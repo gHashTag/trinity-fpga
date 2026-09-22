@@ -2,12 +2,22 @@
 """Deposit the record version on Zenodo.
 
 The metadata lives in zenodo-deposit.json and nowhere else, so a re-run cannot
-disagree with the record that was minted. The token is read from the environment
-and is never written to a file, printed, or committed:
+disagree with the record that was minted.
 
-    ZENODO_TOKEN=... python3 zenodo-deposit.py draft     # create, upload, describe
-    ZENODO_TOKEN=... python3 zenodo-deposit.py show ID   # read the draft back
-    ZENODO_TOKEN=... python3 zenodo-deposit.py publish ID
+The token is read from the macOS Keychain, service `zenodo-api`, so it crosses
+no command line, no shell history and no process list. Store it once, typing it
+into the prompt rather than into an argument:
+
+    security add-generic-password -a "$USER" -s zenodo-api -T /usr/bin/security -U -w
+
+Then:
+
+    python3 zenodo-deposit.py check       # does the token authenticate at all
+    python3 zenodo-deposit.py draft       # create, upload, describe
+    python3 zenodo-deposit.py show ID     # read the draft back
+    python3 zenodo-deposit.py publish ID
+
+ZENODO_TOKEN in the environment overrides the Keychain, for CI.
 
 The draft and publish steps are separate on purpose. Publishing mints a DOI and
 cannot be undone: a published record can be superseded by a new version, never
@@ -19,6 +29,7 @@ does not exist, so a 403 here does not tell you which of the two you have.
 """
 import json
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.request
@@ -28,13 +39,30 @@ API = "https://zenodo.org/api"
 META = os.path.join(HERE, "zenodo-deposit.json")
 PDF = os.path.join(HERE, "paper-c-record.pdf")
 FILENAME = "ternary-network-floats-record-version.pdf"
+KEYCHAIN_SERVICE = "zenodo-api"
+
+_TOKEN = None
 
 
 def token():
-    t = os.environ.get("ZENODO_TOKEN")
+    """Read once, hold in memory, never print. Keychain first, env as override."""
+    global _TOKEN
+    if _TOKEN:
+        return _TOKEN
+    t = os.environ.get("ZENODO_TOKEN", "").strip()
     if not t:
-        sys.exit("set ZENODO_TOKEN (scopes: deposit:write, deposit:actions)")
-    return t.strip()
+        try:
+            t = subprocess.run(
+                ["security", "find-generic-password", "-s", KEYCHAIN_SERVICE, "-w"],
+                capture_output=True, text=True, check=True).stdout.strip()
+        except subprocess.CalledProcessError:
+            sys.exit("no token: store one with\n"
+                     '  security add-generic-password -a "$USER" -s %s '
+                     "-T /usr/bin/security -U -w" % KEYCHAIN_SERVICE)
+    if not t:
+        sys.exit("the keychain item %s is empty" % KEYCHAIN_SERVICE)
+    _TOKEN = t
+    return t
 
 
 def call(method, url, data=None, ctype="application/json"):
@@ -61,6 +89,24 @@ def parse(status, payload, what):
         print(json.dumps(j, indent=2, ensure_ascii=False)[:2000])
         sys.exit("%s failed: HTTP %d" % (what, status))
     return j
+
+
+def check():
+    """Does the token authenticate, before anything is created."""
+    t = token()
+    print("token: %d chars, ends %s, source: %s"
+          % (len(t), t[-3:], "env" if os.environ.get("ZENODO_TOKEN") else "keychain"))
+    status, payload = call("GET", "/deposit/depositions?size=3")
+    if status == 403:
+        sys.exit("HTTP 403 Permission denied.\n"
+                 "Zenodo answers this both for a token that does not exist and for one\n"
+                 "without deposit:write -- it does not say which. Re-issue at\n"
+                 "https://zenodo.org/account/settings/applications/tokens/new/\n"
+                 "with deposit:write AND deposit:actions ticked.")
+    j = parse(status, payload, what="check")
+    print("HTTP", status, "| the token authenticates | existing depositions:", len(j))
+    for d in j:
+        print("  ", d.get("id"), d.get("state"), (d.get("title") or "(untitled)")[:60])
 
 
 def draft():
@@ -104,8 +150,10 @@ def publish(dep_id):
 
 
 if __name__ == "__main__":
-    cmd = sys.argv[1] if len(sys.argv) > 1 else "draft"
-    if cmd == "draft":
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "check"
+    if cmd == "check":
+        check()
+    elif cmd == "draft":
         draft()
     elif cmd == "show":
         show(sys.argv[2])
