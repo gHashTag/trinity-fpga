@@ -1,0 +1,345 @@
+Info: Packing constants..
+Info: Inserting IO buffers..
+Info:     IO port 'clk200_n' driven by IBUFDS 'ibufds_clk'
+Info:     IO port 'clk200_p' driven by IBUFDS 'ibufds_clk'
+Info:     IO port 'uart_tx' driven by OBUF '$iopadmap$bench007_probe_ax7203.uart_tx'
+Info:     IO port 'led[0]' driven by OBUF '$iopadmap$bench007_probe_ax7203.led'
+Info:     IO port 'led[1]' driven by OBUF '$iopadmap$bench007_probe_ax7203.led_1'
+Info:     IO port 'led[2]' driven by OBUF '$iopadmap$bench007_probe_ax7203.led_2'
+Info:     IO port 'led[3]' driven by OBUF '$iopadmap$bench007_probe_ax7203.led_3'
+Info:     Constraining 'clk200_n' to site 'IOB_X1Y123'
+Info:     Tile 'RIOB33_X105Y123'
+Info:     Constraining 'clk200_p' to site 'IOB_X1Y124'
+Info:     Tile 'RIOB33_X105Y123'
+Info:     Constraining 'uart_tx' to site 'IOB_X0Y100'
+Info:     Tile 'LIOB33_SING_X0Y100'
+Info:     Constraining 'led[0]' to site 'IOB_X0Y233'
+Info:     Tile 'LIOB33_X0Y233'
+Info:     Constraining 'led[1]' to site 'IOB_X0Y234'
+Info:     Tile 'LIOB33_X0Y233'
+Info:     Constraining 'led[2]' to site 'IOB_X0Y238'
+Info:     Tile 'LIOB33_X0Y237'
+Info:     Constraining 'led[3]' to site 'IOB_X0Y237'
+Info:     Tile 'LIOB33_X0Y237'
+Info: Generating output buffer for '$iopadmap$bench007_probe_ax7203.uart_tx'
+Info: Generating output buffer for '$iopadmap$bench007_probe_ax7203.led'
+Info: Generating output buffer for '$iopadmap$bench007_probe_ax7203.led_1'
+Info: Generating output buffer for '$iopadmap$bench007_probe_ax7203.led_2'
+Info: Generating output buffer for '$iopadmap$bench007_probe_ax7203.led_3'
+Info:     Created 7 PAD cells from:
+Info:              7x PAD
+Info: Preparing clocking...
+Info: Packing constants..
+Info: Packing cfg...
+Info: Packing PLLs...
+Info: Packing Gigabit Transceivers..
+Info: Packing global buffers...
+Info:     Constrained BUFGCTRL 'bufg_200' to bel 'BUFGCTRL_X0Y0/BUFGCTRL' based on dedicated routing
+Info: Packing MUX[789]s..
+Info: Packing carries..
+Info:    Grouped 328 MUXCYs and 328 XORCYs into 36 chains.
+Info:    Blasted 0 non-chain MUXCYs and 0 non-chain XORCYs to soft logic
+Info: Packing LUTs..
+Info:     Created 953 SLICE_LUTX cells from:
+Info:            667x LUT1
+Info:             16x LUT2
+Info:             32x LUT3
+Info:             47x LUT4
+Info:            102x LUT5
+Info:             89x LUT6
+Info: Packing DRAM..
+Info:    Transformed 0 tied-low DRAM address inputs to be tied-high
+Info: Packing BRAM..
+Info: Packing DSPs..
+Info: Packing flipflops..
+Info:     Created 625 SLICE_FFX cells from:
+Info:            603x FDRE
+Info:             22x FDSE
+Info: Constrained 207 LUTFF pairs.
+
+Info: Annotating ports with timing budgets for target frequency 50.00 MHz
+Info: Checksum: 0xfec7f42c
+
+Info: Device utilisation:
+Info: 	          SLICE_LUTX:   953/269200     0%
+Info: 	           SLICE_FFX:   625/269200     0%
+Info: 	              CARRY4:    83/33650     0%
+Info: 	          PSEUDO_GND:     1/69165     0%
+Info: 	          PSEUDO_VCC:     1/69165     0%
+Info: 	               HARD0:     0/ 3960     0%
+Info: 	            RAMB18E1:     0/  730     0%
+Info: 	            FIFO18E1:     0/  365     0%
+Info: 	        RAMBFIFO36E1:     0/  365     0%
+Info: 	            RAMB36E1:     0/  365     0%
+Info: 	             DSP48E1:     0/  740     0%
+Info: 	                 PAD:     7/ 1062     0%
+Info: 	       IOB33M_OUTBUF:     0/  240     0%
+Info: 	       IOB33S_OUTBUF:     0/  240     0%
+Info: 	        IOB33_OUTBUF:     5/  500     1%
+Info: 	     IOB33M_INBUF_EN:     1/  240     0%
+Info: 	     IOB33S_INBUF_EN:     0/  240     0%
+Info: 	      IOB33_INBUF_EN:     0/  500     0%
+Info: 	IOB33M_TERM_OVERRIDE:     0/  240     0%
+Info: 	IOB33S_TERM_OVERRIDE:     0/  240     0%
+Info: 	 IOB33_TERM_OVERRIDE:     0/  500     0%
+Info: 	       PULL_OR_KEEP1:     0/  980     0%
+Info: 	            IDELAYE2:     0/  500     0%
+Info: 	        OLOGICE3_TFF:     0/  500     0%
+Info: 	      OLOGICE3_OUTFF:     0/  500     0%
+Info: 	       OLOGICE3_MISR:     0/  500     0%
+Info: 	           OSERDESE2:     0/  500     0%
+Info: 	        ILOGICE3_IFF:     0/  500     0%
+Info: 	ILOGICE3_ZHOLD_DELAY:     0/  500     0%
+Info: 	           ISERDESE2:     0/  500     0%
+Info: 	                BUFR:     0/   40     0%
+Info: 	               BUFIO:     0/   40     0%
+Info: 	          IDELAYCTRL:     0/   10     0%
+Info: 	            BUFGCTRL:     3/   32     9%
+Info: 	            PCIE_2_1:     0/    1     0%
+Info: 	               BSCAN:     0/    4     0%
+Info: 	                BUFG:     0/   32     0%
+Info: 	              BUFHCE:     0/  120     0%
+Info: 	            DCIRESET:     0/    1     0%
+Info: 	            DNA_PORT:     0/    1     0%
+Info: 	           EFUSE_USR:     0/    1     0%
+Info: 	           FRAME_ECC:     0/    1     0%
+Info: 	       GTPE2_CHANNEL:     0/   16     0%
+Info: 	        GTPE2_COMMON:     0/    4     0%
+Info: 	         IBUFDS_GTE2:     0/    8     0%
+Info: 	                ICAP:     0/    2     0%
+Info: 	            INVERTER:     0/  240     0%
+Info: 	          MMCME2_ADV:     0/   10     0%
+Info: 	        OLOGICE2_TFF:     0/  500     0%
+Info: 	      OLOGICE2_OUTFF:     0/  500     0%
+Info: 	           PLLE2_ADV:     0/   10     0%
+Info: 	           SELMUX2_1:     0/102950     0%
+Info: 	             STARTUP:     1/    1   100%
+Info: 	          USR_ACCESS:     0/    1     0%
+Info: 	              BUFFER:     0/   82     0%
+Info: 	        ILOGICE2_IFF:     0/  500     0%
+Info: 	       OLOGICE2_MISR:     0/  500     0%
+
+Info: Placed 14 cells based on constraints.
+Info: Creating initial analytic placement for 753 cells, random placement wirelen = 292159.
+Info:     at initial placer iter 0, wirelen = 3259
+Info:     at initial placer iter 1, wirelen = 2979
+Info:     at initial placer iter 2, wirelen = 3079
+Info:     at initial placer iter 3, wirelen = 2897
+Info: Running main analytical placer.
+Info:     at iteration #1, type ALL: wirelen solved = 3261, spread = 20645, legal = 21504; time = 0.03s
+Info:     at iteration #2, type ALL: wirelen solved = 3263, spread = 13179, legal = 13451; time = 0.03s
+Info:     at iteration #3, type ALL: wirelen solved = 3957, spread = 12208, legal = 12914; time = 0.03s
+Info:     at iteration #4, type ALL: wirelen solved = 4390, spread = 10562, legal = 10891; time = 0.03s
+Info:     at iteration #5, type ALL: wirelen solved = 4725, spread = 11742, legal = 12593; time = 0.03s
+Info:     at iteration #6, type ALL: wirelen solved = 5205, spread = 11308, legal = 12181; time = 0.03s
+Info:     at iteration #7, type ALL: wirelen solved = 5578, spread = 11430, legal = 11450; time = 0.03s
+Info:     at iteration #8, type ALL: wirelen solved = 5702, spread = 10020, legal = 11479; time = 0.03s
+Info:     at iteration #9, type ALL: wirelen solved = 5688, spread = 10215, legal = 11416; time = 0.03s
+Info: HeAP Placer Time: 0.41s
+Info:   of which solving equations: 0.11s
+Info:   of which spreading cells: 0.11s
+Info:   of which strict legalisation: 0.04s
+
+Info: Running simulated annealing placer for refinement.
+Info:   at iteration #1: temp = 0.000000, timing cost = 79, wirelen = 10891
+Info:   at iteration #5: temp = 0.000000, timing cost = 46, wirelen = 7694
+Info:   at iteration #10: temp = 0.000000, timing cost = 47, wirelen = 7157
+Info:   at iteration #15: temp = 0.000000, timing cost = 42, wirelen = 6903
+Info:   at iteration #20: temp = 0.000000, timing cost = 40, wirelen = 6776
+Info:   at iteration #25: temp = 0.000000, timing cost = 38, wirelen = 6744
+Info:   at iteration #30: temp = 0.000000, timing cost = 42, wirelen = 6725
+Info:   at iteration #31: temp = 0.000000, timing cost = 42, wirelen = 6725 
+Info: SA placement time 0.52s
+
+Info: Max frequency for clock 'ref_clk': 122.49 MHz (PASS at 100.00 MHz)
+Info: Max frequency for clock 'dut_clk': 120.39 MHz (PASS at 100.00 MHz)
+Info: Max frequency for clock  'clk200': 2857.14 MHz (PASS at 200.00 MHz)
+
+Info: Max delay posedge dut_clk -> posedge ref_clk: 1.55 ns
+Info: Max delay posedge ref_clk -> posedge dut_clk: 0.92 ns
+
+Info: Slack histogram:
+Info:  legend: * represents 2 endpoint(s)
+Info:          + represents [1,2) endpoint(s)
+Info: [  1694,   2094) |**+
+Info: [  2094,   2494) |********+
+Info: [  2494,   2894) |**+
+Info: [  2894,   3294) |****+
+Info: [  3294,   3694) |***********+
+Info: [  3694,   4094) |***+
+Info: [  4094,   4494) |************************+
+Info: [  4494,   4894) |********************************************************+
+Info: [  4894,   5294) |******************************************+
+Info: [  5294,   5694) |************************+
+Info: [  5694,   6094) |****************+
+Info: [  6094,   6494) |************************+
+Info: [  6494,   6894) |*****************+
+Info: [  6894,   7294) |***************************************************+
+Info: [  7294,   7694) |************************************************************ 
+Info: [  7694,   8094) |*******************************************************+
+Info: [  8094,   8494) |********************+
+Info: [  8494,   8894) |******************+
+Info: [  8894,   9294) |*****************************+
+Info: [  9294,   9694) |**********************************+
+Info: Checksum: 0x631dc1a3
+Info: Running post-placement legalisation...
+Info: Routing Vcc connections...
+Info: Routing global clocks...
+Info:     routing clock 'ref_clk'
+Info:     routing clock 'dut_clk'
+Info:     routing clock 'clk200'
+
+Info: Routing..
+Info: Setting up routing queue.
+Info: Routing 3654 arcs.
+Info:            |   (re-)routed arcs  |   delta    | remaining|       time spent     |
+Info:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|
+Info:       1000 |       36        963 |   36   963 |      2696|       0.70       0.70|
+Info:       2000 |       85       1914 |   49   951 |      1802|       0.36       1.06|
+Info:       3000 |      251       2748 |  166   834 |      1079|       0.77       1.82|
+Info:       4000 |      354       3645 |  103   897 |       228|       1.90       3.72|
+Info:       4227 |      354       3873 |    0   228 |         0|       0.01       3.74|
+Info: Routing complete.
+Info: Router1 time 3.74s
+Info: Checksum: 0xdd98c5e7
+
+Info: Critical path report for clock 'ref_clk' (posedge -> posedge):
+Info: curr total
+Info:  0.1  0.1  Source $auto$ff.cc:337:slice$4019.Q
+Info:  0.3  0.4    Net meter.gate_cnt[0] budget 0.620000 ns (17,97) -> (17,97)
+Info:                Sink $abc$15873$lut$not$aiger15872$29.A1
+Info:  0.1  0.5  Source $abc$15873$lut$not$aiger15872$29.O6
+Info:  0.6  1.1    Net $auto$alumacc.cc:512:replace_alu$2702.Y[0] budget 0.620000 ns (17,97) -> (14,103)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.Y[0]$LUT$674.A1
+Info:  0.1  1.2  Source $auto$alumacc.cc:512:replace_alu$2702.Y[0]$LUT$674.O6
+Info:  0.0  1.2    Net $auto$alumacc.cc:512:replace_alu$2702.Y[0]$legal$673 budget 0.620000 ns (14,103) -> (14,103)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[0].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.S0
+Info:  0.5  1.8  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[0].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.O2
+Info:  0.5  2.3    Net $techmap16301$abc$15873$lut$aiger15872$1307.A[2] budget 0.619000 ns (14,103) -> (14,102)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[0].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CYINIT
+Info:  0.6  2.9  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[0].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CO3
+Info:  0.1  3.0    Net $abc$15873$aiger15872$1059 budget 0.619000 ns (14,102) -> (14,101)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[1].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CIN
+Info:  0.1  3.1  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[1].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CO3
+Info:  0.1  3.2    Net $abc$15873$aiger15872$1067 budget 0.619000 ns (14,101) -> (14,100)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[2].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CIN
+Info:  0.1  3.3  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[2].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CO3
+Info:  0.1  3.4    Net $abc$15873$aiger15872$1075 budget 0.619000 ns (14,100) -> (14,99)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[3].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CIN
+Info:  0.1  3.5  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[3].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CO3
+Info:  0.1  3.7    Net $abc$15873$aiger15872$1083 budget 0.619000 ns (14,99) -> (14,98)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[4].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CIN
+Info:  0.1  3.8  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[4].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CO3
+Info:  0.1  3.9    Net $abc$15873$aiger15872$1091 budget 0.619000 ns (14,98) -> (14,97)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[5].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CIN
+Info:  0.1  4.0  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[5].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CO3
+Info:  0.1  4.1    Net $abc$15873$aiger15872$1099 budget 0.619000 ns (14,97) -> (14,96)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[6].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.CIN
+Info:  0.3  4.4  Source $auto$alumacc.cc:512:replace_alu$2702.genblk1.slice[6].genblk1.carry4$split$muxcy2$PACKED_CARRY4$.O1
+Info:  0.7  5.2    Net $auto$alumacc.cc:512:replace_alu$2702.Y[27] budget 0.685000 ns (14,96) -> (13,96)
+Info:                Sink $auto$ff.cc:337:slice$4046.D
+Info:  0.1  5.3  Setup $auto$ff.cc:337:slice$4046.D
+Info: 2.5 ns logic, 2.8 ns routing
+
+Info: Critical path report for clock 'dut_clk' (posedge -> posedge):
+Info: curr total
+Info:  0.1  0.1  Source $auto$ff.cc:337:slice$4295.Q
+Info:  0.6  0.7    Net div[9] budget 0.597000 ns (14,101) -> (14,101)
+Info:                Sink $abc$15873$lut$aiger15872$1600.A1
+Info:  0.1  0.9  Source $abc$15873$lut$aiger15872$1600.O5
+Info:  0.4  1.3    Net $techmap15931$abc$15873$lut$aiger15872$1606.A[5] budget 0.597000 ns (14,101) -> (14,100)
+Info:                Sink $abc$15873$lut$aiger15872$1606.A6
+Info:  0.1  1.4  Source $abc$15873$lut$aiger15872$1606.O6
+Info:  0.3  1.7    Net $techmap15932$auto$abc9_ops.cc:1552:reintegrate$15913.A[0] budget 0.597000 ns (14,100) -> (14,100)
+Info:                Sink $auto$abc9_ops.cc:1552:reintegrate$15913.A1
+Info:  0.1  1.9  Source $auto$abc9_ops.cc:1552:reintegrate$15913.O6
+Info:  0.6  2.4    Net $auto$alumacc.cc:512:replace_alu$2708.Y[0] budget 0.597000 ns (14,100) -> (10,102)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.Y[0]$LUT$930.A2
+Info:  0.1  2.5  Source $auto$alumacc.cc:512:replace_alu$2708.Y[0]$LUT$930.O6
+Info:  0.0  2.5    Net $auto$alumacc.cc:512:replace_alu$2708.Y[0]$legal$929 budget 0.596000 ns (10,102) -> (10,102)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[0].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.S0
+Info:  0.5  3.1  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[0].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CO3
+Info:  0.1  3.2    Net $abc$15873$aiger15872$1181 budget 0.596000 ns (10,102) -> (10,101)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[1].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CIN
+Info:  0.1  3.3  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[1].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CO3
+Info:  0.1  3.4    Net $abc$15873$aiger15872$1189 budget 0.596000 ns (10,101) -> (10,100)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[2].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CIN
+Info:  0.1  3.5  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[2].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CO3
+Info:  0.1  3.6    Net $abc$15873$aiger15872$1197 budget 0.596000 ns (10,100) -> (10,99)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[3].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CIN
+Info:  0.1  3.7  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[3].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CO3
+Info:  0.1  3.8    Net $abc$15873$aiger15872$1205 budget 0.596000 ns (10,99) -> (10,98)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[4].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CIN
+Info:  0.1  4.0  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[4].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CO3
+Info:  0.1  4.1    Net $abc$15873$aiger15872$1213 budget 0.596000 ns (10,98) -> (10,97)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[5].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CIN
+Info:  0.1  4.2  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[5].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CO3
+Info:  0.1  4.3    Net $abc$15873$aiger15872$1221 budget 0.596000 ns (10,97) -> (10,96)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[6].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CIN
+Info:  0.1  4.4  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[6].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CO3
+Info:  0.1  4.5    Net $abc$15873$aiger15872$1229 budget 0.596000 ns (10,96) -> (10,95)
+Info:                Sink $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[7].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.CIN
+Info:  0.2  4.8  Source $auto$alumacc.cc:512:replace_alu$2708.genblk1.slice[7].genblk1.carry4$split$muxcy0$PACKED_CARRY4$.O2
+Info:  0.8  5.6    Net $auto$alumacc.cc:512:replace_alu$2708.Y[30] budget 0.603000 ns (10,95) -> (10,95)
+Info:                Sink $auto$ff.cc:337:slice$3952.D
+Info:  0.1  5.7  Setup $auto$ff.cc:337:slice$3952.D
+Info: 2.2 ns logic, 3.5 ns routing
+
+Info: Critical path report for clock 'clk200' (posedge -> posedge):
+Info: curr total
+Info:  0.1  0.1  Source $auto$ff.cc:337:slice$4296.Q
+Info:  0.4  0.5    Net half budget 2.325000 ns (118,107) -> (118,107)
+Info:                Sink $abc$15873$lut$not$aiger15872$19.A1
+Info:  0.2  0.7  Source $abc$15873$lut$not$aiger15872$19.O5
+Info:  0.0  0.7    Net $0\half[0:0] budget 2.325000 ns (118,107) -> (118,107)
+Info:                Sink $auto$ff.cc:337:slice$4296.D
+Info:  0.1  0.8  Setup $auto$ff.cc:337:slice$4296.D
+Info: 0.3 ns logic, 0.5 ns routing
+
+Info: Critical path report for cross-domain path 'posedge dut_clk' -> 'posedge ref_clk':
+Info: curr total
+Info:  0.1  0.1  Source $auto$ff.cc:337:slice$3988.Q
+Info:  1.1  1.2    Net meter.stp_snap[2] budget 9.800000 ns (13,100) -> (14,88)
+Info:                Sink $auto$ff.cc:337:slice$3779.D
+Info:  0.1  1.3  Setup $auto$ff.cc:337:slice$3779.D
+Info: 0.2 ns logic, 1.1 ns routing
+
+Info: Critical path report for cross-domain path 'posedge ref_clk' -> 'posedge dut_clk':
+Info: curr total
+Info:  0.1  0.1  Source $auto$ff.cc:337:slice$4051.Q
+Info:  0.7  0.8    Net meter.gate_tgl budget 9.800000 ns (17,103) -> (23,103)
+Info:                Sink $auto$ff.cc:337:slice$4322.D
+Info:  0.1  0.9  Setup $auto$ff.cc:337:slice$4322.D
+Info: 0.2 ns logic, 0.7 ns routing
+
+Info: Max frequency for clock 'ref_clk': 189.18 MHz (PASS at 100.00 MHz)
+Info: Max frequency for clock 'dut_clk': 176.80 MHz (PASS at 100.00 MHz)
+Info: Max frequency for clock  'clk200': 1221.00 MHz (PASS at 200.00 MHz)
+
+Info: Max delay posedge dut_clk -> posedge ref_clk: 1.33 ns
+Info: Max delay posedge ref_clk -> posedge dut_clk: 0.94 ns
+
+Info: Slack histogram:
+Info:  legend: * represents 2 endpoint(s)
+Info:          + represents [1,2) endpoint(s)
+Info: [  4181,   4442) |*+
+Info: [  4442,   4703) |**+
+Info: [  4703,   4964) |****+
+Info: [  4964,   5225) |*******+
+Info: [  5225,   5486) |********************+
+Info: [  5486,   5747) |*********************************************+
+Info: [  5747,   6008) |**************************************+
+Info: [  6008,   6269) |********************************+
+Info: [  6269,   6530) |**********************+
+Info: [  6530,   6791) |***********+
+Info: [  6791,   7052) |**********+
+Info: [  7052,   7313) |********+
+Info: [  7313,   7574) |***************+
+Info: [  7574,   7835) |********************************+
+Info: [  7835,   8096) |************************************************************ 
+Info: [  8096,   8357) |*********************************************+
+Info: [  8357,   8618) |***********************+
+Info: [  8618,   8879) |**************+
+Info: [  8879,   9140) |*******************************+
+Info: [  9140,   9401) |*************************+
+Info: Running post-routing legalisation...
