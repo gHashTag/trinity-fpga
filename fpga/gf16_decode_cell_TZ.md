@@ -6,7 +6,7 @@
 
 ## Format parameters (from the SSOT `formats_catalog.t27`, [Verified])
 - gf16: **bits=16, s=1, e=6, m=9, bias=31** (PHI_BIAS=60), storage=u16, cluster=GoldenFloat.
-- FPGA component artifact: 35/35 @ 323 MHz Artix-7 (Zenodo 10.5281/zenodo.19227877).
+- FPGA component artifact: 35/35 functional testbench on Artix-7. No frequency is claimed: the 323 MHz figure is withdrawn (`research/frontier/APPARATUS_AUDIT_2026-08-12.md`). The Zenodo DOI formerly cited here (10.5281/zenodo.19227877) is not an FPGA record and does not support this line.
 
 ## RTL-spec (gf16_decode.v: gf16 u16 → binary32)
 A combinational decoder, a mirror of the gf16 decode law (the same one the conformance golden-oracle uses):

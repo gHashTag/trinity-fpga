@@ -1,5 +1,10 @@
 # Ready-to-paste abstracts — arXiv:2606.05017 and arXiv:2606.09686
 
+> **⚠️ SUPERSEDED — DO NOT PASTE (2026-09-24).** The Paper A abstract below still
+> says "at 323 MHz". That figure was withdrawn on 2026-08-08: it is the toggle rate
+> of a ring oscillator, not a GF16 frequency (`research/frontier/APPARATUS_AUDIT_2026-08-12.md`).
+> The current replacement is v6, which removes it.
+
 > Produced 2026-07-31, pass 28. Baseline: the abstracts arXiv serves **today**
 > (2606.05017**v3**, 2606.09686**v2**), fetched verbatim via the arXiv API.
 >

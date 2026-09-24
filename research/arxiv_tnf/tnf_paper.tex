@@ -286,10 +286,12 @@ with the small non-monotone excursions at the narrow end coming from the roundin
 in the rule rather than from anything about $\varphi$. Two artefacts of that work
 are quantitative and are quoted here as they stand there: an integer-backed
 accumulator path checked at 500-digit precision for $n=1,\dots,256$, and a GF16
-codec passing a 35-of-35 testbench at $323$\,MHz --- on an Artix-7 XC7A35T, a
-\emph{different and smaller} part than the XC7A200T every hardware number in the
-present paper was taken on, so the two frequencies are not comparable and are
-not compared. That preprint also carries an RTL-correctness erratum dated
+codec passing a 35-of-35 functional testbench on an Artix-7. The $323$\,MHz
+frequency once quoted for that codec is withdrawn and is not used here: the GF16
+cores contain no registers, the synthesis top feeds them literal operands, so the
+arithmetic is constant-folded away, and the reported figure was the toggle rate of
+the ring oscillator left in the test top. No frequency for the GF16 codec has been
+characterised. That preprint also carries an RTL-correctness erratum dated
 2026-05-31 whose corrected generator is the baseline used here; the RTL and GDS
 artefacts it mentions carry the pre-erratum multiplier portfolio, were not
 fabricated, and play no part in this paper, whose only hardware is the XC7A200T

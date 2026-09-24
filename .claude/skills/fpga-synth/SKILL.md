@@ -1078,9 +1078,14 @@ The synthesis loop exists to **update the publications**. Status:
 - **Board §1.2 is OPEN:** three parts are cited for "the" GF16 result — abstract
   **XC7A35T**, `trinity-gf16.tex` body **XC7A100T (QMTECH FGG676)**, this work
   **XC7A200T (ALINX AX7203, FBG484)**. Paper should name one part + package.
-- **Fmax is an unstated distinction:** paper's **323 MHz** is the bare-core
-  *combinational* max-freq (probe clock `chain[19]`), NOT a routed clocked design.
-  A routed wrapper on 200T is ~27.55 MHz static. Report both, labelled.
+- **323 MHz is WITHDRAWN (2026-08-08). Never report it, in any form.** The
+  `chain[19]` "probe clock" is the last inverter of a 20-stage ring oscillator in
+  the test top, so `Max frequency for clock 'chain[19]'` measured the oscillator,
+  not GF16. The GF16 cores have no `posedge` (no clock domain), and the synthesis
+  tops feed literal operands, so the arithmetic is constant-folded away (GF16 contributes zero cells). Full proof:
+  `research/frontier/APPARATUS_AUDIT_2026-08-12.md`. The GF16 Fmax is **not characterised**; do not
+  substitute another number for it. A routed wrapper on 200T is ~27.55 MHz static
+  and may be reported only as that, labelled.
 - **Prepared correction material** (not a submission — needs author arXiv creds):
   `trinity-fpga/research/XC7A200T_GF16_DATAPOINT_2026-08-05.md` (this row + the
   board table + on-silicon conformance vectors).
@@ -1113,7 +1118,8 @@ arXiv replacement (which only the author can submit):
 4. Apply `ARXIV_ABSTRACTS_READY_TO_PASTE.md` + `ARXIV_BODY_FIXES_READY_TO_PASTE.md`
    (abstract wording, 20 citation defects, `-nodsp` soft-logic subsection).
 5. Reconcile board §1.2 using `research/XC7A200T_GF16_DATAPOINT_2026-08-05.md`:
-   bare-core combinational 323 MHz vs routed-wrapper ~27.55 MHz; part = XC7A200T-FBG484.
+   part = XC7A200T-FBG484. The 323 MHz figure is withdrawn (see the bullet above);
+   do not reintroduce it while reconciling the board.
 
 ## The failure this pipeline keeps producing: the frame path, not the arithmetic
 

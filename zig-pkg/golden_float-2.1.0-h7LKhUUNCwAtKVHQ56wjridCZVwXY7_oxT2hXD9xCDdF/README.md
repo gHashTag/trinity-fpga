@@ -37,7 +37,7 @@ One normative rule sizes every binary rung (FORMAT-SPEC-001 v1.2):
 | GF4 | 4 | `[1:1:2]` | 0 | Verified |
 | **GF8** | 8 | `[1:3:4]` | 3 † | Verified — edge / sensors |
 | GF12 | 12 | `[1:4:7]` | 7 | Verified — mid-range / audio |
-| **GF16** | 16 | `[1:6:9]` | 31 | **Primary** — FPGA 35/35 @ 323 MHz Artix-7 |
+| **GF16** | 16 | `[1:6:9]` | 31 | **Primary** — FPGA 35/35 on Artix-7 (no frequency claimed) |
 | GF20 | 20 | `[1:7:12]` | 63 | Experimental |
 | GF24 | 24 | `[1:9:14]` | 255 | Experimental |
 | GF32 | 32 | `[1:12:19]` | 2047 | Spec |
