@@ -13,7 +13,7 @@
 **Key record (18939352)**: "Trinity v2.0.1 — FPGA Autoregressive Ternary LLM"
 - Author: Vasilev Dmitrii (Trinity)
 - First autoregressive ternary LLM on FPGA
-- QMTech XC7A100T ($30), 63 tok/s @ 92 MHz, ~1W
+- QMTech XC7A100T ($30), 63 tok/s @ 92 MHz, ~1W (since qualified: 63 tok/s is a projection at 92 MHz; `gHashTag/trinity/README.md` gives ~34 tok/s at 50 MHz; power was not measured and ~1W is withdrawn)
 - Open-source toolchain: openXC7 (yosys + nextpnr-xilinx)
 - 16 tokens generated in autoregressive mode (seed=42)
 - License: MIT
