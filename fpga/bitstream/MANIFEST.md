@@ -7,9 +7,9 @@
 | Field | Value |
 |---|---|
 | Board | QMTech XC7A100T Starter Kit |
-| Actual die | **XC7A200T** (IDCODE `0x13631093`) |
+| Actual die | **XC7A100T** (IDCODE `0x13631093`) |
 | Silicon rev | 1 |
-| Package | FGG484 |
+| Package | FGG676 |
 | Tool | Vivado 2023.2 |
 
 ## Bitstream
@@ -18,8 +18,8 @@
 |---|---|
 | File | `design.bit` |
 | SHA-256 | `8536e265...d77352b` *(full hash in CI artefact)* |
-| LUT used | 83 / 134,600 (0.06%) |
-| FF used | 27 / 269,200 (0.01%) |
+| LUT used | 83 / 63,400 (0.13%) |
+| FF used | 27 / 126,800 (0.02%) |
 | BRAM | 0 |
 | DSP | 0 |
 

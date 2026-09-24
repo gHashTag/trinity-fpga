@@ -3005,8 +3005,10 @@ each rung is measured at its specified parameters. Against
 \texttt{int8} the two are indistinguishable once seeds are swept
 (Table~\ref{tab:rejected}). The two are consistent: the frontier asks what a word of
 a given width carries, the datapath asks what it costs to unpack, and every fixed
-field unpacks by reading fields. The gap in LUT area runs between fixed and tapered
-formats, $2.4$ to $6.4\times$, and belongs to Theorems~\ref{thm:scan}
+field unpacks by reading fields. Fixed and tapered formats separate on
+$F_{\max}$, not on LUT area: every fixed field decodes faster than every taper,
+while on area the two groups overlap (Table~\ref{tab:cleandecode},
+Theorem~\ref{thm:taperdelay}). That separation belongs to Theorems~\ref{thm:scan}
 and~\ref{thm:valuelaw} rather than to this ladder.
 
 \paragraph{A limit of the measurement, stated.} Range is analytic for a fixed

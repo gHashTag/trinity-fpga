@@ -326,7 +326,7 @@ the same balance that keeps the training-noise floor low.
 
 | Format | Adder LUTs | Mul LUTs / DSP | Decode LUTs | Decode style | Source |
 |---|---:|---|---:|---|---|
-| GF16 `[1\|6\|9]` | **486** `[measured, parametric]` / 176 `[old top]` | **94 + 1 DSP** `[measured, old]` | ~50 `[est.]` | algebraic | `LUT_COMPARISON_MEASURED.md` (yosys 0.63, 2026-07-14) |
+| GF16 `[1\|6\|9]` | **491** `[measured, parametric]` / 176 `[old top]` | **94 + 1 DSP** `[measured, old]` | ~50 `[est.]` | algebraic | `LUT_COMPARISON_MEASURED.md` (yosys 0.63, 2026-07-14) |
 | GF16 MAC-16 (16-elem dot) | **71 + 16 DSP** `[measured]` | — | — | — | `BENCH-006_RESULTS.md` |
 | Ternary MAC-16 | **52, 0 DSP** `[measured]` | — | — | — | `BENCH-006_RESULTS.md` |
 | GF32 `[1\|12\|19]` | ~600 `[est.]` | ~500 + 1 DSP | ~120 `[est.]` | algebraic | extrapolated from GF16 |
