@@ -151,6 +151,7 @@ Governance proposals require a quorum of 5% of staked supply and a simple majori
 
 ## Next Steps
 
+- [Minting](./minting.md) -- how an accepted spec mints TRI on-chain (100% mined, zero pre-mine)
 - [Rewards](./rewards.md) -- detailed reward rates and bonus multipliers
 - [Quick Start](./quickstart.md) -- start earning $TRI now
 - [Architecture](./architecture.md) -- how the network secures the token economy
