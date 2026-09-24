@@ -18,6 +18,12 @@ import re, pathlib, sys, collections
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PAPER = ROOT / "research" / "arxiv_tnf" / "tnf_paper.tex"
 
+# A traceability audit, a withdrawal or a rot inventory exists to TABULATE the
+# literals that have no source. Left in SOURCES it absolves the very numbers it
+# indicts: writing "this figure appears in no data file" makes the figure appear
+# in a data file. These documents are evidence about sources, not sources.
+AUDIT = ("DOCUMENT_TRACEABILITY", "WITHDRAWAL", "SCRIPT_ROT")
+
 # Where a number in the paper could legitimately come from
 SOURCES = [p for pat in ("research/**/*.md", "research/**/*.py", "research/**/*.json",
                          "research/**/*.txt", "fpga/**/*.md", "fpga/**/*.v",
@@ -25,7 +31,8 @@ SOURCES = [p for pat in ("research/**/*.md", "research/**/*.py", "research/**/*.
                          "conformance/**/*.json", "conformance/**/*.txt",
                          "docs/**/*.md", "*.md")
              for p in ROOT.glob(pat)
-             if p.is_file() and p != PAPER and p.stat().st_size < 2_000_000]
+             if p.is_file() and p != PAPER and p.stat().st_size < 2_000_000
+             and not p.name.startswith(AUDIT)]
 
 def literals(text):
     """Distinctive numbers: 3+ significant digits, or a decimal with 2+ places.
@@ -67,12 +74,29 @@ def is_measured(v):
     return False
 
 def sourced(v):
-    """A paper may round what a data file records: 0.181 for 0.1807. Accept a
+    """A paper may round what a data file records: 0.181 for 0.1812. Accept a
     data literal that starts with the paper's digits, so rounding is not counted
-    as a missing source."""
-    if v in blob: return True
-    if "." in v:
-        return re.search(r'(?<![\d.])' + re.escape(v) + r'\d', blob) is not None
+    as a missing source.
+
+    A bare substring test is not a source test: it matches 145 inside 1456 and
+    0.145 inside 10.1452, so digits that sit inside a longer number read as
+    traced. Require a digit boundary on both sides. The one extension still
+    accepted is the rounding rule above, for decimals only: 0.145 is sourced by
+    0.1456, never by 10.1452.
+
+    Same test as re.search(r'(?<![\\d.])' + re.escape(v) + r'(?![\\d])', blob),
+    or r'\\d' in place of the lookahead for a decimal, but scanned literal first.
+    A pattern that opens with a lookbehind gets no literal-prefix search, so
+    re.search walks the whole blob (tens of millions of characters) once per
+    literal: minutes for the paper's thousand literals, where this takes seconds."""
+    n, decimal = len(v), "." in v
+    i = blob.find(v)
+    while i >= 0:
+        before = blob[i-1:i]
+        if not (before.isdecimal() or before == "."):
+            if decimal or not blob[i+n:i+n+1].isdecimal():
+                return True
+        i = blob.find(v, i + 1)
     return False
 
 all_missing = sorted((v for v in want if not sourced(v)), key=lambda s: (-len(s), s))

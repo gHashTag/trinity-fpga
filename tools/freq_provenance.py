@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Provenance registry for every frequency figure in the TNF paper.
 
-The existing gate (tools/check_paper_numbers.py) accepts a literal as sourced if
-its digit string appears ANYWHERE in the concatenated data blob with separators
-stripped. A frequency such as 307.69 therefore "traces" to a conformance vector
-file that happens to contain the digits 30769 inside a hexadecimal or decimal
-column. That is not provenance.
+Until #542 the paper-numbers gate (tools/check_paper_numbers.py) accepted a
+literal as sourced if its digit string appeared ANYWHERE in the concatenated
+data blob with separators stripped. A frequency such as 307.69 therefore
+"traced" to a conformance vector file that happens to contain the digits 30769
+inside a hexadecimal or decimal column. That is not provenance. The gate now
+asks for a delimited match, as in 2. below; 1. is still this registry's alone.
 
-This registry is stricter in two ways:
+This registry is stricter than that old rule in two ways:
 
   1. only prose/record files can be a source: *.md and *.py under research/,
      fpga/, conformance/, docs/ and the repository root -- the places a
