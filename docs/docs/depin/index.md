@@ -102,7 +102,7 @@ No registration required. Download the node software, start it, and begin earnin
 
 | Component | Status |
 |-----------|--------|
-| **$TRI Token** | [`0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469`](https://sepolia.etherscan.io/address/0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469) on Sepolia |
+| **$TRI Token** | transferable, multi-chain: **TON** + **Solana** (chains of record). Sepolia [`0xef368e29…`](https://sepolia.etherscan.io/address/0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469) was the testnet PoC |
 | **Docker Image** | `ghcr.io/ghashtag/trinity-node:latest` |
 | **HTTP API** | Port 8080 (OpenAI-compatible) |
 | **Prometheus** | Port 9090 |

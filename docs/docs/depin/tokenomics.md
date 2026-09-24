@@ -22,7 +22,7 @@ The supply is derived from the **Trinity Identity**: the number of unique states
 | Token Name | Trinity Token |
 | Decimals | 18 |
 | Total Supply | 10,460,353,203 (3^21) |
-| Network | Ethereum (Sepolia testnet) |
+| Network | **TON** and **Solana** (multi-chain) |
 
 ## Allocation
 
@@ -122,13 +122,14 @@ The following features are designed but not yet implemented in the node software
 ## Contract Address
 
 :::caution Testnet Only
-$TRI is currently deployed on Ethereum Sepolia testnet. Mainnet deployment is planned for a future milestone.
+$TRI is a real, transferable token. Chains of record are **TON** (Telegram distribution: Mini Apps, TON Connect, @wallet) and **Solana** (deep DEX liquidity), with one canonical 3^21 supply mirrored across both by a lock-and-mint bridge. The Ethereum Sepolia contract below was the original testnet proof of concept and is superseded as a chain of record; it stays only as a testnet artefact. The reasoning that moved TRI from a non-transferable credit to a transferable token, and what a compliant issuance still requires, is recorded in `specs/trinet/settlement_law.t27` under finding `ISSUANCE_AT_SMALL_N`.
 :::
 
-| Network | Address |
+| Chain | Status / address |
 |---------|---------|
-| Sepolia Testnet | [`0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469`](https://sepolia.etherscan.io/address/0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469) |
-| Ethereum Mainnet | Not yet deployed |
+| TON | chain of record -- not yet deployed |
+| Solana | chain of record -- not yet deployed |
+| Ethereum Sepolia (testnet PoC, superseded) | [`0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469`](https://sepolia.etherscan.io/address/0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469) |
 
 ## Governance
 
