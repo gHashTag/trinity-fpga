@@ -61,8 +61,14 @@ attached to load it into.
   the multiplier arm is 2.15× faster per output element despite half the clock
   (`FMAX.md`). The unrolled variant IS built now and takes the cycles back —
   660 LC at 204.08 MHz, one element per cycle (`PIPELINED.md`).
-- **No Fmax.** `nextpnr-xilinx` is not installed on this machine, so this is
-  area only. Saying "faster" here would be unsupported.
+- **No xc7 Fmax for the table above.** It is post-synthesis only:
+  `nextpnr-xilinx` was not installed where it was produced, so on xc7 it is
+  area only. The frequencies measured since for the φ and multiplier arms are
+  on iCE40 HX8K, a fabric with no DSP blocks (`FMAX.md`, `PIPELINED.md`), and
+  do not carry over to xc7. This note covers `scale_mul` and `scale_phi` only,
+  not the later ladder runs; reading it as covering them led to a withdrawal
+  that was later retracted
+  (`research/frontier/WITHDRAWAL_FMAX_UNSOURCED_2026-08-10.md`).
 - **The built direction is not the one deployed.** Real layer scales are below
   one — `α = mean|W| ≈ 0.02` gives `k = round(log_φ α) ≈ −8` — so a deployed
   layer needs the *inverse* step `(a,b) → (b−a, a)`, from `φ⁻¹ = φ − 1`. That
