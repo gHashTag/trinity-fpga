@@ -35,7 +35,7 @@ The golden ratio connects to ternary systems! This isn't coincidence — it's fu
 
 ## Real-world performance
 
-- **63 tok/s @ 1W** on FPGA (QMTech XC7A100T, $30)
+- ~~**63 tok/s @ 1W** on FPGA (QMTech XC7A100T, $30)~~ withdrawn: ~34 tok/s at 50 MHz; 63 tok/s was a 92 MHz projection, and power was not measured (`gHashTag/trinity/README.md`)
 - **CPU inference** without GPU
 - **SIMD 17x+** speedup, **JIT 22x+** speedup
 
@@ -438,7 +438,7 @@ Space(infer(x)) = O(d²)
 
 | Model | Params | Size | tok/s @ 1W |
 |-------|--------|------|------------|
-| HSLM-1B | 1.95M | 385 KB | 63 |
+| HSLM-1B | 1.95M | 385 KB | ~~63~~ (withdrawn: power was never measured, so no tok/s at 1W figure stands; `gHashTag/trinity/README.md`) |
 | BitNet-3B | 3.1B | 1.2 GB | 12 |
 
 ## Why polynomial time matters

@@ -24,7 +24,7 @@ Trinity — Pure Zig autonomous AI agent swarm.
 
 ### BitNet LLM
 - CPU inference without GPU
-- 63 tok/s @ 1W on FPGA
+- ~~63 tok/s @ 1W on FPGA~~ (withdrawn: ~34 tok/s at 50 MHz; 63 tok/s was a 92 MHz projection and power was not measured, `gHashTag/trinity/README.md`)
 - Quantized weights: {-1, 0, +1}
 
 ### TRI-27

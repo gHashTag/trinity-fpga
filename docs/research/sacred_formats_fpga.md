@@ -240,7 +240,7 @@ tri fpga power sacred_alu --clock 100MHz --duration 60s
 
 | Unit       | Device      | LUT | FF  | DSP | Fmax (MHz) | Notes |
 |------------|------------|-----|-----|-----|------------|-------|
-| hslm_full_top | XC7A100T   | 4,267 | 2,449 | 0 | ≥92 | Autoregressive LLM, 63 tok/s |
+| hslm_full_top | XC7A100T   | 4,267 | 2,449 | 0 | ≥92 | Autoregressive LLM, ~34 tok/s at 50 MHz; 63 tok/s was a 92 MHz projection (`gHashTag/trinity/README.md`) |
 | ternary_mac   | XC7A100T   | ~150 | ~80 | 0 | ≥100 | Single MAC unit |
 
 ### GF16 Format — To Be Measured (Phase 2)

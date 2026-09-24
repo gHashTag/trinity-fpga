@@ -5,6 +5,8 @@
 **Commit:** `84d6b03fe`
 **DOI:** [10.5281/zenodo.18947017](https://doi.org/10.5281/zenodo.18947017)
 
+> **Correction (2026-09-24):** power was not measured, so the ~1W figure and the tok/s/W row are withdrawn. 92 MHz is an Fmax estimate; the run was clocked at 50 MHz, where `gHashTag/trinity/README.md` gives ~34 tok/s (16 tokens in ~467 ms). The rows below are qualified in place.
+
 ## Citation
 
 ```bibtex
@@ -26,14 +28,14 @@ First autoregressive ternary language model running on an FPGA with a fully open
 | Metric | Value |
 |--------|-------|
 | Board | QMTech XC7A100T-1FGG676C ($30) |
-| Power | ~1W |
+| Power | not measured (the earlier ~1W figure is withdrawn: no instrument, rail or method is on record, per `gHashTag/trinity/README.md`) |
 | Toolchain | openXC7 (yosys + nextpnr-xilinx + prjxray) |
 | DSP blocks | **0** |
 | LUT usage | ~7,400 (5.8%) |
 | BRAM usage | ~98% |
-| Fmax | 92 MHz |
-| Latency | 15.9 ms/token @ 92 MHz |
-| Throughput | ~63 tok/s @ 92 MHz |
+| Fmax | 92 MHz (estimate, not measured on the board; the run below was clocked at 50 MHz) |
+| Latency | 15.9 ms/token @ 92 MHz (projected; ~29.2 ms/token at 50 MHz, see Latency Breakdown) |
+| Throughput | ~63 tok/s @ 92 MHz projected; ~34 tok/s at 50 MHz, listed as measured in `gHashTag/trinity/README.md` (16 tokens in ~467 ms, which equals 16 × the 29.2 ms/token clock count in Latency Breakdown) |
 | Tokens generated | 16 (autoregressive from seed=42) |
 | Total generation time | ~467 ms @ 50 MHz |
 
@@ -88,12 +90,12 @@ All weights use 2-bit ternary encoding: `01` = +1, `10` = -1, `00` = 0. Multipli
 
 | Platform | tok/s/W |
 |----------|---------|
-| **Trinity XC7A100T** | **~63** |
+| **Trinity XC7A100T** | ~~**~63**~~ withdrawn: derived from the unmeasured ~1W figure (`gHashTag/trinity/README.md`) |
 | FlightLLM (Alveo U280) | ~1.5 |
 | Bitnet.cpp (M2 Ultra) | ~0.12 |
 | Bitnet.cpp (i7-13700H) | ~0.03 |
 
-Note: models differ in size (HSLM ~60K params vs LLaMA-7B), but the hardware efficiency ratio demonstrates the advantage of natively ternary architectures.
+Note: models differ in size (HSLM ~60K params vs LLaMA-7B), but the hardware efficiency ratio demonstrates the advantage of natively ternary architectures. (Correction 2026-09-24: the Trinity row is withdrawn because power was not measured, so this table no longer supports that conclusion.)
 
 ## Latency Breakdown
 
@@ -142,7 +144,7 @@ Self-test uses `lm_done` (LM head completion) rather than `argmax_valid` (argmax
 
 ## Future Work
 
-1. **Parallel MAC lanes** (4-8x): ~250-500 tok/s, still 0 DSP
+1. **Parallel MAC lanes** (4-8x): ~250-500 tok/s, still 0 DSP (4-8x applied to the ~63 tok/s projection at 92 MHz, not a measurement)
 2. **Block pipelining**: overlap Block N+1 with Block N for ~4x latency reduction
 3. **UART token streaming**: real-time output during generation
 4. **Trained weights**: replace deterministic patterns with actual trained ternary weights
