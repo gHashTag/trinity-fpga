@@ -22,9 +22,13 @@ TRI is the network's unit of payment for verified work, and it is real,
 transferable money. The settlement law below -- what earns a credit and what is
 refused -- is exactly what backs its value: a TRI is worth something only
 because it is paid for work a verifier accepted, never for a promise. TRI is
-issued on-chain, on both TON and Solana (owner decision 2026-09-24). The earlier
-scoping of TRI as a non-transferable internal credit, and the reasons it held at
-a handful of nodes, are kept under finding ISSUANCE_AT_SMALL_N, now superseded.
+issued on-chain, on both TON and Solana (owner decision 2026-09-24). One hundred
+percent of the supply is mined this way and only this way: the mint at genesis is
+zero, there is no pre-mine, no founder allocation and no sale, and every TRI up to
+the 3^21 cap enters circulation when a verifier accepts a spec or a job. The
+earlier scoping of TRI as a non-transferable internal credit, and the reasons it
+held at a handful of nodes, are kept under finding ISSUANCE_AT_SMALL_N, now
+superseded.
 """
 
 constants {

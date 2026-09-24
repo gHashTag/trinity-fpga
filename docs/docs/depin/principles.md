@@ -11,10 +11,12 @@ source of truth is the spec `specs/trinet/settlement_law.t27`.
 
 ## The principle, in one line
 
-**TRI is real, transferable money, and it is paid only for work a verifier
-accepted.** Every accepted turn -- a spec completed, a function repaired until
-`t27c` accepts it, a job computed correctly on a board -- pays TRI. TRI is
-transferable and has value, because it is backed by a receipt anyone can
+**TRI is real, transferable money, and 100% of it is mined by accepted work --
+there is no pre-mine and no sale.** Every accepted turn -- a spec completed, a
+function repaired until `t27c` accepts it, a job computed correctly on a board --
+mints TRI to whoever did it. The minted supply at genesis is zero; every token up
+to the 3^21 cap is panned, not printed. TRI has value because the only way to
+hold one is to have done work a verifier accepted, backed by a receipt anyone can
 recompute.
 
 ## What this replaces
