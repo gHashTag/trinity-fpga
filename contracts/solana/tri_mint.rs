@@ -118,27 +118,61 @@ fn verify_quorum_via_introspection(
         if ix.program_id != ed25519_program::ID {
             continue;
         }
-        // Parse the Ed25519Program instruction: (pubkey, message). Reference
-        // parsing omitted for brevity; it yields `signed_pubkey` and `message`.
-        let (signed_pubkey, message) = parse_ed25519_ix(&ix.data);
-        if &message[..] != &digest[..] {
-            continue; // signed something other than this attestation
-        }
-        for (idx, key) in attestors.iter().enumerate() {
-            if !seen[idx] && *key == signed_pubkey {
-                seen[idx] = true;
-                count += 1;
-                break;
+        // Each Ed25519Program instruction may carry several signatures; the
+        // runtime has already verified them, so we only match (pubkey, message)
+        // against (attestor, digest). Logic verified host-side in
+        // contracts/solana/verify (`cargo test`, 4/4).
+        for (signed_pubkey, message) in parse_ed25519_ix(&ix.data) {
+            if message.as_slice() != &digest[..] {
+                continue; // signed something other than this attestation
+            }
+            for (idx, key) in attestors.iter().enumerate() {
+                if !seen[idx] && *key == signed_pubkey {
+                    seen[idx] = true;
+                    count += 1;
+                    break;
+                }
             }
         }
     }
     Ok(count)
 }
 
-fn parse_ed25519_ix(_data: &[u8]) -> ([u8; 32], Vec<u8>) {
-    // Reference stub: real code decodes the Ed25519Program instruction layout
-    // (num_signatures, offsets, then pubkey/message/signature blobs).
-    unimplemented!("decode Ed25519Program instruction — see solana docs")
+/// Decode the Ed25519Program instruction layout: count:u8, pad:u8, then `count`
+/// offsets structs (7 * u16 LE), then the referenced pubkey/signature/message
+/// bytes. Returns (pubkey, message) for entries that reference THIS
+/// instruction's own data (instruction_index == u16::MAX).
+fn parse_ed25519_ix(data: &[u8]) -> Vec<([u8; 32], Vec<u8>)> {
+    let mut out = Vec::new();
+    if data.len() < 2 {
+        return out;
+    }
+    let count = data[0] as usize;
+    let rd = |p: usize| u16::from_le_bytes([data[p], data[p + 1]]) as usize;
+    const SELF: usize = u16::MAX as usize;
+    let mut off = 2usize;
+    for _ in 0..count {
+        if off + 14 > data.len() {
+            break;
+        }
+        let sig_ix = rd(off + 2);
+        let pk_off = rd(off + 4);
+        let pk_ix = rd(off + 6);
+        let msg_off = rd(off + 8);
+        let msg_sz = rd(off + 10);
+        let msg_ix = rd(off + 12);
+        off += 14;
+        if pk_ix != SELF || msg_ix != SELF || sig_ix != SELF {
+            continue;
+        }
+        if pk_off + 32 > data.len() || msg_off + msg_sz > data.len() {
+            continue;
+        }
+        let mut pk = [0u8; 32];
+        pk.copy_from_slice(&data[pk_off..pk_off + 32]);
+        out.push((pk, data[msg_off..msg_off + msg_sz].to_vec()));
+    }
+    out
 }
 
 #[account]

@@ -334,6 +334,19 @@ test "a mint over the cap is refused and consumes no nonce" {
     try testing.expect(!auth.spent.contains(1)); // nonce not consumed
 }
 
+test "digest matches the cross-language golden vector" {
+    // Independently computed with Python hashlib over the exact big-endian
+    // layout (worker++work_id++chain++amount++nonce++epoch). The Solana and TON
+    // contracts must reproduce THIS digest for the same attestation, or their
+    // signatures verify against a different message than the attestors signed.
+    const golden = [_]u8{
+        0x9c, 0xe2, 0xce, 0xe5, 0x77, 0xfd, 0x87, 0xa7, 0x2b, 0x83, 0x7d, 0x56,
+        0xc7, 0x28, 0xb7, 0x0a, 0x58, 0x0e, 0x36, 0x6f, 0x4a, 0x5b, 0x73, 0x39,
+        0xdb, 0xa8, 0x14, 0x64, 0x39, 0xc1, 0xdd, 0xe7,
+    };
+    try testing.expectEqualSlices(u8, &golden, &sampleAtt(1, 5, .ton).digest());
+}
+
 test "a zero-amount attestation is refused" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
