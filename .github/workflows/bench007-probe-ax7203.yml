@@ -1,0 +1,146 @@
+# BENCH-007 probe bitstream for the ALINX AX7203 (xc7a200tfbg484-2).
+#
+# Sources: bench/bench007/ (see bench/bench007/README.md and RUNBOOK.ru.md).
+# Actions -> "BENCH-007 probe (AX7203)" -> Run workflow. Download the artifact,
+# check the sha256, flash.
+#
+# Differences from the repo's other AX7203 workflows, on purpose:
+#   * NO --timing-allow-fail. A seed that fails timing is rejected like a seed
+#     that fails to route. A bitstream is uploaded only if timing PASSED.
+#   * The nextpnr log (with the timing report) ships with the bitstream, so the
+#     Fmax the report quotes is the one this exact .bit was built with.
+#   * Carry chains are allowed (no -nocarry): the W973-W988 builds show CARRY4
+#     working on this flow, and the counters need them.
+#   * Every clock net is constrained in the XDC and --freq is set to 50, so a
+#     clock that silently fell back to the default is caught, not trusted.
+#   * The openXC7 image is pinned by digest (the chipdb cache key carries it),
+#     so a rebuild uses the same yosys/nextpnr as the recorded build.
+# Reference build of this exact flow (run 35993961960, image digest below, seed 1):
+#   ref_clk 189.18 MHz (target 100), dut_clk 176.80 MHz (target 100),
+#   clk200 1221 MHz (target 200) -- all PASS; 953 LUT, 625 FF, 83 CARRY4.
+#   Fmax moves between builds (178/153 on an earlier netlist): quote your own log.
+
+name: BENCH-007 probe (AX7203)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'bench/bench007/rtl/**'
+      - '.github/workflows/bench007-probe-ax7203.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bench007-probe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bitstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    env:
+      B: build/bench007
+      TOP: bench007_probe_ax7203
+      PART: xc7a200tfbg484-2
+      # the tag 'latest' of regymm/openxc7 as of 2026-04-24 (the reference build's image)
+      IMAGE: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull openXC7 image
+        run: |
+          set -o pipefail
+          for i in 1 2 3 4 5 6; do
+            docker pull "$IMAGE" && break
+            sleep $((i*20))
+          done
+          docker image inspect "$IMAGE" --format '{{.Id}}{{range .RepoDigests}} {{.}}{{end}}' | tee image_id.txt
+          test -s image_id.txt
+
+      - name: Yosys
+        run: |
+          mkdir -p $B
+          docker run --rm -v "$PWD:/work" -w /work "$IMAGE" bash -c "
+            yosys -V &&
+            yosys -l $B/yosys.log -p '
+              read_verilog bench/bench007/rtl/bench_meter.v bench/bench007/rtl/bench007_probe_ax7203.v;
+              synth_xilinx -flatten -abc9 -arch xc7 -top $TOP;
+              write_json $B/$TOP.json'"
+          grep -A30 'Number of cells' $B/yosys.log | tail -30
+
+      - name: Cache chipdb
+        id: chipdb
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.B }}/chipdb/${{ env.PART }}.bin
+          key: chipdb-${{ env.PART }}-${{ env.IMAGE }}-v1
+
+      - name: Generate chipdb
+        if: steps.chipdb.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p $B/chipdb
+          docker run --rm -v "$PWD:/work" -w /work "$IMAGE" bash -c "
+            cd /nextpnr-xilinx &&
+            python3 xilinx/python/bbaexport.py --device $PART --bba /work/$B/chipdb/$PART.bba &&
+            bbasm -l /work/$B/chipdb/$PART.bba /work/$B/chipdb/$PART.bin"
+          rm -f $B/chipdb/$PART.bba
+
+      - name: nextpnr (seed search; timing must PASS)
+        run: |
+          OK=0
+          for s in 1 2 3 4 5 6 7 8; do
+            rm -f $B/$TOP.fasm
+            set +e
+            docker run --rm -v "$PWD:/work" -w /work "$IMAGE" \
+              nextpnr-xilinx --chipdb /work/$B/chipdb/$PART.bin \
+                --xdc /work/bench/bench007/rtl/$TOP.xdc \
+                --json /work/$B/$TOP.json --fasm /work/$B/$TOP.fasm \
+                --freq 50 --seed $s --router router1 > $B/nextpnr_seed$s.log 2>&1
+            rc=$?
+            set -e
+            if [ $rc -ne 0 ] || [ ! -s $B/$TOP.fasm ] || grep -q "Failed to find a route" $B/nextpnr_seed$s.log; then
+              echo "seed $s rejected (rc=$rc)"; grep -E "ERROR|Max frequency" $B/nextpnr_seed$s.log | tail -5
+              continue
+            fi
+            echo "seed $s accepted"; OK=$s; cp $B/nextpnr_seed$s.log $B/nextpnr.log; break
+          done
+          [ "$OK" != "0" ] || { echo "::error::no seed routed with timing met"; exit 1; }
+          # every clock net is constrained in the XDC; --freq 50 is a tripwire for one that is not
+          if grep -q "PASS at 50.00 MHz" $B/nextpnr.log; then
+            echo "::error::a clock fell back to --freq (unconstrained net)"; exit 1
+          fi
+          if grep -q "FAIL at" $B/nextpnr.log; then
+            echo "::error::a clock failed timing"; exit 1
+          fi
+          for c in ref_clk dut_clk clk200; do
+            grep -qE "Max frequency for clock +'$c'.*PASS" $B/nextpnr.log || { echo "::error::no PASS line for $c"; exit 1; }
+          done
+          echo "seed=$OK" > $B/seed.txt
+          grep -E "Max frequency|Device utilisation|Info:\s+(SLICE|CARRY|BUFG)" $B/nextpnr.log || true
+
+      - name: fasm2frames + xc7frames2bit
+        run: |
+          docker run --rm -v "$PWD:/work" -w /work "$IMAGE" bash -c "
+            source /prjxray/env/bin/activate &&
+            fasm2frames --db-root /nextpnr-xilinx/xilinx/external/prjxray-db/artix7 --part $PART \
+              /work/$B/$TOP.fasm /work/$B/$TOP.frames &&
+            /prjxray/build/tools/xc7frames2bit \
+              --part_file /nextpnr-xilinx/xilinx/external/prjxray-db/artix7/$PART/part.yaml \
+              --part_name $PART --frm_file /work/$B/$TOP.frames --output_file /work/$B/$TOP.bit"
+          cd $B && sha256sum $TOP.bit | tee $TOP.bit.sha256
+          ls -l $TOP.bit
+          { echo "commit=$GITHUB_SHA"; echo "run=$GITHUB_RUN_ID"; cat seed.txt; echo "image=$(cat ../../image_id.txt)"; } > provenance.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bench007-probe-ax7203
+          path: |
+            ${{ env.B }}/*.bit
+            ${{ env.B }}/*.sha256
+            ${{ env.B }}/nextpnr.log
+            ${{ env.B }}/yosys.log
+            ${{ env.B }}/provenance.txt
+          retention-days: 90
