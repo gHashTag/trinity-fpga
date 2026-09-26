@@ -1,0 +1,20 @@
+[package]
+name = "tri-mint-verify"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# Host-testable verification of the Solana mint-on-acceptance logic: the
+# attestation digest (must match the Zig oracle's cross-language golden vector)
+# and the Ed25519Program-instruction parser + quorum count. `cargo test`.
+# This is NOT the deployable program (that is ../tri_mint.rs, Anchor/SBF); it is
+# the pure logic that program mirrors, verifiable without a validator.
+
+[dependencies]
+sha2 = "0.10"
+ed25519-dalek = "2"
+
+[dev-dependencies]
+hex = "0.4"
+
+[workspace]

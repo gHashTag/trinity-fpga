@@ -1,0 +1,127 @@
+;; tri_minter.fc — TON mint-on-acceptance minter (jetton master's mint gate).
+;;
+;; REFERENCE, UNAUDITED, NOT BUILT HERE (no func/fift toolchain on this host).
+;; Mirrors the golden oracle src/trinet/mint_authority.zig, tested 10/10 with
+;; real ed25519 signatures. Every rule here must reproduce that oracle.
+;; Protocol of record: specs/trinet/mint_on_acceptance.t27.
+;;
+;; Genesis minted supply is zero. The only op that mints is `op::mint_on_att`
+;; with a valid M-of-N attestor quorum. No founder/treasury/liquidity mint.
+;;
+;; Storage:
+;;   minted_total : uint64        (mTRI minted so far; starts at 0)
+;;   threshold    : uint8         (M)
+;;   epoch        : uint32
+;;   attestors    : cell          (dict: index -> 256-bit ed25519 pubkey, N keys)
+;;   spent        : cell          (dict: global_nonce(128) -> unit; shared view)
+;;   jetton_master: slice         (the jetton to mint from)
+
+#include "imports/stdlib.fc";
+
+const int CAP_TRI    = 10460353203;   ;; 3^21
+const int CHAIN_TON  = 1;             ;; Chain.ton in the oracle
+const int op::mint_on_att = 0x54524931; ;; "TRI1"
+
+;; error codes
+const int err::zero_amount = 101;
+const int err::wrong_chain = 102;
+const int err::wrong_epoch = 103;
+const int err::replayed    = 104;
+const int err::sub_quorum  = 105;
+const int err::over_cap    = 106;
+
+;; SHA-256 over the same big-endian layout as mint_authority.zig::digest:
+;; worker(32) work_id(32) chain(1) amount(8) global_nonce(16) epoch(4).
+int attestation_digest(slice worker, slice work_id, int chain, int amount, int nonce, int epoch) {
+    builder b = begin_cell()
+        .store_slice(worker)          ;; 256 bits
+        .store_slice(work_id)         ;; 256 bits
+        .store_uint(chain, 8)
+        .store_uint(amount, 64)
+        .store_uint(nonce, 128)
+        .store_uint(epoch, 32);
+    return string_hash(b.end_cell().begin_parse()); ;; sha256 of the bytes
+}
+
+;; Count DISTINCT attestor keys whose signature verifies over `digest`.
+;; Mirrors the oracle's quorumReached: outsiders count for nothing, and a key
+;; cannot be counted twice. `sigs` is a dict: attestor_index -> 512-bit sig.
+int count_quorum(int digest, cell attestors, cell sigs, int n) {
+    int distinct = 0;
+    int i = 0;
+    while (i < n) {
+        (slice pk, int fk?) = attestors.udict_get?(8, i);
+        (slice sg, int fs?) = sigs.udict_get?(8, i);
+        if (fk? & fs?) {
+            int pubkey = pk~load_uint(256);
+            ;; check_signature(hash, signature, pubkey) — TVM primitive
+            if (check_signature(digest, sg, pubkey)) {
+                distinct += 1;
+            }
+        }
+        i += 1;
+    }
+    return distinct;
+}
+
+() recv_internal(int msg_value, cell in_msg_full, slice in_msg_body) impure {
+    slice cs = in_msg_body;
+    int op = cs~load_uint(32);
+    if (op != op::mint_on_att) { return (); } ;; ignore other ops
+
+    ;; --- load storage ---
+    slice ds = get_data().begin_parse();
+    int minted_total  = ds~load_uint(64);
+    int threshold     = ds~load_uint(8);
+    int epoch         = ds~load_uint(32);
+    cell attestors    = ds~load_ref();
+    cell spent        = ds~load_dict();
+    slice jetton_master = ds~load_msg_addr();
+    int n_attestors   = ds~load_uint(8);
+
+    ;; --- parse the attestation + signatures from the message ---
+    slice worker   = cs~load_bits(256);
+    slice work_id  = cs~load_bits(256);
+    int chain      = cs~load_uint(8);
+    int amount     = cs~load_uint(64);
+    int nonce      = cs~load_uint(128);
+    int att_epoch  = cs~load_uint(32);
+    cell sigs      = cs~load_dict();
+
+    ;; --- the same checks as the oracle, same order ---
+    throw_if(err::zero_amount, amount == 0);
+    throw_unless(err::wrong_chain, chain == CHAIN_TON);
+    throw_unless(err::wrong_epoch, att_epoch == epoch);
+    (_, int seen?) = spent.udict_get?(128, nonce);
+    throw_if(err::replayed, seen?);
+
+    int digest = attestation_digest(worker, work_id, chain, amount, nonce, att_epoch);
+    throw_unless(err::sub_quorum, count_quorum(digest, attestors, sigs, n_attestors) >= threshold);
+
+    ;; cap checked last, so an over-cap attempt consumes no nonce
+    int next = minted_total + amount;
+    throw_if(err::over_cap, next > CAP_TRI);
+
+    ;; --- spend the nonce, bump the total, persist ---
+    spent~udict_set_builder(128, nonce, begin_cell());
+    set_data(begin_cell()
+        .store_uint(next, 64)
+        .store_uint(threshold, 8)
+        .store_uint(epoch, 32)
+        .store_ref(attestors)
+        .store_dict(spent)
+        .store_slice(jetton_master)
+        .store_uint(n_attestors, 8)
+        .end_cell());
+
+    ;; --- send the jetton mint message to `worker` for `amount` ---
+    ;; (standard jetton mint: internal message to the jetton master with a
+    ;; mint body targeting the worker's jetton wallet; body omitted for brevity)
+    send_jetton_mint(jetton_master, worker, amount);
+}
+
+;; get-methods
+int minted_total() method_id {
+    slice ds = get_data().begin_parse();
+    return ds~load_uint(64);
+}

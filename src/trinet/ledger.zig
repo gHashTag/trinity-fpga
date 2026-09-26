@@ -1,15 +1,17 @@
 //! TRI settlement — turning verified ternary compute into credit, and making
 //! cheating cost more than it pays.
 //!
-//! WHAT TRI IS HERE. A TRI unit in this ledger is an internal work credit: a
-//! record that a node performed a verified unit of ternary compute. It is not
-//! minted on a chain, it is not transferable between owners, and nothing in
-//! this module issues a financial instrument. That is a deliberate scoping
-//! choice, not an oversight — a network can bootstrap, measure contribution
-//! and pay contributors out of a budget without ever issuing a token, and the
-//! moment a transferable token exists the design question stops being
-//! technical. Keeping the credit non-transferable is what lets the accounting
-//! be built and tested now.
+//! WHAT TRI IS HERE. This ledger records an earning: proof that a node
+//! performed a verified unit of ternary compute, with the anti-cheat rule that
+//! makes the record trustworthy. As of the owner decision on 2026-09-24, TRI is
+//! a real, transferable token, and this earning is what authorises a mint of it
+//! on-chain — 100% of TRI is mined by accepted work, with no pre-mine and no
+//! sale (specs/trinet/settlement_law.t27, specs/trinet/mint_on_acceptance.t27).
+//! This module still does the accounting; it does not itself issue the token.
+//! The on-chain mint path is the attestor-quorum authority modelled and tested
+//! in src/trinet/mint_authority.zig, which the TON and Solana contracts mirror.
+//! (Earlier revisions of this note scoped TRI as a non-transferable internal
+//! credit; that scoping is superseded — see finding ISSUANCE_AT_SMALL_N.)
 //!
 //! THE ECONOMIC CONDITION. A compute market only works if the expected value
 //! of cheating is negative. With an audit rate p, a reward r per accepted job
