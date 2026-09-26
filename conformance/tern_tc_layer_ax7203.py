@@ -1,52 +1,549 @@
 #!/usr/bin/env python3
-"""Stage B.1 - one real tern_tc layer's wq matrix on the AX7203, bit-exact.
+"""The trained tern_tc weights on the AX7203 node cell, with every receipt checked.
 
 Reads the TC02 binary exported from the trained tern_tc checkpoint
-(igla-coder-gpu/c_infer/model.bin), takes layer 0's wq (d_model x d_model
-ternary weights, the matrix the board cell's shape was chosen for) and runs
-every row against ternary activation vectors on the board over UART. The
-oracle is the independent Python golden dot; a second oracle in C (extracted
-from tc_infer.c's ternary_matvec) guards against a shared packing bug.
+(igla-coder-gpu/c_infer/model.bin), splits every row of every chosen ternary
+weight matrix into 32-trit chunks, sends each chunk to the TRI-NET node cell
+over UART, and accepts an answer only if ALL of these hold for its response:
 
-The cell only takes ternary activations (int8 activations are Stage B.3), so
-x vectors are ternary; what makes this run "the real layer" is that the
-weights come from the trained model, not from a RNG.
+  * status is 0x01 (keyed: the node holds a key and signed the answer);
+  * the nonce echoes one this run issued, exactly once;
+  * node_id equals the one the first response pinned;
+  * the 8-byte SipHash-2-4 tag equals siphash24(preimage, key) recomputed here;
+  * y equals the dot product of that chunk's operands.
 
-Usage:
-    python3 tern_tc_layer_ax7203.py --port /dev/cu.usbserial-130 --baud 1144744 \
-        --keys ../trinet-keys.txt --model ~/igla-coder-gpu/c_infer/model.bin
+A row passes only if every one of its chunks was accepted AND the chunk sum
+equals the row dot computed straight from the model's int8 weights, not from
+the packed wire bytes, so a packing bug cannot hide behind a shared oracle.
+
+WHY THIS FILE WAS REWRITTEN (2026-09-26). The first version printed
+"receipts authenticated under node0's key" but never compared a tag: it built
+the preimage and dropped it, and counted `status == 0x01` as authentication.
+It also compared only per-row sums (chunk errors could cancel) and never
+checked the nonce echo. Its dot-product result stands; its receipt count does
+not, until this version reruns on the board.
+
+WHAT THE CELL CAN ALREADY DO THAT WAS BOOKED AS FUTURE WORK.
+  * w_down has an 864-wide input. 864 = 27 x 32, so it is 27 chunks per row on
+    the same 32-wide cell, not a wider cell.
+  * wk and wv also have a 320-wide input and were skipped.
+  * int8 activations: every q in [-127, 127] is a sum of 6 balanced-ternary
+    digits, q = sum_k 3^k d_k with d_k in {-1, 0, +1}. So w.q = sum_k 3^k (w.d_k)
+    and each w.d_k is an ordinary ternary x ternary job. `--act int8` runs
+    6 digit planes per vector and recombines them on the host. The cell does
+    only ternary work; the powers of 3 are applied here, in the open.
+
+Board-free checks:
+    python3 tern_tc_layer_ax7203.py --self-test
+RTL co-simulation (the real trinet_node_core under iverilog, no board):
+    python3 tern_tc_layer_ax7203.py --synthetic --layers 0 --all --setkey \\
+        --keys test --emit-requests req.hex
+    (run formal/tern_tc_layer_rtl_tb.v, which writes resp.hex)
+    python3 tern_tc_layer_ax7203.py --synthetic --layers 0 --all --setkey \\
+        --keys test --responses resp.hex
+Board:
+    python3 tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-130 \\
+        --baud 1144744 --keys ../trinet-keys.txt --model ~/igla-coder-gpu/c_infer/model.bin
+
+Author: Dmitrii Vasilev (@gHashTag)
 """
 import argparse
 import os
+import random
 import struct
 import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from trinet_mac32_conformance_ax7203 import (  # noqa: E402
-    N_BYTES, N_TRITS, OP_MAC32, STATUS_OK,
-    golden_dot, pack_trits, siphash24, receipt_preimage,
+    N_TRITS, OP_MAC32, STATUS_OK,
+    golden_dot, pack_trits, receipt_preimage, siphash24, unpack_trits,
 )
 
-D_MODEL = 320
-CHUNKS = D_MODEL // N_TRITS
+OP_SETKEY = 0x02
+ST_KEY_SET = 0x02
+ST_KEY_LOCKED = 0x03
+ST_NO_KEY = 0x04
 MAGIC_RESP = 0xA5
 RESP_LEN = 19
-ZERO = bytes(1)
+SETKEY_NONCE = 0x7E7E0001
+FIRST_JOB_NONCE = 0x00010000       # keep job nonces clear of the setkey nonce
 
-def parse_keyed_response(raw: bytes):
-    if len(raw) < RESP_LEN or raw[0] != MAGIC_RESP:
-        return None
+KINDS = ("wq", "wk", "wv", "wo", "gate", "up", "down")
+LEGACY_B1 = ("wq", "wo", "gate", "up")   # the 24-matrix set of commit 1f131fd
+INT8_DIGITS = 6                          # 3^6 = 729: covers [-364, 364]
+
+# A public test key (the SipHash reference key). Never deploy it.
+TEST_KEY = bytes(range(16))
+
+
+# ---------------------------------------------------------------------------
+# Model file
+# ---------------------------------------------------------------------------
+
+def load_tc02(path, kinds, layers=None):
+    """Chosen ternary matrices of a TC02 file as [(name, rows, in_dim)].
+
+    Layout per igla-coder-gpu/scripts/export_tc_bin.py: header, f32 embed,
+    then per layer: norm1, wq+g, wk+g, wv+g, wo+g, norm2, gate+g, up+g, down+g.
+    Each weight is int8 in {-1, 0, +1}, row-major [out][in].
+    """
+    f = open(path, "rb")
+    if f.read(4) != b"TC02":
+        raise SystemExit(f"{path}: not a TC02 file")
+    n_layer, n_head, n_kv_head, d_model, d_ff, head_dim, vocab = \
+        struct.unpack("<7i", f.read(28))
+    qd, kvd = n_head * head_dim, n_kv_head * head_dim
+    shapes = [("wq", qd, d_model), ("wk", kvd, d_model), ("wv", kvd, d_model),
+              ("wo", d_model, qd), ("gate", d_ff, d_model), ("up", d_ff, d_model),
+              ("down", d_model, d_ff)]
+    f.seek(4 * vocab * d_model, 1)                      # embed (f32)
+    out = []
+    for L in range(n_layer):
+        f.seek(4 * d_model, 1)                          # norm1
+        for kind, n_out, n_in in shapes:
+            if kind == "gate":
+                f.seek(4 * d_model, 1)                  # norm2
+            want = kind in kinds and (layers is None or L in layers)
+            if want:
+                buf = struct.unpack(f"<{n_out * n_in}b", f.read(n_out * n_in))
+                if not set(buf) <= {-1, 0, 1}:
+                    raise SystemExit(f"L{L}/{kind}: weights are not ternary")
+                rows = [buf[r * n_in:(r + 1) * n_in] for r in range(n_out)]
+                out.append((f"L{L}/{kind}", rows, n_in))
+            else:
+                f.seek(n_out * n_in, 1)
+            f.seek(4, 1)                                # per-tensor scale g
+    return out, dict(n_layer=n_layer, d_model=d_model, d_ff=d_ff, vocab=vocab)
+
+
+def write_synthetic_tc02(path, seed=0x7C02, density=0.597, n_layer=6, n_head=5,
+                         n_kv_head=1, d_model=320, d_ff=864, head_dim=64,
+                         vocab=64):
+    """A TC02 file with tern_tc's shapes and random ternary weights.
+
+    Used where the trained model.bin is not available (CI, the cloud, RTL
+    co-simulation). Its vocab is shrunk because only the skip matters.
+    """
+    rng = random.Random(seed)
+    qd, kvd = n_head * head_dim, n_kv_head * head_dim
+
+    def tern(n):
+        return bytes((rng.choice((1, 0xFF)) if rng.random() < density else 0)
+                     for _ in range(n))
+
+    with open(path, "wb") as f:
+        f.write(b"TC02")
+        f.write(struct.pack("<7i", n_layer, n_head, n_kv_head, d_model, d_ff,
+                            head_dim, vocab))
+        f.write(bytes(4 * vocab * d_model))
+        for _ in range(n_layer):
+            f.write(bytes(4 * d_model))
+            for n_out, n_in in ((qd, d_model), (kvd, d_model), (kvd, d_model),
+                                (d_model, qd)):
+                f.write(tern(n_out * n_in) + struct.pack("<f", 1.0))
+            f.write(bytes(4 * d_model))
+            for n_out, n_in in ((d_ff, d_model), (d_ff, d_model), (d_model, d_ff)):
+                f.write(tern(n_out * n_in) + struct.pack("<f", 1.0))
+        f.write(bytes(4 * d_model))
+
+
+# ---------------------------------------------------------------------------
+# Activations
+# ---------------------------------------------------------------------------
+
+def balanced_ternary(q, digits=INT8_DIGITS):
+    """q -> [d_0 .. d_{digits-1}], d_k in {-1,0,+1}, q = sum 3^k d_k."""
+    out = []
+    for _ in range(digits):
+        r = q % 3
+        d = -1 if r == 2 else r
+        out.append(d)
+        q = (q - d) // 3
+    if q != 0:
+        raise ValueError("value out of range for balanced-ternary digits")
+    return out
+
+
+def make_vectors(in_dim, act, n_x, rng):
+    """Activation vectors for one input width: [(values, planes)].
+
+    planes = [(weight, trit_vector)]; the row dot is sum weight * (w . trits).
+    """
+    vecs = []
+    for _ in range(n_x):
+        if act == "ternary":
+            x = [rng.choice((-1, 0, 1)) for _ in range(in_dim)]
+            vecs.append((x, [(1, x)]))
+        else:
+            x = [rng.randint(-127, 127) for _ in range(in_dim)]
+            digs = [balanced_ternary(v) for v in x]
+            planes = [(3 ** k, [d[k] for d in digs]) for k in range(INT8_DIGITS)]
+            vecs.append((x, planes))
+    return vecs
+
+
+# ---------------------------------------------------------------------------
+# Jobs
+# ---------------------------------------------------------------------------
+
+def build_jobs(mats, act, n_x, seed):
+    """Every chunk job, plus the per-row reference computed from int weights.
+
+    A job is (w_bytes, x_bytes, row_id, weight); its nonce is
+    FIRST_JOB_NONCE + its index, so nothing else needs storing per job.
+    """
+    rng = random.Random(seed)
+    vec_cache = {}
+    jobs, rows_ref = [], []
+    for name, rows, in_dim in mats:
+        if in_dim % N_TRITS:
+            raise SystemExit(f"{name}: input {in_dim} is not a multiple of {N_TRITS}")
+        chunks = in_dim // N_TRITS
+        if in_dim not in vec_cache:
+            vecs = make_vectors(in_dim, act, n_x, rng)
+            vec_cache[in_dim] = [
+                (x, [(weight, [pack_trits(trits[c * N_TRITS:(c + 1) * N_TRITS])
+                               for c in range(chunks)])
+                     for weight, trits in planes])
+                for x, planes in vecs]
+        for xi, (x, planes) in enumerate(vec_cache[in_dim]):
+            for r, row in enumerate(rows):
+                row_id = len(rows_ref)
+                rows_ref.append((name, xi, r, sum(w * v for w, v in zip(row, x))))
+                wbs = [pack_trits(row[c * N_TRITS:(c + 1) * N_TRITS])
+                       for c in range(chunks)]
+                for weight, xbs in planes:
+                    for c in range(chunks):
+                        jobs.append((wbs[c], xbs[c], row_id, weight))
+    if FIRST_JOB_NONCE + len(jobs) >= 1 << 32:
+        raise SystemExit("too many jobs for a 32-bit nonce")
+    return jobs, rows_ref
+
+
+def request(op, nonce, w, x):
+    return bytes([0xAA, 0x55, op]) + nonce.to_bytes(4, "little") + w + x + b"\x00"
+
+
+def setkey_request(key):
+    return request(OP_SETKEY, SETKEY_NONCE, key[:8], key[8:])
+
+
+def parse(raw):
     return {
         "y": raw[1] - 256 if raw[1] > 127 else raw[1],
         "status": raw[2],
-        "nonce": raw[3:7],
+        "nonce": int.from_bytes(raw[3:7], "little"),
         "node_id": int.from_bytes(raw[7:11], "little"),
         "tag": int.from_bytes(raw[11:19], "little"),
     }
 
 
+# ---------------------------------------------------------------------------
+# Transports: a serial port, a recorded response stream, or a reference cell
+# ---------------------------------------------------------------------------
+
+class SerialLink:
+    def __init__(self, port, baud):
+        import serial
+        self.ser = serial.Serial(port, baud, timeout=2)
+        self.ser.reset_input_buffer()
+
+    def write(self, b):
+        self.ser.write(b)
+
+    def read(self, n):
+        return self.ser.read(n)
+
+
+class ReplayLink:
+    """Responses recorded by the RTL testbench: one hex byte per line."""
+
+    def __init__(self, path):
+        self.buf = bytes(int(t, 16) for t in open(path).read().split())
+        self.pos = 0
+
+    def write(self, b):
+        pass
+
+    def read(self, n):
+        out = self.buf[self.pos:self.pos + n]
+        self.pos += len(out)
+        return out
+
+
+class RefCell:
+    """A Python model of fpga/portable/trinet_node_core.v, for negative controls.
+
+    `fault` makes it misbehave in exactly one way, so the self-test can show
+    that each check can fail.
+    """
+
+    def __init__(self, node_id=0x5452494E, key=None, fault=None, fault_at=5):
+        self.node_id, self.key, self.fault, self.fault_at = node_id, key, fault, fault_at
+        self.rx, self.out, self.n = b"", bytearray(), 0
+
+    def write(self, b):
+        self.rx += b
+        while len(self.rx) >= 24:
+            frame, self.rx = self.rx[:24], self.rx[24:]
+            self._answer(frame)
+
+    def _answer(self, fr):
+        op, nonce, w, x = fr[2], fr[3:7], fr[7:15], fr[15:23]
+        if op == OP_SETKEY:
+            if self.key is None:
+                self.key, status = w + x, ST_KEY_SET
+            else:
+                status = ST_KEY_LOCKED
+            y, sign_key = 0, w + x if status == ST_KEY_SET else self.key
+        else:
+            y = golden_dot(w, x)
+            status = STATUS_OK if self.key is not None else ST_NO_KEY
+            sign_key = self.key or bytes(16)
+        node = self.node_id
+        hit = op == OP_MAC32 and self.n == self.fault_at
+        if op == OP_MAC32:
+            self.n += 1
+        if hit and self.fault == "lie":          # wrong answer, honestly signed
+            y += 2
+        if hit and self.fault == "nonce":
+            nonce = (int.from_bytes(nonce, "little") ^ 0x40000000).to_bytes(4, "little")
+        if hit and self.fault == "impersonate":
+            node ^= 1
+        if self.fault == "wrong_key":
+            sign_key = bytes(16 - i for i in range(16))
+        tag = siphash24(receipt_preimage(op, nonce, w, x, y & 0xFF, node), sign_key)
+        resp = (bytes([MAGIC_RESP, y & 0xFF, status]) + nonce
+                + node.to_bytes(4, "little") + tag.to_bytes(8, "little"))
+        if hit and self.fault == "damage":
+            resp = resp[:12] + bytes([resp[12] ^ 0x10]) + resp[13:]
+        if hit and self.fault == "drop":
+            return
+        self.out += resp
+
+    def read(self, n):
+        out, self.out = bytes(self.out[:n]), self.out[n:]
+        return out
+
+
+# ---------------------------------------------------------------------------
+# The run
+# ---------------------------------------------------------------------------
+
+def install_key(link, key, log=print):
+    """op 0x02, then check the ack is signed with the key we sent."""
+    link.write(setkey_request(key))
+    raw = link.read(RESP_LEN)
+    if len(raw) < RESP_LEN or raw[0] != MAGIC_RESP:
+        log("setkey: no answer")
+        return None
+    r = parse(raw)
+    if r["status"] == ST_KEY_SET:
+        pre = receipt_preimage(OP_SETKEY, SETKEY_NONCE.to_bytes(4, "little"),
+                               key[:8], key[8:], 0, r["node_id"])
+        if r["tag"] != siphash24(pre, key):
+            log("setkey: ack status 0x02 but its tag does not verify under our key")
+            return None
+        log(f"setkey: key installed on node {r['node_id']:#010x}; ack tag verifies")
+    elif r["status"] == ST_KEY_LOCKED:
+        log(f"setkey: node {r['node_id']:#010x} already holds a key "
+            f"(0x03); receipts below will show whether it is ours")
+    else:
+        log(f"setkey: unexpected status {r['status']:#04x}")
+        return None
+    return r["node_id"]
+
+
+def run(link, jobs, rows_ref, key, window=64, log=print):
+    """Send jobs pipelined, classify every response, then rebuild rows."""
+    n = len(jobs)
+    got = [None] * n
+    counts = dict(accepted=0, lie=0, damage=0, tag=0, status=0, node=0,
+                  fabricated=0, duplicate=0, short=0)
+    answered = 0
+    node_pin = None
+    sent = outstanding = 0
+    first_bad = []
+
+    def bad(kind, msg):
+        counts[kind] += 1
+        if len(first_bad) < 8:
+            first_bad.append(msg)
+
+    seen = bytearray(n)
+    while sent < n or outstanding:
+        while sent < n and outstanding < window:
+            w, x, _row, _weight = jobs[sent]
+            link.write(request(OP_MAC32, FIRST_JOB_NONCE + sent, w, x))
+            sent += 1
+            outstanding += 1
+        raw = link.read(RESP_LEN)
+        if len(raw) < RESP_LEN or raw[0] != MAGIC_RESP:
+            bad("short", f"after {sent} sent: short or unframed read ({len(raw)} bytes)")
+            break                        # stop: a lost frame makes the rest a guess
+        outstanding -= 1
+        r = parse(raw)
+        i = r["nonce"] - FIRST_JOB_NONCE
+        if not 0 <= i < sent:
+            bad("fabricated", f"nonce {r['nonce']:#010x} was never issued")
+            continue
+        if seen[i]:
+            bad("duplicate", f"nonce {r['nonce']:#010x} answered twice")
+            continue
+        seen[i] = 1
+        answered += 1
+        if r["status"] != STATUS_OK:
+            bad("status", f"nonce {r['nonce']:#010x}: status {r['status']:#04x}")
+            continue
+        if node_pin is None:
+            node_pin = r["node_id"]
+        if r["node_id"] != node_pin:
+            bad("node", f"nonce {r['nonce']:#010x}: node {r['node_id']:#010x} "
+                        f"!= {node_pin:#010x}")
+            continue
+        w, x, _row, _weight = jobs[i]
+        nb = r["nonce"].to_bytes(4, "little")
+        expect = golden_dot(w, x)
+        tag_ok = r["tag"] == siphash24(
+            receipt_preimage(OP_MAC32, nb, w, x, r["y"] & 0xFF, r["node_id"]), key)
+        if tag_ok and r["y"] == expect:
+            counts["accepted"] += 1
+            got[i] = r["y"]
+        elif tag_ok:
+            bad("lie", f"nonce {r['nonce']:#010x}: y={r['y']} expected {expect}, "
+                       f"and the tag signs the wrong answer")
+        elif r["y"] != expect:
+            bad("damage", f"nonce {r['nonce']:#010x}: y={r['y']} expected {expect}, "
+                          f"tag fits neither")
+        else:
+            bad("tag", f"nonce {r['nonce']:#010x}: right y, tag does not verify")
+
+    acc = {}
+    complete = {}
+    for (_w, _x, rid, weight), y in zip(jobs, got):
+        if y is None:
+            complete[rid] = False
+        else:
+            complete.setdefault(rid, True)
+            acc[rid] = acc.get(rid, 0) + weight * y
+    exact = sum(1 for rid, ref in enumerate(rows_ref)
+                if complete.get(rid) and acc.get(rid) == ref[3])
+    counts["missing"] = n - answered
+    return dict(counts=counts, exact=exact, rows=len(rows_ref), jobs=len(jobs),
+                node=node_pin, first_bad=first_bad,
+                per_matrix=_per_matrix(rows_ref, acc, complete))
+
+
+def _per_matrix(rows_ref, acc, complete):
+    out = {}
+    for rid, (name, _xi, _r, ref) in enumerate(rows_ref):
+        t = out.setdefault(name, [0, 0])
+        t[1] += 1
+        if complete.get(rid) and acc.get(rid) == ref:
+            t[0] += 1
+    return out
+
+
+def report(res, elapsed, act, log=print):
+    c = res["counts"]
+    for name, (ok, tot) in res["per_matrix"].items():
+        log(f"  [{'ok ' if ok == tot else 'FAIL'}] {name:9s} {ok:6d}/{tot:<6d} rows bit-exact")
+    log("-" * 66)
+    log(f"jobs sent               : {res['jobs']}")
+    log(f"receipts verified (tag) : {c['accepted']}/{res['jobs']}"
+        + (f" under node {res['node']:#010x}" if res["node"] is not None else ""))
+    rejected = {k: v for k, v in c.items() if k != "accepted" and v}
+    log(f"rejected                : {rejected if rejected else 'none'}")
+    log(f"rows bit-exact          : {res['exact']}/{res['rows']}  (activations: {act})")
+    if elapsed:
+        log(f"elapsed                 : {elapsed:.2f} s ({res['jobs'] / elapsed:.0f} jobs/s)")
+    for m in res["first_bad"]:
+        log(f"  ! {m}")
+    log("-" * 66)
+    return c["accepted"] == res["jobs"] and res["exact"] == res["rows"]
+
+
+# ---------------------------------------------------------------------------
+# Self-test: the checks, each shown able to fail
+# ---------------------------------------------------------------------------
+
+def self_test(scratch):
+    ok = True
+
+    def check(cond, what):
+        nonlocal ok
+        print(f"  {'ok  ' if cond else 'FAIL'} {what}")
+        ok = ok and cond
+
+    print("self-test (no board)")
+    rng = random.Random(1)
+    for _ in range(500):
+        t = [rng.choice((-1, 0, 1)) for _ in range(N_TRITS)]
+        if unpack_trits(pack_trits(t)) != t:
+            break
+    else:
+        t = None
+    check(t is None, "pack/unpack round trip, 500 vectors")
+    check(all(sum(3 ** k * d for k, d in enumerate(balanced_ternary(q))) == q
+              for q in range(-364, 365)), "balanced-ternary digits rebuild every q in [-364, 364]")
+    check(siphash24(bytes(range(26)), TEST_KEY) == 0x17D835B85BBB15F3,
+          "siphash24 reproduces the published 26-byte vector")
+
+    path = os.path.join(scratch, "synthetic_tc02.bin")
+    write_synthetic_tc02(path)
+    mats, hdr = load_tc02(path, KINDS)
+    ins = {n.split("/")[1]: i for n, _, i in mats}
+    check(len(mats) == 42 and ins["down"] == 864 and ins["wk"] == 320,
+          "TC02 parse: 42 ternary matrices; w_down is 864-in (27 chunks), wk 320-in")
+    n_w = sum(len(r) * i for _, r, i in mats)
+    check(n_w == 6451200, f"TC02 parse: {n_w} ternary weights = tern_tc's 6.45M")
+
+    small, _ = load_tc02(path, ("wk", "down"), layers={0})
+    small = [(n, r[:6], i) for n, r, i in small]
+    for act in ("ternary", "int8"):
+        jobs, ref = build_jobs(small, act, 1, seed=3)
+        res = run(RefCell(key=TEST_KEY), jobs, ref, TEST_KEY, log=lambda *_: None)
+        check(res["exact"] == res["rows"] and res["counts"]["accepted"] == len(jobs),
+              f"honest cell, {act} activations: {res['exact']}/{res['rows']} rows, "
+              f"{res['counts']['accepted']}/{len(jobs)} receipts")
+
+    jobs, ref = build_jobs(small, "ternary", 1, seed=3)
+    cases = [
+        ("wrong_key", "tag", "a cell signing with another key"),
+        ("lie", "lie", "a wrong answer with a valid tag"),
+        ("damage", "tag", "one flipped tag bit"),
+        ("nonce", "fabricated", "a nonce this run never issued"),
+        ("impersonate", "node", "a response from another node id"),
+        ("drop", "short", "a dropped response"),
+    ]
+    for fault, kind, what in cases:
+        res = run(RefCell(key=TEST_KEY, fault=fault), jobs, ref, TEST_KEY,
+                  window=1, log=lambda *_: None)
+        passed = res["counts"]["accepted"] == len(jobs) and res["exact"] == res["rows"]
+        check(not passed and res["counts"][kind] > 0,
+              f"rejects {what} (counted as '{kind}')")
+    cell = RefCell(key=None)
+    res = run(cell, jobs, ref, TEST_KEY, log=lambda *_: None)
+    check(res["counts"]["status"] == len(jobs) and res["exact"] == 0,
+          "an unkeyed cell (status 0x04) gets no credit, though its y is right")
+    cell = RefCell(key=None)
+    check(install_key(cell, TEST_KEY, log=lambda *_: None) is not None,
+          "setkey: ack tag verifies under the key sent")
+    res = run(cell, jobs, ref, TEST_KEY, log=lambda *_: None)
+    check(res["exact"] == res["rows"], "after setkey, the same cell passes")
+    check(install_key(cell, bytes(16 - i for i in range(16)), log=lambda *_: None)
+          is not None and run(cell, jobs, ref, TEST_KEY, log=lambda *_: None)["exact"]
+          == res["rows"], "a second setkey is refused (0x03) and the first key holds")
+    print(f"self-test: {'PASS' if ok else 'FAIL'}")
+    return ok
+
+
+# ---------------------------------------------------------------------------
+
 def load_key(path, name="node0"):
+    if path == "test":
+        return TEST_KEY
     for line in open(path):
         p = line.split()
         if len(p) == 2 and p[0] == name and len(p[1]) == 32:
@@ -54,147 +551,81 @@ def load_key(path, name="node0"):
     raise SystemExit(f"no key for {name} in {path}")
 
 
-def load_tc02(path, all_mats=False):
-    """All 320-input weight matrices of a TC02 file, as trit row lists.
-
-    Returns [(name, rows)] where name is like "L0/wq". With all_mats=False,
-    only layer 0's wq - the original Stage B.1 shape.
-    """
-    f = open(path, "rb")
-    assert f.read(4) == b"TC02", "not a TC02 file"
-    n_layer, n_head, n_kv_head, d_model, d_ff, head_dim, vocab = \
-        struct.unpack("<7i", f.read(28))
-    assert d_model == D_MODEL, f"model d_model {d_model} != cell {D_MODEL}"
-    qd = n_head * head_dim
-    f.seek(4 * vocab * d_model, 1)                # skip embed
-
-    def rows_of(count, per_row=D_MODEL):
-        buf = struct.unpack(f"<{count * per_row}b", f.read(count * per_row))
-        rs = [buf[r * per_row:(r + 1) * per_row] for r in range(count)]
-        assert set(rs[0]) <= {-1, 0, +1}, "weights are not ternary"
-        return rs
-
-    out = []
-    for L in range(n_layer):
-        f.seek(4 * d_model, 1)                    # norm1_w
-        out.append((f"L{L}/wq", rows_of(qd)))     # wq
-        f.seek(4, 1)                              # gq
-        kvd = n_kv_head * head_dim
-        f.seek(kvd * d_model + 4, 1)              # wk + gk
-        f.seek(kvd * d_model + 4, 1)              # wv + gv
-        out.append((f"L{L}/wo", rows_of(D_MODEL)))  # wo
-        f.seek(4, 1)                              # go
-        f.seek(4 * d_model, 1)                    # norm2_w
-        if all_mats:
-            out.append((f"L{L}/gate", rows_of(d_ff)))   # w_gate
-            f.seek(4, 1)                          # gg
-            out.append((f"L{L}/up", rows_of(d_ff)))     # w_up
-            f.seek(4, 1)                          # gu
-            f.seek(D_MODEL * d_ff + 4, 1)         # w_down (864-in) + gd
-        else:
-            f.seek(3 * (D_MODEL * d_ff + 4), 1)   # gate/up/down + scales
-    return out
-
-
-def run_matrix(ser, key, name, rows, xs, window, stats):
-    """One weight matrix against every x vector; fills stats."""
-    jobs = []
-    for xi, x in enumerate(xs):
-        for r, row in enumerate(rows):
-            for c in range(CHUNKS):
-                wb = pack_trits(row[c * N_TRITS:(c + 1) * N_TRITS])
-                xb = pack_trits(x[c * N_TRITS:(c + 1) * N_TRITS])
-                req = (bytes([0xAA, 0x55, OP_MAC32])
-                       + (stats["job"]).to_bytes(4, "little")
-                       + wb + xb + ZERO)
-                jobs.append((r, xi, req, wb, xb))
-                stats["job"] += 1
-
-    acc, ref_acc = {}, {}
-    sent, inflight = 0, []
-    while sent < len(jobs) or inflight:
-        while sent < len(jobs) and len(inflight) < window:
-            job = jobs[sent]
-            ser.write(job[2])
-            inflight.append((sent, job))
-            sent += 1
-        raw = ser.read(RESP_LEN)
-        if not raw or len(raw) < RESP_LEN:
-            continue
-        _, (r, xi, _req, wb, xb) = inflight.pop(0)
-        resp = parse_keyed_response(raw)
-        nonce = ((xi * len(rows) + r) * CHUNKS + c_dummy if False else None)
-        if resp is None or resp["status"] != STATUS_OK:
-            stats["bad"] += 1
-            continue
-        pre = receipt_preimage(OP_MAC32, (0).to_bytes(4, "little"),
-                               wb, xb, resp["y"] & 0xFF, 0x5452494E)
-        stats["ok"] += 1
-        k = (xi, r)
-        acc[k] = acc.get(k, 0) + resp["y"]
-        ref_acc[k] = ref_acc.get(k, 0) + golden_dot(wb, xb)
-    exact = sum(1 for k in ref_acc if acc.get(k) == ref_acc[k])
-    stats["exact"] += exact
-    stats["rows"] += len(ref_acc)
-    tag = "ok " if exact == len(ref_acc) else "FAIL"
-    print(f"  [{tag}] {name:9s} {len(rows):4d} rows x {len(xs)} x: "
-          f"{exact}/{len(ref_acc)} bit-exact")
-    return exact == len(ref_acc)
-
-
 def main():
-    a = argparse.ArgumentParser()
+    a = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     a.add_argument("--port", default="/dev/cu.usbserial-130")
     a.add_argument("--baud", type=int, default=1144744)
-    a.add_argument("--keys", default="../trinet-keys.txt")
+    a.add_argument("--keys", default="../trinet-keys.txt",
+                   help="key file, or 'test' for the public SipHash test key")
+    a.add_argument("--node", default="node0", help="key name in the key file")
     a.add_argument("--model", default=os.path.expanduser(
         "~/igla-coder-gpu/c_infer/model.bin"))
+    a.add_argument("--synthetic", action="store_true",
+                   help="random ternary weights in tern_tc's shapes (no model.bin)")
     a.add_argument("--all", action="store_true",
-                   help="every 320-input matrix (wq/wo/gate/up, all layers)")
-    a.add_argument("--n_x", type=int, default=2, help="activation vectors")
+                   help="every ternary matrix: wq wk wv wo gate up down")
+    a.add_argument("--mats", help=f"comma list from {','.join(KINDS)} "
+                                  f"(legacy B.1 set: {','.join(LEGACY_B1)})")
+    a.add_argument("--layers", help="comma list of layer indices (default: all)")
+    a.add_argument("--act", choices=("ternary", "int8"), default="ternary")
+    a.add_argument("--n_x", type=int, default=2, help="activation vectors per width")
+    a.add_argument("--seed", type=int, default=0x7213)
     a.add_argument("--window", type=int, default=64, help="jobs in flight")
+    a.add_argument("--setkey", action="store_true",
+                   help="install the key first (op 0x02) and verify the ack")
+    a.add_argument("--emit-requests", metavar="HEX",
+                   help="write the request byte stream for the RTL testbench")
+    a.add_argument("--responses", metavar="HEX",
+                   help="verify a response stream recorded by the RTL testbench")
+    a.add_argument("--self-test", action="store_true")
     args = a.parse_args()
 
-    import serial
+    if args.self_test:
+        scratch = os.environ.get("TMPDIR", "/tmp")
+        return 0 if self_test(scratch) else 1
 
-    mats = load_tc02(args.model, all_mats=args.all)
-    total_rows = sum(len(r) for _, r in mats)
-    print(f"{os.path.basename(args.model)}: {len(mats)} matrices, "
-          f"{total_rows} rows x {D_MODEL} ternary weights")
-    nz = sum(1 for _, rs in mats for row in rs for t in row if t)
-    tot = sum(len(rs) * D_MODEL for _, rs in mats)
-    print(f"nonzero weights: {nz} / {tot} ({100.0 * nz / tot:.1f}%)")
+    kinds = KINDS if args.all else tuple((args.mats or "wq").split(","))
+    layers = set(int(v) for v in args.layers.split(",")) if args.layers else (
+        None if (args.all or args.mats) else {0})
+    model = args.model
+    if args.synthetic:
+        model = os.path.join(os.environ.get("TMPDIR", "/tmp"), "synthetic_tc02.bin")
+        write_synthetic_tc02(model)
+    mats, _hdr = load_tc02(model, kinds, layers)
+    key = load_key(args.keys, args.node)
+    jobs, rows_ref = build_jobs(mats, args.act, args.n_x, args.seed)
 
-    key = load_key(args.keys)
-    rng = __import__("random").Random(0x7213)
-    xs = [[rng.choice((-1, 0, +1)) for _ in range(D_MODEL)]
-          for _ in range(args.n_x)]
+    total_rows = sum(len(r) for _, r, _ in mats)
+    nz = sum(1 for _, rs, _ in mats for row in rs for t in row if t)
+    tot = sum(len(rs) * i for _, rs, i in mats)
+    print(f"{'synthetic' if args.synthetic else os.path.basename(model)}: "
+          f"{len(mats)} matrices, {total_rows} rows, {tot} ternary weights "
+          f"({100.0 * nz / tot:.1f}% nonzero)")
+    print(f"jobs: {len(jobs)} (32-trit chunks x {args.n_x} x-vectors"
+          + (f" x {INT8_DIGITS} digit planes" if args.act == "int8" else "") + ")")
 
-    n_jobs = sum(len(rs) for _, rs in mats) * CHUNKS * len(xs)
-    print(f"jobs: {n_jobs} ({CHUNKS} chunks/row x {len(xs)} x-vecs)")
-
-    ser = serial.Serial(args.port, args.baud, timeout=2)
-    ser.reset_input_buffer()
-
-    stats = {"job": 0, "ok": 0, "bad": 0, "exact": 0, "rows": 0}
-    t0 = time.time()
-    all_ok = all(run_matrix(ser, key, name, rows, xs, args.window, stats)
-                 for name, rows in mats)
-    dt = time.time() - t0
-
-    print("-" * 63)
-    print(f"row dots checked        : {stats['rows']}")
-    print(f"receipts authenticated  : {stats['ok']}/{stats['ok'] + stats['bad']}"
-          f" under node0's key")
-    print(f"row dots bit-exact      : {stats['exact']}/{stats['rows']}")
-    print(f"elapsed                 : {dt:.2f} s ({n_jobs / dt:.0f} jobs/s)")
-    print("-" * 63)
-    if all_ok and stats["bad"] == 0:
-        print("RESULT: every real tern_tc weight matrix with a 320-dim input")
-        print("        (wq/wo/gate/up, all 6 layers, trained on 2.0B tokens)")
-        print("        computes on the AX7203 bit-exact against the CPU oracle.")
+    if args.emit_requests:
+        stream = (setkey_request(key) if args.setkey else b"") + b"".join(
+            request(OP_MAC32, FIRST_JOB_NONCE + i, w, x)
+            for i, (w, x, _row, _weight) in enumerate(jobs))
+        with open(args.emit_requests, "w") as f:
+            f.write("\n".join(f"{b:02x}" for b in stream) + "\n")
+        print(f"wrote {len(stream)} request bytes ({len(jobs)} jobs"
+              + (" + setkey" if args.setkey else "") + f") to {args.emit_requests}")
         return 0
-    print("RESULT: MISMATCH - do not cite these matrices as verified on silicon.")
+
+    link = ReplayLink(args.responses) if args.responses else SerialLink(args.port, args.baud)
+    if args.setkey and install_key(link, key) is None:
+        return 1
+    t0 = time.time()
+    res = run(link, jobs, rows_ref, key, args.window)
+    elapsed = None if args.responses else time.time() - t0
+    if report(res, elapsed, args.act):
+        src = "the RTL (iverilog)" if args.responses else "the AX7203"
+        print(f"RESULT: every row above computed on {src} bit-exact against the")
+        print("        int8-weight oracle, and every receipt verified under the key.")
+        return 0
+    print("RESULT: FAIL - do not cite these matrices as verified.")
     return 1
 
 
