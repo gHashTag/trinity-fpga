@@ -21,8 +21,8 @@ that reason rather than for runtime.
 import json, re, subprocess, sys, pathlib
 import numpy as np
 
-SC = pathlib.Path(_envos.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
 import os
+SC = pathlib.Path(os.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
 sys.path.insert(0, os.environ.get("T27_CONFORMANCE") or str(pathlib.Path(__file__).resolve().parent / "oracles"))
 import tnf_ref as T, gf_ref as G, posit_ref as P, fp8_ref as F8
 
@@ -32,11 +32,15 @@ OUT.mkdir(parents=True, exist_ok=True)
 # (name, physical bits, encode/decode pair). Physical width, not the nominal name:
 # TNF4 is E_t=2 trits -> 4 exponent cells + sign + 1 mantissa = 6 bits.
 # W963: this list is the substitution itself. "tnf8" was bound to TNFFormat(4, 3) --
-# 11 bits, 126.91 binades, TNF16's exponent field with a cut mantissa -- while the
-# ladder defines the eighth rung as TNFFormat(3, 4): 10 bits, 30.95 binades. Every
+# 11 bits, 78.91 binades, TNF16's exponent field with a cut mantissa -- while the
+# ladder defines the eighth rung as TNFFormat(3, 4): 10 bits, 24.95 binades. Every
 # census figure published for TNF8 priced the substitute. Both are measured here,
 # against floats of each one's own physical width, so the substitution has a number
 # in this project's ORIGINAL metric rather than only in the MAC-lane one.
+# W994: binades count trit words only (the W963 record said 30.95 and 126.91 because
+# the oracle then decoded exponent offsets above offset_max). A code that is not a
+# TNF word now makes decode() raise, and its table row is written as 0: the table
+# still has 2^n rows, but the non-words no longer carry invented values.
 _Fx = F8.FPxFormat
 UNITS = [
     ("tnf8_ladder_10b", 10, lambda: (T, T.TNFFormat(3, 4))),

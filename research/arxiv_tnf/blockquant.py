@@ -17,6 +17,12 @@ OCP microscaling style rather than ours:
 
 Control arm: the same rig with the block spanning the whole tensor, which isolates
 the block size as the only variable.
+
+W994: the "stability advantage" tested here is withdrawn (it came from TNF4 grids
+that decoded codes above offset_max, which are not TNF words). This experiment
+survives it: on TNF4's words nobody fails in either arm, TNF4 is slightly worse
+than both fp6 formats per tensor and level with e2m3 at block 32, and the block-32
+RMS ratio is 3.463.
 """
 import gzip, json, os, pathlib, sys, time
 import numpy as np
@@ -110,7 +116,7 @@ def main():
     grids = {k: grid(*v) for k, v in FMT.items()}
     out = {"task": "mnist", "epochs": EPOCHS, "seeds": SEEDS, "blocks": BLOCKS,
            "scheme": "OCP-MX-style: shared power-of-two scale per block, STE, not learned",
-           "runs": {}}
+           "tnf_grid": "trit-words", "runs": {}}
     for block in BLOCKS:
         key = "per_tensor" if block <= 0 else f"block{block}"
         for name, g in grids.items():

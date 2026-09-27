@@ -25,6 +25,16 @@ TRUE_LADDER dictionary that once held them was retired by the versioned
 ladders in tnf_ladder_versions.py, which version the NOMINAL budget instead.) Measured consequence of the misnaming: the sign of the advantage
 over takum followed the sign of the width excess (+2 bits: 484x; +1: 2x;
 -2: 0.08x), and at true width with range to spare the advantage is 1.00x.
+
+GRID NOTICE (2026-09-27): the offset field is exp_bits = bit_length(3^Et - 1)
+bits wide, so it can hold offsets above offset_max = 3^Et - 1. Those codes are
+not TNF words: no trit exponent produces them and encode() never emits them.
+decode() used to turn them into numbers anyway, so every rig that enumerated
+range(1 << width) read a grid that is not the format. For TNF4 = TNFFormat(2,1)
+that grid had 57 distinct values (zero included) up to 3072, 14.58 binades; the
+trit words give 29 up to 12, 6.58 binades. TNF8 = TNFFormat(3,4): 960 finite
+non-zero values against 800 words. decode() now raises ValueError on such a
+code. Use is_word() to filter an enumeration of raw codes.
 """
 
 from fractions import Fraction
@@ -121,14 +131,43 @@ def is_special(fmt: TNFFormat, raw: int) -> bool:
     return ((raw >> fmt.exp_shift) & ((1 << fmt.exp_bits) - 1)) == fmt.offset_max
 
 
+def is_word(fmt: TNFFormat, raw: int) -> bool:
+    """True when the exponent field holds a trit offset (0 .. offset_max).
+
+    The field is exp_bits wide and 2^exp_bits > 3^Et, so some raw codes carry
+    an offset no trit exponent can produce. They are not words of the format.
+    """
+    return ((raw >> fmt.exp_shift) & ((1 << fmt.exp_bits) - 1)) <= fmt.offset_max
+
+
 def decode(fmt: TNFFormat, raw: int):
     sign = (raw >> fmt.sign_shift) & 1
     offset = (raw >> fmt.exp_shift) & ((1 << fmt.exp_bits) - 1)
     m = raw & (fmt.mant - 1)
+    if offset > fmt.offset_max:
+        raise ValueError(f"not a TNF word: exponent offset {offset} > "
+                         f"offset_max {fmt.offset_max} (raw {raw:#x})")
     if offset == fmt.offset_max:
         return math.nan if m else (-math.inf if sign else math.inf)
     if offset == 0:
         return Fraction(0)
+    val = (Fraction(1) + Fraction(m, fmt.mant)) * _pow2(offset - fmt.exp_offset)
+    return -val if sign else val
+
+
+def decode_every_code(fmt: TNFFormat, raw: int):
+    """The withdrawn reading, kept only to reproduce superseded records and ablations.
+
+    Before 2026-09-27 decode() read an offset above offset_max as an ordinary
+    binary exponent. This function still does, so a record built on that reading
+    (compare_w991.json, the W946-W965 grids) can be reproduced line by line. It
+    describes no TNF format; never use it for a result about TNF.
+    """
+    if is_word(fmt, raw):
+        return decode(fmt, raw)
+    sign = (raw >> fmt.sign_shift) & 1
+    offset = (raw >> fmt.exp_shift) & ((1 << fmt.exp_bits) - 1)
+    m = raw & (fmt.mant - 1)
     val = (Fraction(1) + Fraction(m, fmt.mant)) * _pow2(offset - fmt.exp_offset)
     return -val if sign else val
 
@@ -204,6 +243,41 @@ def _selftest():
     print("TNF16 1.5*2.0 =", float(decode(F16, tef_mul(F16, encode(F16, 1.5), encode(F16, 2.0)))))
     _width_rule_check()
     _roundtrip_check()
+    _grid_check()
+
+
+def _grid_check():
+    """Only trit offsets are words: count them and check decode refuses the rest.
+
+    Expected counts are finite non-zero values of one sign times two:
+    (offset_max - 1) * 2^M * 2. TNF4 (2,1): 7*2*2 = 28. TNF8 (3,4): 25*16*2 =
+    800. TNF16 v2 (4,11): 79*2048*2 = 323,584 (counted by field, not decoded).
+    """
+    print("\ngrid (trit words only)")
+    for (t, m), want in (((2, 1), 28), ((3, 4), 800)):
+        f = TNFFormat(t, m)
+        width = 1 + f.exp_bits + f.mant_bits
+        finite = refused = 0
+        for raw in range(1 << width):
+            if not is_word(f, raw):
+                try:
+                    decode(f, raw)
+                except ValueError:
+                    refused += 1
+                    continue
+                raise AssertionError(f"decode accepted non-word {raw:#x} in {f}")
+            v = decode(f, raw)
+            if isinstance(v, Fraction) and v != 0:
+                finite += 1
+        nonword = (1 << width) - 2 * (f.offset_max + 1) * f.mant
+        assert finite == want, (f, finite, want)
+        assert refused == nonword, (f, refused, nonword)
+        print(f"  TNFFormat({t},{m}) {width}b: {finite} finite non-zero words, "
+              f"{refused} non-word codes refused")
+    f = TNFFormat(4, 11)
+    n = 2 * (f.offset_max - 1) * f.mant
+    assert n == 323584, n
+    print(f"  TNFFormat(4,11) 19b: {n} finite non-zero words (by field count)")
 
 
 def _width_rule_check():

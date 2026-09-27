@@ -7,8 +7,12 @@ a truth table flatters small alphabets -- without measuring it.
 
 This emits a STRUCTURAL decoder for any TNFFormat directly from the format
 object's own fields (sign_shift, exp_shift, exp_bits, mant_bits, exp_offset,
-offset_max), verifies the structure against the oracle over EVERY code, and
-prices it with the same rig. Running it on TNF4 and TNF8 as well, where the truth
+offset_max), verifies the structure against the oracle over EVERY word, and
+prices it with the same rig. (W994: a code whose exponent field exceeds
+offset_max is not a TNF word. The oracle's decode raises on it and the emitted
+RTL's output on it is a don't-care, so such codes are counted apart and never
+compared. Before W994 the oracle turned them into numbers and they were counted
+as checked: that is where TNF16's "524288 codes checked" came from.) Running it on TNF4 and TNF8 as well, where the truth
 table also exists, measures how much the truth-table method was flattering them.
 """
 import json, re, subprocess, sys, pathlib
@@ -63,9 +67,17 @@ def oracle_bits(f, raw):
 
 
 def verify(f, bits):
-    """Every code, model against oracle. Returns (checked, mismatches, skipped)."""
-    bad = skipped = checked = 0
+    """Every word, model against oracle. Returns (checked, mismatches, skipped, nonwords).
+
+    `skipped` counts words whose value lies outside fp32's range; `nonwords` counts
+    codes whose exponent field exceeds offset_max. Those are not TNF words: the
+    oracle refuses them and the RTL's output on them is a don't-care.
+    """
+    bad = skipped = checked = nonwords = 0
     for raw in range(1 << bits):
+        if not T.is_word(f, raw):
+            nonwords += 1
+            continue
         mv = model(f, raw)
         ov = oracle_bits(f, raw)
         if mv is None or ov is None:
@@ -76,7 +88,7 @@ def verify(f, bits):
             bad += 1
             if bad <= 3:
                 print(f"    расхождение код {raw}: модель {mv:08X} оракул {ov:08X}", flush=True)
-    return checked, bad, skipped
+    return checked, bad, skipped, nonwords
 
 
 def emit(name, f, bits):
@@ -87,7 +99,8 @@ def emit(name, f, bits):
 // GENERATED from TNFFormat(exp_trits={f.exp_trits}, mant_bits={f.mant_bits}) by
 // transliterating the reference decoder's own field arithmetic. Physical width is
 // sign_shift + 1 = {bits}, not the rung's name. Verified against the oracle over
-// all {1 << bits} codes.
+// every word: {2 * (f.offset_max + 1) * f.mant} of the {1 << bits} codes. The other codes
+// are not TNF words (exponent field above {f.offset_max}); the output on them is a don't-care.
 module s_{name}_decode (input wire [{bits-1}:0] x, output wire [31:0] fp32_out);
   wire        s   = x[{f.sign_shift}];
   wire [{f.exp_bits-1}:0] off = x[{e_hi}:{e_lo}];
@@ -296,7 +309,8 @@ def measure(name, bits, vfile, fused):
 
 
 # W966: the units. TNF16 v2-spec was already priced structurally in W942 (450.29
-# consumer cells over 524288 verified codes); what was missing is a float peer priced
+# consumer cells; W942 said "524288 verified codes", but only 331776 of them are
+# TNF words -- W994); what was missing is a float peer priced
 # THE SAME WAY. Both matchings are here -- range-matched e7m11 and width-matched
 # e6m12 -- plus the ladder's TRUE eighth rung at 10 bits, which the W942 record does
 # not contain because it priced TNFFormat(4,3) at 11 bits instead.
@@ -360,9 +374,11 @@ if __name__ == "__main__":
     for name, et, mb in RUNGS:
         f = T.TNFFormat(et, mb)
         bits = f.sign_shift + 1
-        checked, bad, skipped = verify(f, bits)
+        checked, bad, skipped, nonwords = verify(f, bits)
         print(f"  {name}: {bits} бит, проверено {checked} кодов, расхождений {bad}, "
               f"вне fp32 {skipped}", flush=True)
+        print(f"  {name}: {nonwords} codes are not TNF words (don't-care, not compared)",
+              flush=True)
         if bad:
             print(f"  {name}: СТРУКТУРА НЕ СОВПАДАЕТ С ОРАКУЛОМ -- не измеряю", flush=True)
             continue
@@ -373,7 +389,8 @@ if __name__ == "__main__":
         if not bare or not fu:
             continue
         res[name] = {"physical_bits": bits, "codes_checked": checked, "mismatches": bad,
-                     "outside_fp32": skipped, "decoder_cells": bare["per_unit"],
+                     "outside_fp32": skipped, "nonword_codes": nonwords,
+                     "decoder_cells": bare["per_unit"],
                      "consumer_cells": fu["per_unit"], "r2_bare": bare["r2"], "r2_fused": fu["r2"]}
         print(f"  {name}: декодер {bare['per_unit']:.2f}  потребитель {fu['per_unit']:.2f}", flush=True)
         (OUT / "struct972.json").write_text(json.dumps(res, indent=1))

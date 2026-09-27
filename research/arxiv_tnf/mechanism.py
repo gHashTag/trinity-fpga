@@ -11,6 +11,12 @@ format then needs headroom ABOVE its initialisation point, not resolution below 
 Under the peak2one convention the peak starts at grid value 1.0, so the headroom is
 exactly max(grid): 3072 for TNF4, 28 for fp6 e3m2, 7.5 for fp6 e2m3 -- a 400x spread.
 
+W994: TNF4's 3072 came from decoding codes whose exponent field lies above
+offset_max, which are not TNF words. TNF4's largest word is 12, so the spread is
+12 / 28 / 7.5 and TNF4 has less headroom than fp6 e3m2. The TNF4 rows are therefore
+read only from records marked "tnf_grid": "trit-words" (the W994 reruns); the fp6
+rows are unchanged. The record is written as mechanism_w994.json.
+
 Prediction: in failing runs the scale falls far enough that max|x|/s exceeds the
 grid maximum, i.e. the tensor SATURATES. This checks it against every record.
 """
@@ -18,7 +24,8 @@ import json, pathlib, sys
 import numpy as np
 
 R = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".")
-GMAX = {"TNF4": 3072.0, "fp6e3m2": 28.0, "fp6e2m3": 7.5}
+GMAX = {"TNF4": 12.0, "fp6e3m2": 28.0, "fp6e2m3": 7.5}
+OUT = "mechanism_w994.json"
 TH = {"mnist": 60.0, "fashion": 60.0, "kmnist": 40.0}
 
 rows = []
@@ -31,6 +38,8 @@ for f in sorted(R.glob("stability*.json")):
         gm = GMAX.get(fmt)
         if gm is None:
             continue
+        if fmt == "TNF4" and d.get("tnf_grid") != "trit-words":
+            continue          # W994: a record from the every-code grid
         for seed, tr in runs.items():
             acc = tr[-1]["acc"] * 100
             s0 = np.array(tr[0]["act_scales"], dtype=float)
@@ -62,5 +71,5 @@ print(f"    отказ без насыщения    {fn:4d}      ни того �
 den = tp + fp + fn + tn
 print(f"    согласие: {(tp+tn)/den*100:.1f}%  ({tp+tn}/{den})")
 json.dump({"rows": rows, "confusion": {"tp": tp, "fp": fp, "fn": fn, "tn": tn}},
-          open(R / "mechanism_w950.json", "w"), indent=1)
-print("\nWROTE " + str(R / "mechanism_w950.json"))
+          open(R / OUT, "w"), indent=1)
+print("\nWROTE " + str(R / OUT))

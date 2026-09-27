@@ -9,9 +9,15 @@ DYNAMIC RANGE, which is the very thing this project claimed as its advantage.
 
 Exact widths, computed from the grids (every grid value must be representable):
 
-  TNF4      17 bits per value, 33 per product, 38-bit block-32 accumulator
+  TNF4       9 bits per value, 17 per product, 22-bit block-32 accumulator
   fp6 e3m2  10 / 19 / 24
   fp6 e2m3   7 / 13 / 18
+
+(W994: until then the TNF4 row read 17 / 33 / 38. Those widths came from a grid
+that included codes whose exponent field lies above offset_max, which are not TNF
+words; decode now refuses them and grid() drops them. Over TNF4's words its range is
+narrower than fp6 e3m2's, so the premise above -- that range was TNF's advantage and
+costs it here -- does not hold for TNF4.)
 
 So the unit under test is one MAC lane: decode a weight code and an activation code
 to fixed point, multiply, accumulate at block-accumulator width. Cost is the SLOPE of

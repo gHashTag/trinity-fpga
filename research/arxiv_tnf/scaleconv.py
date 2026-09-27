@@ -5,15 +5,22 @@ Every stability run in this project initialised the quantiser scale as s = max|x
 so the tensor peak lands on grid value 1.0. The PUBLISHED mechanism -- "the narrow
 grids zero everything below 1.67 % (e2m3) or 0.22 % (e3m2) of the tensor peak" --
 is min/max of each grid, i.e. it assumes the peak lands on the grid's MAXIMUM,
-which is the standard max-rule. The two differ enormously, because the grids have
-maxima of 3072 (TNF4), 28 (e3m2) and 7.5 (e2m3).
+which is the standard max-rule. The two differ, because the grids have maxima of
+12 (TNF4), 28 (e3m2) and 7.5 (e2m3).
 
 Under what the rig actually did, TNF4 zeroes everything below 12.5 % of the peak
-against e3m2's 6.25 %, and its usable alphabet shrinks from 57 values to 7 while
-e3m2 keeps 12. TNF4 is HANDICAPPED under its own experiment and still trained 40/40.
+against e3m2's 6.25 %, and its usable alphabet shrinks from 29 values to 7 while
+e3m2 keeps 12.
 
 So scale initialisation was never matched across formats, and the mismatch is
-format-dependent by up to 400x. This runs both conventions, changing nothing else.
+format-dependent by up to 3.7x. This runs both conventions, changing nothing else.
+
+W994: W949 wrote TNF4's maximum as 3072, its grid as 57 values and the spread as
+400x, and concluded that TNF4 "is HANDICAPPED under its own experiment and still
+trained 40/40". The grid was built by decoding every code, and codes whose
+exponent field lies above offset_max are not TNF words. On TNF4's 29 values TNF4
+fails 1/5 seeds under peak2one and 5/5 under peak2max on MNIST, like both fp6
+formats under peak2max. The conclusion is withdrawn.
 
   peak2one : s = max|x|                 -- what every previous run did
   peak2max : s = max|x| / max(grid)     -- the standard max rule, matched
@@ -32,6 +39,11 @@ EPOCHS = int(os.environ.get("EPOCHS", "3"))
 FMT = {"TNF4": (T, T.TNFFormat(2, 1), 6),
        "fp6e2m3": (F8, F8.FORMATS["fp6_e2m3"], 6),
        "fp6e3m2": (F8, F8.FORMATS["fp6_e3m2"], 6)}
+# W994: FORMATS=TNF4 (a comma list) runs a subset.
+if os.environ.get("FORMATS"):
+    _keep = [k for k in os.environ["FORMATS"].split(",") if k]
+    assert all(k in FMT for k in _keep), _keep
+    FMT = {k: FMT[k] for k in _keep}
 OUT = S / f"scaleconv_w949_{EPOCHS}ep.json"
 
 
@@ -111,6 +123,7 @@ def main():
     grids = {k: grid(*v) for k, v in FMT.items()}
     out = {"task": "mnist", "epochs": EPOCHS, "seeds": SEEDS,
            "note": "peak2one is the legacy convention used by every prior run",
+           "tnf_grid": "trit-words",
            "grid_max": {k: float(g.max()) for k, g in grids.items()}, "runs": {}}
     for conv in ("peak2one", "peak2max"):
         for name, g in grids.items():

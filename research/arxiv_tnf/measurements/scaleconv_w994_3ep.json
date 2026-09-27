@@ -1,0 +1,36 @@
+{
+ "task": "mnist",
+ "epochs": 3,
+ "seeds": [
+  20260820,
+  7,
+  1337,
+  424242,
+  99991
+ ],
+ "note": "peak2one is the legacy convention used by every prior run",
+ "tnf_grid": "trit-words",
+ "grid_max": {
+  "TNF4": 12.0
+ },
+ "runs": {
+  "peak2one": {
+   "TNF4": [
+    16.09,
+    87.74,
+    95.1,
+    96.04,
+    96.42
+   ]
+  },
+  "peak2max": {
+   "TNF4": [
+    24.66,
+    24.29,
+    26.67,
+    11.35,
+    11.96
+   ]
+  }
+ }
+}

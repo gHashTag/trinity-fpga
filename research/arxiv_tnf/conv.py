@@ -4,6 +4,9 @@
 # eighth rung. The ladder defines rung 8 as TNFFormat(3, 4): 10 bits, 30.95 binades.
 # Corrected below. The records this rig produced are marked with _format_note and
 # superseded by census_tnf8_w963.json and rung_w964_*.json.
+# W994: 30.95 and 126.91 counted codes whose exponent field lies above offset_max,
+# which are not TNF words; over the words (3, 4) spans 24.95 binades and (4, 3)
+# 78.91. decode now refuses those codes; this rig's enumeration drops them.
 """W943: does the 4-bit result hold on a convolutional network?
 
 Every accuracy claim in this project comes from MLPs. Convolutions change both the

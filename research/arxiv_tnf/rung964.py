@@ -12,6 +12,9 @@ Two open items from W950, closed by one rig.
 2. The 40-run sweep used the learned scale everywhere -- the recipe W950 showed to
    be the cause of the failures. Until the three tasks are repeated under the
    computed scale, "TNF4 55/55" mostly describes our own defect.
+   (W994: "TNF4 55/55" itself is withdrawn. It was measured on a grid built by
+   decoding every code, and codes whose exponent field lies above offset_max are not
+   TNF words; on TNF4's own 29 values the learned recipe fails too.)
 
 SCALE_MODE=learned  : LSQ with the gradient factor, s initialised to max|x| (peak2one)
 SCALE_MODE=computed : OCP-MX-style shared power-of-two per block, never learned
@@ -35,13 +38,17 @@ BLOCK = int(os.environ.get("BLOCK", "0"))
 TH = {"mnist": 60.0, "fashion": 60.0, "kmnist": 40.0}[TASK]
 # W964: the ladder's eighth rung has a measured area (W963) and no measured accuracy.
 # Every accuracy figure ever published for "TNF8" used TNFFormat(4, 3) -- 11 bits,
-# 126.91 binades -- not the ladder's TNFFormat(3, 4) -- 10 bits, 30.95 binades. Both
+# 78.91 binades -- not the ladder's TNFFormat(3, 4) -- 10 bits, 24.95 binades. Both
 # run here, with a float matched to the TRUE rung's width, so the substitution has an
 # accuracy number as well as an area one.
 _Fx = F8.FPxFormat
 FMT = {"TNF8_true_10b": (T, T.TNFFormat(3, 4), 10),
        "TNF8_sub_11b": (T, T.TNFFormat(4, 3), 11),
        "fp10_e5m4": (F8, _Fx("fp10_e5m4", 5, 4, 15), 10)}
+# W994: binades above count TNF words only (W964 wrote 126.91 and 30.95, from grids
+# that decoded codes above offset_max). On its words TNF8 (3,4) is fp10 e5m4's grid
+# scaled by 2^-4, less fp10's lowest binades and its subnormals, so a power-of-two
+# scale set from the grid maximum quantises a tensor the same way in both.
 OUT = S / f"rung_w964_{TASK}_{MODE}_b{BLOCK}_{EPOCHS}ep.json"
 
 SAT = {}          # layer -> max observed (max|x|/s)/gmax this epoch
@@ -162,7 +169,7 @@ def main():
     assert len(Xt) == 60000 and len(Xv) == 10000, (len(Xt), len(Xv))
     grids = {k: grid(*v) for k, v in FMT.items()}
     out = {"task": TASK, "mode": MODE, "block": BLOCK, "epochs": EPOCHS,
-           "seeds": SEEDS, "threshold": TH, "runs": {}}
+           "seeds": SEEDS, "threshold": TH, "tnf_grid": "trit-words", "runs": {}}
     for name, g in grids.items():
         QLinear.g, QLinear.gmax = g, float(g.max())
         for seed in SEEDS:

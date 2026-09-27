@@ -14,6 +14,13 @@ range one format buys and the other does not:
 Decomposition is exact integer arithmetic: a float IS dyadic, so Fraction(v) is exact
 and limit_denominator is both unnecessary and, over half a million values, ruinously
 slow -- the first version of this rig ran past ten minutes on it.
+
+W994: rung16_w965.json counted every code, including codes whose exponent field lies
+above offset_max, which are not TNF words (decode now refuses them; stats() drops
+them). Over the words the TNF rows are 80,897 and 323,585 values (with zero), 79.0
+binades, (odd, shift) (10, 87) and (12, 89). The e7 peers were range-matched to the
+127-binade figure; they are not range-matched to 79.0, and their (odd, shift) pairs
+(10, 135) and (12, 137) no longer equal TNF16's. The record is rung16_w994.json.
 """
 import json, math, os, pathlib, sys, time
 from fractions import Fraction
@@ -68,5 +75,5 @@ CASES = [
 out = {}
 for key, mod, fmt, W, label in CASES:
     out[key] = stats(mod, fmt, W, label)
-    (S / "rung16_w965.json").write_text(json.dumps(out, indent=1))
-print("\nWROTE " + str(S / "rung16_w965.json"), flush=True)
+    (S / "rung16_w994.json").write_text(json.dumps(out, indent=1))
+print("\nWROTE " + str(S / "rung16_w994.json"), flush=True)

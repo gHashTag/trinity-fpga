@@ -4,6 +4,9 @@
 Every stability run in this project scaled by the maximum of the WHOLE tensor. Under
 that rule a format must span the tensor's entire dynamic range by itself, and TNF4's
 14.6 binades against fp6 e2m3's 5.9 is decisive -- that is our surviving claim.
+(W994: it is not. TNF4's words span 6.58 binades; the 14.6 came from decoding codes
+whose exponent field lies above offset_max, which are not TNF words. fp6 e3m2's 8.8
+is more than TNF4's, and the claim is withdrawn.)
 
 But nobody deploys per-tensor scaling at four to six bits. The OCP microscaling (MX)
 formats give every block of 32 elements its own shared exponent, so the ELEMENT format
@@ -15,11 +18,13 @@ This measures the crossover directly: underflow fraction and relative RMS error 
 each grid, as a function of block size, on distributions with the shape of weights and
 of post-ReLU activations. No datasets, no training -- only the grids and the arithmetic.
 """
-import json, sys, pathlib
+import json, os, sys, pathlib
 import numpy as np
 
-S = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(S / "oracles"))
+# W994: T27_WORK / T27_CONFORMANCE as in the other rigs, so a rerun need not write
+# into the source tree.
+S = pathlib.Path(os.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
+sys.path.insert(0, os.environ.get("T27_CONFORMANCE") or str(S / "oracles"))
 import tnf_ref as T, fp8_ref as F8
 
 RNG = np.random.default_rng(20260820)
@@ -65,7 +70,8 @@ def measure(x, g, block):
     W949 correction: the grid is normalised to unit maximum first, so the block
     peak lands on the format's LARGEST representable value. That is the standard
     max rule, and it is the convention under which this project's published
-    mechanism (0.0041 % / 0.22 % / 1.67 % underflow thresholds) was computed. The
+    mechanism (underflow thresholds 1.04 % for TNF4, 0.22 % for e3m2, 1.67 % for
+    e2m3; W949 wrote 0.0041 % for TNF4, from its every-code grid) was computed. The
     first version of this rig snapped onto the RAW grid, which maps the peak to
     grid value 1.0 instead -- and produced identical underflow for TNF4 and
     fp6 e2m3, the anomaly that exposed the same defect in the training rig.
@@ -96,7 +102,7 @@ def main():
     out = {"n": N, "blocks": blocks,
            "binades": {k: round(binades(g), 2) for k, g in GRIDS.items()},
            "grid_size": {k: int(len(g)) for k, g in GRIDS.items()},
-           "res": {}}
+           "tnf_grid": "trit-words", "res": {}}
     print("  диапазон грида (бинады):",
           ", ".join(f"{k} {v}" for k, v in out["binades"].items()), flush=True)
     for dn, x in dists.items():

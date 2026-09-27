@@ -27,3 +27,54 @@ whose harness tested representability against zero rather than against the range
 bounds, and the pre-fix workload sweep taken with the same harness. Both are
 superseded by the files above; the defect and its consequences are stated in the
 paper rather than hidden.
+
+## W994: the TNF4/TNF8/TNF16 records recomputed on the trit-word grid
+
+Up to W993 `tnf_ref.decode` read an exponent field above `offset_max` as an
+ordinary power of two, although `tnf_ref.encode` never produces such a word.
+Every rig that built its value grid by decoding all codes therefore trained,
+counted and synthesised on values the format does not have (TNF4: 57 values up
+to 3072 instead of 29 up to 12). Since W994 `decode` raises on such a code and
+the rigs build their grids from TNF words only; `decode_every_code` keeps the
+withdrawn reading for comparisons. The records below were rerun with the fixed
+oracle (`T27_CONFORMANCE=oracles`, output in a scratch `T27_WORK`) and copied
+here verbatim under a `w994` name. Where a rerun also carries TNF-free rows
+(the fp6 arms of `blockscale`, `blockquant`, `macrig` and `accrig`, the fp rows of
+`census963` and `rung16`), `verify_numbers.py` checks that they are identical to
+the record the rerun replaces. The earlier records stay in this directory as the
+history of the defect; `verify_numbers.py` no longer reads their TNF rows as
+current.
+
+| file | command (environment, then rig) |
+|---|---|
+| `stability_w994_mnist_gs_3ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=3 stability.py` |
+| `stability_w994_mnist_gs_10ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=10 stability.py` |
+| `stability_w994_mnist_gs_30ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=30 stability.py` |
+| `stability_w994_mnist_nogs_3ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=3 GRAD_SCALE=0 stability.py` |
+| `stability_w994_mnist_pct0.999_3ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=3 INIT_PCT=0.999 stability.py` |
+| `lsq_ablation_w994_qp3072_3ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=3 LSQ_QP=3072 stability.py` |
+| `lsq_ablation_w994_qp3072_10ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=10 LSQ_QP=3072 stability.py` |
+| `lsq_ablation_w994_nogs_10ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=10 GRAD_SCALE=0 stability.py` |
+| `lsq_ablation_w994_pct0.999_nogs_3ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=3 INIT_PCT=0.999 GRAD_SCALE=0 stability.py` |
+| `lsq_ablation_w994_everycode_qp12_10ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=10 LSQ_QP=12 TNF_GRID=every-code stability.py` (the withdrawn grid, trained on purpose) |
+| `scaleconv_w994_3ep.json` | `FORMATS=TNF4 EPOCHS=3 scaleconv.py` |
+| `blockquant_w994_3ep.json` | `EPOCHS=3 blockquant.py` |
+| `blockscale_w994.json` | `blockscale.py` |
+| `sweep_w994_mnist_{computed_b0,computed_b32,learned_b0}_3ep.json` | `FORMATS=TNF4 TASK=mnist EPOCHS=3 SCALE_MODE=… BLOCK=… sweep_w951.py` |
+| `rung_w994_mnist_{computed_b0,computed_b32,learned_b0}_3ep.json` | `TASK=mnist EPOCHS=3 SCALE_MODE=… BLOCK=… rung964.py` |
+| `rung16_w994.json` | `rung16.py` |
+| `mac_w994.json`, `acc_w994.json` | `macrig.py`, `accrig.py` (the rigs write `*_w952.json`; renamed on copy) |
+| `census_tnf8_w994.json` | `census963.py` |
+| `mechanism_w994.json` | `python3 mechanism.py measurements` (reads the `stability*` records; TNF4 rows only from records marked `"tnf_grid": "trit-words"`) |
+
+Not rerun, and so not current for TNF: the Fashion-MNIST and KMNIST arms (no data
+on this machine); the TNF rows of the float-lane records `flane_w953.json` and
+`curve_w955.json` (yosys 0.67 reports multiple drivers on those rigs); the TNF4
+arms of the learned-scale LSQ records `lsq_2026-08-20.json` and
+`lsq_width_matched_2026-08-20.json` (only the MNIST w4a4 arm, which is the
+stability base configuration, was recomputed, as `stability_w994_mnist_gs_3ep.json`);
+and the structural RTL records (`structural_w942`, `struct966`): that RTL
+decodes the exponent rows above `offset_max` as numbers, which is a design
+question for the RTL, not a rerun. The learned-scale rung
+(`rung_w994_mnist_learned_b0_3ep.json`) is not bit-reproducible on this torch
+build; two runs gave +0.024 and +0.038 points. The committed file is the second.

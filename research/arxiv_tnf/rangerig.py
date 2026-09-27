@@ -35,6 +35,11 @@ NS = [1, 2, 4, 8]
 # binades against fp6 e2m3's 5.91, so +46 % priced the range TNF4 buys and e2m3 does
 # not. fp6_e4m1 is the range-matched peer: same six bits, exponent widened until its
 # span meets TNF4's. If cost tracks range rather than the lattice, it lands on TNF4.
+# W994: the 14.58 came from codes whose exponent field lies above offset_max, which
+# are not TNF words. TNF4's words span 6.58 binades -- less than fp6 e3m2's 8.8 -- so
+# fp6_e4m1 is not TNF4's range-matched peer, and the TNF4 row of rangematch_w954.json
+# (and the (odd, shift) pairing (2, 15) with fp6_e4m1) is withdrawn: over its words
+# TNF4 is (2, 7). The rig was not rerun (yosys 0.67 rejects it, multiple drivers).
 _F = F8.FPxFormat
 FMT = {"TNF4": (T, T.TNFFormat(2, 1), 6),
        "fp6e2m3": (F8, F8.FORMATS["fp6_e2m3"], 6),

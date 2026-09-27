@@ -6,6 +6,13 @@ MNIST, fp6 e2m3 lands at sigma = 46.09 and fp6 e3m2 at 32.33, while TNF4 sits at
 0.21. A standard deviation that large is not "noise" -- it is a mixture of runs
 that trained and runs that did not, and the useful question is what separates them.
 
+W994: the TNF4 half of that claim is withdrawn. Its grid was built by decoding
+every 6-bit code, and the oracle then turned the codes whose exponent field lies
+above offset_max into numbers (32 ... 3072); they are not TNF words. On the 29
+values TNF4 actually has (largest 12, 6.58 binades) the same recipe gives TNF4
+sigma = 27.91 on MNIST (mean 83.63), and at 10 and 30 epochs every seed fails.
+The fp6 figures do not involve a TNF grid and stand.
+
 This logs, per seed and per epoch: test accuracy, and the learned activation scale
 of each layer. If the scale diverges or collapses in the failing runs, the finding
 is about the RECIPE (a scale that runs away on a sparse grid) rather than about the
@@ -28,6 +35,19 @@ SEEDS = [20260820, 7, 1337, 424242, 99991]
 FORMATS = {"TNF4": (T, T.TNFFormat(2, 1), 6),
            "fp6e2m3": (F8, F8.FORMATS["fp6_e2m3"], 6),
            "fp6e3m2": (F8, F8.FORMATS["fp6_e3m2"], 6)}
+# W994: FORMATS=TNF4 (a comma list) runs a subset. The TNF4 rows are the ones the
+# grid fix changes; the fp6 rows of the earlier records do not involve a TNF grid.
+if _env.environ.get("FORMATS"):
+    _keep = [k for k in _env.environ["FORMATS"].split(",") if k]
+    assert all(k in FORMATS for k in _keep), _keep
+    FORMATS = {k: FORMATS[k] for k in _keep}
+# W994: TNF_GRID names the TNF grid. "trit-words" (the default) is what the format
+# has: decode() refuses a code whose exponent field exceeds offset_max. "every-code"
+# rebuilds the withdrawn grid (57 values up to 3072 for TNF4) with
+# decode_every_code(), and exists only for the ablation that separates the grid's
+# margin from the LSQ gradient factor. Every record says which grid it used.
+TNF_GRID = _env.environ.get("TNF_GRID", "trit-words")
+assert TNF_GRID in ("trit-words", "every-code"), TNF_GRID
 # W949: the published copy had this hard-coded at 3 while the copy that produced
 # the 10- and 30-epoch records read it from the environment. FALSIFY-ME.md tells
 # a replicator to set EPOCHS; on the published rig that knob did not exist.
@@ -36,9 +56,10 @@ EPOCHS = int(_env.environ.get("EPOCHS", "3"))
 
 def value_set(mod, fmt, bits):
     v = []
+    dec = mod.decode_every_code if (mod is T and TNF_GRID == "every-code") else mod.decode
     for c in range(1 << bits):
         try:
-            x = float(mod.decode(fmt, c))
+            x = float(dec(fmt, c))
         except Exception:
             continue
         if np.isfinite(x):
@@ -67,7 +88,8 @@ class LSQ(torch.autograd.Function):
         xs = x / s
         q = snap(xs, vals)
         ctx.save_for_backward(xs, q)
-        ctx.gscale = 1.0 / max((x.numel() * max(float(vals.abs().max()), 1.0)) ** 0.5, 1.0)
+        qp = LSQ_QP if LSQ_QP is not None else max(float(vals.abs().max()), 1.0)
+        ctx.gscale = 1.0 / max((x.numel() * qp) ** 0.5, 1.0)
         return q * s
 
     @staticmethod
@@ -77,7 +99,12 @@ class LSQ(torch.autograd.Function):
         return g, (g * (q - xs)).sum().reshape(1) * gs, None
 
 
-GRAD_SCALE = True
+# W994: GRAD_SCALE=0 is the W946 base configuration (no LSQ gradient factor); the
+# published copy had it hard-coded on, so the base record could not be rerun from it.
+# LSQ_QP fixes the Qp in the gradient factor instead of taking max|grid|; with it the
+# ablation can give the trit grid the every-code grid's factor (3072) and vice versa.
+GRAD_SCALE = _env.environ.get("GRAD_SCALE", "1") != "0"
+LSQ_QP = float(_env.environ["LSQ_QP"]) if _env.environ.get("LSQ_QP") else None
 import os
 INIT_PCT = float(os.environ['INIT_PCT']) if os.environ.get('INIT_PCT') else None
 
@@ -107,8 +134,10 @@ class QLinear(nn.Linear):
                     else float(QLinear.vals.abs().max())
                 self.ws.fill_(max(float(self.weight.abs().max()) / _d, 1e-8))
                 # W947: a max-rule scale is the worst case for a narrow-range grid --
-                # fp6 e2m3 spans 5.9 binades against TNF4's 14.6, so under max
-                # scaling everything below 1.67 % of the peak underflows. A
+                # fp6 e2m3 spans 5.9 binades, so under max scaling everything below
+                # 1.67 % of the peak underflows. (W947 set this against TNF4's 14.6
+                # binades; TNF4's words span 6.58, and below 1.04 % of the peak
+                # underflows -- W994.) A
                 # percentile init is the standard mitigation; INIT_PCT selects it.
                 if INIT_PCT is not None and x.numel():
                     v = float(np.quantile(np.abs(x.detach().numpy()), INIT_PCT))
@@ -138,7 +167,10 @@ def main():
     Xv, yv = torch.from_numpy(Xte), torch.from_numpy(yte)
     Xt, yt = torch.from_numpy(Xtr), torch.from_numpy(ytr)
     sets = {k: value_set(*v) for k, v in FORMATS.items()}
-    out = {"task": __import__("os").environ.get("TASK","mnist"), "seeds": SEEDS, "epochs": EPOCHS, "runs": {}}
+    out = {"task": __import__("os").environ.get("TASK","mnist"), "seeds": SEEDS, "epochs": EPOCHS,
+           "tnf_grid": TNF_GRID, "grad_scale": GRAD_SCALE, "lsq_qp": LSQ_QP,
+           "init_pct": INIT_PCT, "scale_rule": _env.environ.get("SCALE_RULE", "peak2one"),
+           "runs": {}}
     for name, vals in sets.items():
         QLinear.vals = QLinear.act_vals = vals
         for seed in SEEDS:
@@ -173,6 +205,14 @@ def main():
     _pref = "stability_" if _env.environ.get("SCALE_RULE", "peak2one") == "peak2one" else "stability_p2m_"
     _task = _env.environ.get("TASK", "mnist")
     _rec = f"pct{INIT_PCT}" if INIT_PCT else "gs"
+    # W994: the knobs that change the experiment change the name, for the reason
+    # above. With every knob at its default the name is what it always was.
+    if not GRAD_SCALE:
+        _rec += "_nogs"
+    if LSQ_QP is not None:
+        _rec += f"_qp{LSQ_QP:g}"
+    if TNF_GRID != "trit-words":
+        _rec += "_everycode"
     p = SC / f"{_pref}{_task}_{_rec}_{EPOCHS}ep.json"
     p.write_text(json.dumps(out, indent=1))
     print("\nWROTE " + str(p), flush=True)

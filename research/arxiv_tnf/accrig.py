@@ -12,13 +12,19 @@ arithmetic, not design. So this measures the accumulator alone: an adder and a
 register of the required width, replicated.
 
   TNF4 38 bits, fp6 e3m2 24, fp6 e2m3 18.
+
+W994: TNF4's 38 came from a grid that included codes whose exponent field lies
+above offset_max, which are not TNF words. Over TNF4's words (largest 12, finest
+step 1/16, the same width rule as macrig.py) the block-32 accumulator is 22 bits,
+narrower than fp6 e3m2's 24. The 4.83x above is likewise from that grid; over the
+words the MAC lane costs 1.34x fp6 e2m3 and 0.69x fp6 e3m2 (macrig.py).
 """
 import json, os, pathlib, re, subprocess
 import numpy as np
 
 S = pathlib.Path(os.environ.get("T27_WORK") or pathlib.Path(__file__).resolve().parent)
 NS = [1, 2, 4, 8]
-ACC = {"TNF4": 38, "fp6e3m2": 24, "fp6e2m3": 18}
+ACC = {"TNF4": 22, "fp6e3m2": 24, "fp6e2m3": 18}      # TNF4 was 38 before W994
 CELL = re.compile(r"^\s+(\d+)\s+(LUT[1-6]|CARRY4|MUXF[78])\s*$")
 
 

@@ -21,6 +21,14 @@ with the fixed-point product width of W952:
   fp6 e2m3  odd 4 bits, s<=2   ->  2*4 + 2*2  = 12 = 13-1
 
 so the two lane styles are priced in the same frame, into the same accumulator.
+
+W994: the TNF4 row, and the 768 / 4.83x above, came from a grid that included
+codes whose exponent field lies above offset_max, which are not TNF words. decode
+now refuses them and grid() drops them. Over TNF4's 28 words: odd 2 bits, s<=7, bus
+2*2 + 2*7 = 18, while the fixed-point product is 17 bits, so the exact agreement
+above does not carry over to the words; the fixed-point lane is 213 cells, 1.34x fp6 e2m3 (macrig.py). The
+float-lane cell counts of flane_w953.json were not rerun: yosys 0.67 rejects the
+rig's design (multiple drivers), so its TNF4 row is withdrawn, not replaced.
 """
 import json, math, os, pathlib, re, subprocess, sys
 from fractions import Fraction

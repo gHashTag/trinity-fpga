@@ -21,6 +21,17 @@ with the fixed-point product width of W952:
   fp6 e2m3  odd 4 bits, s<=2   ->  2*4 + 2*2  = 12 = 13-1
 
 so the two lane styles are priced in the same frame, into the same accumulator.
+
+W994: the TNF4 row above, and the TNF4_6b and TNF8_10b points of curve_w955.json,
+came from a grid that included codes whose exponent field lies above offset_max,
+which are not TNF words. decode now refuses them and grid() drops them. Over the
+words, TNF4 is odd 2 bits, s<=7 (bus 18, against a 17-bit fixed-point product,
+so the exact agreement above does not carry over) and TNF8 (3, 4) is odd 5 bits,
+s<=28; the
+'same (odd, shift) pair as fp6 e4m1 / fp10 e5m4' pairing no longer holds
+(verify_numbers.py computes the pairs). The TNF points of curve_w955.json were not
+rerun: yosys 0.67 rejects this rig's design (multiple drivers), so they are
+withdrawn, not replaced. The fp rows do not involve the TNF decoder.
 """
 import json, math, os, pathlib, re, subprocess, sys
 from fractions import Fraction

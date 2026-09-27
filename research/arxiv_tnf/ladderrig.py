@@ -35,6 +35,11 @@ NS = [1, 2, 4, 8]
 # this project instantiated TNFFormat(4, 3) instead: 11 bits, 126.91 binades, a
 # different format sharing TNF16's exponent field. Both are priced here, against
 # floats of each one's own physical width, so the substitution has a number.
+# W994: both binade figures counted codes whose exponent field lies above
+# offset_max, which are not TNF words. Over the words: (3, 4) spans 24.95 binades
+# with 800 values, (4, 3) 78.91 with 1264. (3, 4)'s (odd, shift) is (5, 28), not
+# fp10_e5m4's (5, 34), so the TNF8 row of ladder_w954.json and its pairing with
+# fp10_e5m4 are withdrawn. The rig was not rerun (yosys 0.67 rejects it).
 _F = F8.FPxFormat
 FMT = {"TNF8_ladder_10b": (T, T.TNFFormat(3, 4), 10),
        "fp10_e5m4":       (F8, _F("fp10_e5m4", 5, 4, 15), 10),

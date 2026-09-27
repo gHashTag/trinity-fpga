@@ -3,10 +3,12 @@
 
 W991 (`measurements/compare_w991.json`) enumerated every code of each physical
 width and counted the distinct non-zero finite decodings. For posit and takum
-that is the format. For TNF it is not: `tnf_ref.decode` maps an exponent field
+that is the format. For TNF it is not: `tnf_ref.decode` mapped an exponent field
 above the special row (`offset_max`) to an ordinary power of two, while
 `tnf_ref.encode` sends every such magnitude to infinity, so no rounding and no
-arithmetic ever produces those words. At 19 bits they are 47 of the 128
+arithmetic ever produces those words. (Since 2026-09-27 `decode` raises on such
+a code. The every-code column below reads it with `decode_every_code`, the
+withdrawn reading, kept for exactly this comparison.) At 19 bits they are 47 of the 128
 exponent rows. W991 counted them, which is where its 516,096 values and 127
 binades came from; its "8190 of 2^19 codes are unreachable" is posit19's value
 count minus that figure, not a count of words.
@@ -61,7 +63,7 @@ def tnf_rows(exp_trits, mant_bits):
     roundtrip_ok = roundtrip_bad = above_kept = above_total = 0
     for raw in range(1 << width):
         off = (raw >> f.exp_shift) & (field - 1)
-        v = T.decode(f, raw)
+        v = T.decode_every_code(f, raw)
         if not finite_nonzero(v):
             continue
         every.add(v)

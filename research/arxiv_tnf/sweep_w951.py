@@ -12,6 +12,9 @@ Two open items from W950, closed by one rig.
 2. The 40-run sweep used the learned scale everywhere -- the recipe W950 showed to
    be the cause of the failures. Until the three tasks are repeated under the
    computed scale, "TNF4 55/55" mostly describes our own defect.
+   (W994: "TNF4 55/55" itself is withdrawn. It was measured on a grid built by
+   decoding every code, and codes whose exponent field lies above offset_max are not
+   TNF words; on TNF4's own 29 values the learned recipe fails too.)
 
 SCALE_MODE=learned  : LSQ with the gradient factor, s initialised to max|x| (peak2one)
 SCALE_MODE=computed : OCP-MX-style shared power-of-two per block, never learned
@@ -36,6 +39,11 @@ TH = {"mnist": 60.0, "fashion": 60.0, "kmnist": 40.0}[TASK]
 FMT = {"TNF4": (T, T.TNFFormat(2, 1), 6),
        "fp6e2m3": (F8, F8.FORMATS["fp6_e2m3"], 6),
        "fp6e3m2": (F8, F8.FORMATS["fp6_e3m2"], 6)}
+# W994: FORMATS=TNF4 (a comma list) runs a subset.
+if os.environ.get("FORMATS"):
+    _keep = [k for k in os.environ["FORMATS"].split(",") if k]
+    assert all(k in FMT for k in _keep), _keep
+    FMT = {k: FMT[k] for k in _keep}
 OUT = S / f"sweep_w951_{TASK}_{MODE}_b{BLOCK}_{EPOCHS}ep.json"
 
 SAT = {}          # layer -> max observed (max|x|/s)/gmax this epoch
@@ -156,7 +164,7 @@ def main():
     assert len(Xt) == 60000 and len(Xv) == 10000, (len(Xt), len(Xv))
     grids = {k: grid(*v) for k, v in FMT.items()}
     out = {"task": TASK, "mode": MODE, "block": BLOCK, "epochs": EPOCHS,
-           "seeds": SEEDS, "threshold": TH, "runs": {}}
+           "seeds": SEEDS, "threshold": TH, "tnf_grid": "trit-words", "runs": {}}
     for name, g in grids.items():
         QLinear.g, QLinear.gmax = g, float(g.max())
         for seed in SEEDS:

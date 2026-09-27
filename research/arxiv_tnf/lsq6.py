@@ -31,6 +31,9 @@ TASKS = {"mnist": SC / "mnist", "fashion": SC / "fashion"}
 # 4-bit fp4 grid (15 values) is a width mismatch, and on sparse activations that
 # mismatch -- not the number system -- is what collapsed MNIST. The fair peers at
 # six bits are fp6_e2m3 and fp6_e3m2, both shipped by the same oracle.
+# W994: 57 was the count over every code, including codes whose exponent field lies
+# above offset_max, which are not TNF words; decode now refuses them and
+# value_set() drops them. TNF4 has 29 values (28 non-zero, largest 12).
 FORMATS = {"TNF4": (T, T.TNFFormat(2, 1), 6),
            "fp6e2m3": (F8, F8.FORMATS["fp6_e2m3"], 6),
            "fp6e3m2": (F8, F8.FORMATS["fp6_e3m2"], 6),
