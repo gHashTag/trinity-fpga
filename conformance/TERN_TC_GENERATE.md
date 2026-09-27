@@ -91,3 +91,46 @@ the board.
   everything except the ternary dot products.
 
 ## Results
+
+### Board run, 2026-09-27 13:18:05Z to 13:43:42Z: FAIL (answer bytes lost on the UART)
+
+One attempt, `conformance/board_runs/gen_tokens_8.log`:
+`tri fpga-run gen_tokens_8 --limit 3600 -- python3 -u tern_tc_generate_ax7203.py --setkey --port /dev/cu.usbserial-110 --keys ../trinet-keys.txt`.
+The UART was behind the Genesys hub (`# usb HUB` in the header) with 75 IOKit
+user clients on the bridge, 74 of them FwUpdateManagerd.
+
+```
+calls                   : 183 of 192 (4 per layer per token)
+jobs sent               : 7321152 of 7682304 (+ 1900608 chunks skipped: activation digit plane all zero)
+receipts verified (tag) : 7235186/7321152 under node 0x5452494e
+rows bit-exact          : 127530/129216  (int8 activations from the model's own forward pass)
+elapsed                 : 1536.6 s (4712 answers/s in run())
+longest host pause      : 80.8 ms
+RESULT: FAIL - t7 L3/gate+up: rejected {'short': 1, 'missing': 85966}. No token from this run is cited.
+```
+
+The run stopped in call 183 of 192: the last token, layer 3, `gate+up`, after
+2,162 of that call's 88,128 answers. The failing read starts with a byte that is
+not the answer magic, and the header one byte later carries nonce `0x6f6675`
+where `0x6f6672` was due. `tri fpga-hole gen_tokens_8.log`: 56 bytes were lost
+from the answer stream (18 bytes of one answer and 2 whole answers), one anchor.
+
+- The prediction is not confirmed. Per the pre-registration no token from this
+  run is cited, and the run is not repeated: it failed after the first job.
+- Every rejection is `short` or `missing`. No answer was rejected for its tag,
+  nonce, node id or value, but the claim was about all 7,682,304 and it did not
+  hold.
+- At window 24 at most 24 × 19 = 456 answer bytes are outstanding, less than the
+  CP2102N's 512-byte receive buffer, so a host stall cannot overflow it. The
+  window limit guards against overflow and this hole came from something else. It
+  is shorter than one full-speed USB bulk packet (64 bytes), which fits a packet
+  lost on the hub path. That is a hypothesis; nothing here measured it.
+- The W24 control after E2 (`tern_tc_all_w24_after_e2.log`, 403,200 of 403,200)
+  bounds the W24 loss rate below about 3 in 403,200 (rule of three). This run saw
+  one hole in about 7.3 million answers. The two agree: the loss is rare, and a
+  run of 403 thousand answers cannot see it.
+
+A clean 7.7-million-answer run over this link needs either a hub-free UART, whose
+loss rate is not yet measured, or a new pre-registered protocol that re-requests
+a missing nonce and still checks every receipt. The second is a different claim
+and a new spec, not a change to this harness.
