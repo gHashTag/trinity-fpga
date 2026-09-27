@@ -1,0 +1,2 @@
+501ab904690159dac2bb6d3c32245aeb4e582c002a0ecd66cf8f6cc8ad57f4bd  e2_eth_phy_status_zinv_t1.bit (file)
+be28e2218fa65e4d43ccdb8229fcedb3d44ad395d8b30dc5528315430161e637  payload from the sync word; E2 build 0b6d7820 plus LIOI3_X0Y235.OLOGIC_Y0.ZINV_T1, one config bit (frame 0x0002001E w73 b3) and its frame ECC

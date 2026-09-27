@@ -288,6 +288,64 @@ with router2, and to gate CI on `ZINV_T1` being present for every IOBUF pin.
 Note that the node build uses `--nosrl` because SRL hangs router1, so moving
 off router1 is not free.
 
+### The one-bit fix, checked off the board (not flashed)
+
+Two builds carry the fix. Neither has been on the board.
+
+- **Hand-edited (`e2z`).** It is the flashed E2 FASM plus the single line
+  `LIOI3_X0Y235.OLOGIC_Y0.ZINV_T1`, then `fasm2frames` and `frames2bit`, with no
+  new P&R.
+- **Patched engine (`e2p`).** P&R was re-run with nextpnr-xilinx and the
+  ZINV_T1 fix backported. The work is in a local branch,
+  `fix/zinv-t1-pad-pip` at `f3a8c73c`, not pushed. Its FASM has the ZINV_T1
+  line in place of the pad pip line `LIOI_T0.LIOI_OLOGIC0_TQ`. That line sets no
+  bits, and the frames are equal without it.
+
+| check | result |
+|---|---|
+| frames, flashed E2 against `e2z` | one bit differs: frame `0x0002001E`, word 73, bit 3 |
+| frames, `e2z` against `e2p` | identical, byte for byte |
+| payload from the sync word, flashed E2 against `e2z` | 6 bits in 3 bytes: that bit, and 5 bits of word 50 of the same frame, which is the frame's ECC that `frames2bit` recomputes |
+| `tri fpga-tristate` on the three FASMs | flags the flashed E2; passes `e2z` and `e2p` |
+
+**What changed in `tri fpga-tristate`.** At first the check looked only for the
+pad pip line. On `e2p`, which has no such line, it therefore saw no tristate at
+all, and it would have passed that build even with ZINV_T1 missing. It now also
+keys on the routed T1 input, `LIOI3_X0Y235.IOI_OLOGIC0_T1.IOI_IMUX15_1`. That is
+a real pip with bits, present whichever writer ran. A copy of `e2p`'s FASM with
+the ZINV_T1 line removed is now flagged.
+
+**The bitstream** is `artifacts/bitstreams/e2_eth_phy_status_zinv_t1.bit`. The
+file is gitignored; its hashes are in the tracked `.sha256` next to it. Its
+payload is `be28e221…0161e637`.
+
+**Prediction, written before the flash.**
+
+- **Hypothesis 1 (inverted output enable).** The `board:` line counts MDIO
+  answers above 0, `id` reads `00221622`, and `pm` has a PHY bit set.
+- **Hypothesis 2 (pins).** `id` reads `FFFFFFFF` at every address again.
+
+The link bits are not part of either prediction. The cable's far end is the
+router. `fpga-run` has no field for that, so the record states it.
+
+**Board steps.** Each flash needs the owner's «да», and the owner types the
+sudo password. There is one attempt per step name. The port is whatever
+`tri fpga-usb` names at the time.
+
+```
+tri fpga-usb
+tri fpga-ioclients
+tri fpga-flash e2z_flash artifacts/bitstreams/e2_eth_phy_status_zinv_t1.bit --owner-yes "QUOTE" --expect be28e221
+tri fpga-run e2z_phy_status -- python3 -u eth_phy_status_ax7203.py --port /dev/cu.usbserial-110 --lines 40
+tri fpga-flash node0_restore_after_e2z artifacts/bitstreams/trinet_node0_ci30762491794.bit --owner-yes "QUOTE" --expect ee75d97b
+tri fpga-run tern_tc_all_w24_after_e2z -- python3 -u tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-110 --baud 1144744 --keys ../trinet-keys.txt --model /Users/playra/igla-coder-gpu/c_infer/model.bin --window 24
+tri fpga-keycheck
+```
+
+- **`--lines 40`** covers about 20 s, more than one no-link reset period.
+- **The last two runs** return the board to the node and repeat the W24
+  control, as after the first E2.
+
 ## Security notes for E4
 
 - Anyone on the LAN can send requests. They can use up capacity, but without
