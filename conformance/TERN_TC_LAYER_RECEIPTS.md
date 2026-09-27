@@ -458,3 +458,50 @@ Expected, if the window does not matter: the same PASS as step 1. Got:
 - Operating point for now: window 24, the harness default. The causes that
   remain are testable without new RTL. One is window 64 without the hub. The
   other is the adapter's and the driver's buffer sizes. Neither has been run.
+
+### Rerun step 3 (pre-registered): the CP2102N receive buffer, windows 26 and 30
+
+Written and pushed before either run. No harness, RTL or expected-number
+change: `--window` is a command-line argument of the same harness (blob
+`01f85f04`, which differs from `b1e95f6f` in comments and help text only).
+
+**Source.** The Silicon Labs CP2102N datasheet (Rev. 1.5) says:
+
+- section 1: the bridge has a 512-byte receive buffer and a 512-byte
+  transmit buffer;
+- section 4.3.9: "Handshaking is required at high baud rates (greater than
+  1 MBaud) to avoid receiver overrun".
+
+The node runs at 1,144,744 baud with no handshaking. `trinet_node_core.v` has
+only `uart_rx` and `uart_tx`, and the AX7203 constraint files map only those
+two pins to the CP2102. The node therefore cannot be held off.
+
+**Hypothesis.** Answers are lost when more than 512 bytes of them wait in the
+CP2102N receive buffer, that is, when the host's USB IN polling pauses long
+enough. With W jobs in flight, at most 19W answer bytes exist between the
+node and the harness.
+
+- **W <= 26** (494 B) can never overflow the buffer, however long the pause.
+- **W >= 27** overflows after a pause long enough for the node to produce
+  513 bytes, about 27 answers at 4,770/s, or 5.7 ms (derived). That threshold
+  is the same for every W >= 27. So window 30 should slip about as readily as
+  window 64 did: 3 of 3 long runs, after 6,744 to 19,049 jobs.
+
+The harness's "longest host pause" measures this process, not USB polling. The
+driver keeps draining the bridge while the process sleeps, which is how window
+24 survived a 22.4 ms process pause.
+
+**Runs**, each once, same port and hub, `--all --setkey`, window 26 first:
+
+| run | bytes in flight | prediction | refutes the hypothesis |
+|---|---|---|---|
+| `--window 26` | 494 | PASS, `403200/403200` | any slip |
+| `--window 30` | 570 | FAIL: a slip, most likely within the first ~20,000 jobs | a clean 403200/403200 |
+
+Neither outcome proves the hypothesis alone. Both together, a pass at 494 B
+and a slip at 570 B, would place the loss threshold between 494 and 570 bytes,
+bracketing 512. If the 512 B excludes a USB endpoint buffer, the threshold
+moves up by at most one 64-byte packet. That still separates 26 from 64, but
+it could let window 30 pass, so a clean window-30 run is read as "weakened",
+not "refuted", unless it is repeated. Logs: `board_runs/tern_tc_all_w26.log`,
+`board_runs/tern_tc_all_w30.log`.
