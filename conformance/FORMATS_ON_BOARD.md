@@ -9,7 +9,9 @@ behave on this board. Short answer:
   Z[φ] (GFTernary × Z[φ]), plus int8 activations. All three pass with signed
   receipts.
 - **None of the paper's 27 Tier-E cells** (13 decode, 7 GF ADD, 7 GF MUL) can
-  be re-measured without reflashing. Their board results are recorded only as
+  be re-measured without reflashing. One has been since, with the owner's yes:
+  GF8 ADD, all 65,536 pairs, `HW RESULT: 65536/65536 bit-exact (fails=0)`
+  (section 7). Their board results are recorded only as
   quotes in issue comments on gHashTag/trinity-fpga#199. No raw UART log for
   any of them is in a repository on this Mac, and only one of their bitstreams
   is: GF8 ADD.
@@ -47,7 +49,7 @@ Paper v0.2, section 4, line 59: 13 decode, 7 ADD and 7 MUL, all on the AX7203
 | column | cells | recorded result | evidence on disk |
 |---|---|---|---|
 | decode-HW 13 | bf16, int8, nf4, fp8_e4m3, posit8, fp8_e5m2, fp4_e2m1, int4, fp6_e2m3, fp6_e3m2, lns8, tf32, binary16 | N/N per cell (binary16 65536/65536, exhaustive; bf16 and tf32 only 8/8) | none |
-| compute ADD 7 | GF4, 6, 8, 12, 16, 20, 24 | 256 to 512 vectors per cell, fails=0 | GF8 bitstream only |
+| compute ADD 7 | GF4, 6, 8, 12, 16, 20, 24 | 256 to 512 vectors per cell, fails=0 | GF8 bitstream only; GF8 re-measured exhaustively on 2026-09-27 (section 7) |
 | compute MUL 7 | GF4, 6, 8, 12, 16, 20, 24 | 256 to 480 vectors per cell, fails=0 | none |
 
 The one bitstream is `artifacts/bitstreams/gf8_clean_ax7203.bit` from
@@ -153,3 +155,23 @@ The owner said yes to this flash and run on 2026-09-27: «да, прошей GF8
   the link. A wrong value that is not `None` points at the arithmetic.
 - **One attempt.** A second run is allowed only if the first fails before its
   first pair (port busy, no answer to pair 1). Both logs are then kept.
+
+### Result, 04:44 UTC (measured)
+
+**PASS.** `board_runs/gf8_add_exhaustive_154839.log` ends with `HW RESULT:
+65536/65536 bit-exact (fails=0)` and `# exit=0`.
+
+- **Load.** `board_runs/gf8_add_flash.log`: IDCODE 0x13636093, "loaded file
+  ... in 778s", exit 0, 04:26:37 to 04:39:59 UTC.
+- **Run.** One attempt, 04:40:22 to 04:44:37 UTC, 254 s, no `MISMATCH` line.
+- **What this adds to the record.** Section 3 has 4,096 pairs from 2026-08-01
+  as a quoted line. This run covers every input pair, and its raw log is in the
+  repository.
+- **Link.** 65,536 pairs at 7 bytes out and 4 bytes back went through with no
+  `hw=None`. So 154,839 baud against divider 434 on CFGMCLK held for 720,896
+  bytes. The run does not measure the clock: any rate the design tolerates
+  would pass.
+- **Rate.** At 3.9 ms per pair, the run was 5.5 times slower than the wire
+  (0.71 ms per pair). Stop-and-wait over USB sets that pace, not the design.
+- **Cost.** The GF8 load replaced the TRI-NET node. Until the node is reloaded
+  and re-keyed, no receipt run (section 1) is possible on this board.
