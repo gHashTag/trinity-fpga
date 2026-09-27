@@ -104,3 +104,30 @@ Before running it:
 - Identify the board by the node id it reports, not by the serial port name.
 
 The flash history of this board is in `fpga/openxc7-synth/FLASH_HISTORY.md`.
+
+## Reload after MXDOT4, 2026-09-27 (written before the control run)
+
+The owner said yes to returning the node («да, вариант 1, верни узел TRI-NET»)
+and picked the CI artifact over the local build.
+
+- **Bitstream.** `trinet-fleet-node0-UNKEYED` from CI run 30762491794
+  (2026-08-02, success, head 1bb1d97e). It was fetched with the owner's OK,
+  stored gitignored as `artifacts/bitstreams/trinet_node0_ci30762491794.bit`.
+  Its sha256 is `0fafd225e2d18f73f6b605a85d0fb592f5a684dd17a7313aad76249ac89eddb4`.
+  That matches the recorded prefix `0fafd225e2`, which pins weak point 5
+  above. The load is logged in `board_runs/node0_ci_flash.log`.
+- **Control, from `conformance/`.** This is the window-24 command from
+  `TERN_TC_LAYER_RECEIPTS.md`, which is the one that passed:
+  `tri fpga-run tern_tc_all_w24_reload --limit 1800 -- python3
+  tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-1130 --baud
+  1144744 --keys ../trinet-keys.txt --model
+  /Users/playra/igla-coder-gpu/c_infer/model.bin --window 24`.
+- **Harness.** The code is unchanged since b1e95f6f, the version that passed.
+  The later commits changed only help text and comments.
+- **PASS** means the log shows all three of these:
+  - `receipts verified (tag) : 403200/403200`;
+  - `rows bit-exact : 33792/33792`;
+  - exit 0.
+- **Anything else is a FAIL** and is recorded as it stands.
+- **One attempt.** A second run is allowed only if the first fails before its
+  first job (port busy, the node does not answer). Both logs are then kept.
