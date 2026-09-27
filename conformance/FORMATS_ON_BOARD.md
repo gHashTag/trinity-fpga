@@ -369,8 +369,13 @@ the owner's yes and replaces the TNF16 design.
     205/205 response bytes, at 0, −43,000 and +45,000 ppm.
   - Gate level: the yosys netlist of the core (builder flags, FORMATS=3) on
     yosys's `xilinx/cells_sim.v`. A 2,000-request smoke run is bit-exact. The
-    full 251,616-request run was still going when this was committed. Its
-    last line is added below when it ends, pass or fail.
+    full run gives `MXDOT4 SIM: 251616/251616 bit-exact (fails=0)`.
+    - It took 1,662 s wall, 07:10:35Z by the log's file time.
+    - The netlist is 1,706 LUT instances, the FORMATS=3 row of the cost
+      table.
+    - The testbench is `fpga/tnet/mxdot4_core_tb.v` without the FORMATS
+      override, because the netlist has no parameter.
+    - The vector file is the `107843f1…cb2d` above.
   - Host `conformance/mxdot4_board_ax7203.py --self-test`: every one of seven
     injected faults is caught, and so is a board with the tables swapped. The
     host's model core agrees with the reference words on all 251,616
