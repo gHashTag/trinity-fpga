@@ -131,3 +131,25 @@ of that chain exists only as a line quoted inside a comment.
   - If that fails, sweep the rate before reading anything into the result.
 - **Ready without the board:** `conformance/gf8_add_conformance_ax7203.py
   --self-test` passes today: 65536 pairs, 0 inconsistencies.
+
+## 7. Pre-registered: GF8 ADD at 154,839 baud (written before the run)
+
+The owner said yes to this flash and run on 2026-09-27: «да, прошей GF8 ADD и
+запусти на 154839».
+
+- **Bitstream:** `artifacts/bitstreams/gf8_clean_ax7203.bit`, sha256
+  `47d8a076…e369`. The load is logged in `board_runs/gf8_add_flash.log`.
+- **Command,** from `conformance/`: `tri fpga-run gf8_add_exhaustive_154839
+  --limit 1800 -- python3 gf8_add_conformance_ax7203.py --port
+  /dev/cu.usbserial-1130 --baud 154839 --exhaustive`.
+- **Vectors:** all 256 × 256 = 65,536 pairs, checked against `gf_ref.py`
+  (GF8 = 1S+3E+4M, bias 3, HAS_INF 0). The run recorded on 2026-08-01 used
+  4,096 pairs. Exhaustive covers every input.
+- **PASS** means the log has the line `HW RESULT: 65536/65536 bit-exact
+  (fails=0)` and exit 0. Anything else is a FAIL and is recorded as it stands.
+  If the run is stopped at the 1,800 s limit, it is recorded as incomplete.
+- **Telling link from arithmetic.** The host sends no sequence number, so a
+  lost byte shows up as `hw=None` in the mismatch lines. A `None` points at
+  the link. A wrong value that is not `None` points at the arithmetic.
+- **One attempt.** A second run is allowed only if the first fails before its
+  first pair (port busy, no answer to pair 1). Both logs are then kept.
