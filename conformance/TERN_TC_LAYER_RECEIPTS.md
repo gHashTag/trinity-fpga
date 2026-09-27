@@ -20,7 +20,7 @@ PASS.
 |---|---|
 | 28,416 / 28,416 row dots bit-exact (wq/wo/gate/up, 6 layers) | **stands**: the y values were compared per row against the oracle |
 | 320 / 320 rows, 3,200 receipts, random 320x320 (`trinet_matvec_demo.py`) | **stands**: that harness does compare tags and nonces |
-| 284,160 / 284,160 receipts authenticated under node0's key | **withdrawn** until the board reruns the fixed harness |
+| 284,160 / 284,160 receipts authenticated under node0's key | **withdrawn**: those receipts were never checked. Replaced by a new measurement with the fixed harness on 2026-09-27 at 02:43Z: 403,200 / 403,200 receipts verified across all 42 matrices, which include these 24 (see "Rerun step 1" below) |
 
 ## What the fixed harness checks
 
@@ -97,12 +97,15 @@ operator forging their own receipts).
 
 ## Board run, 2026-09-27 UTC
 
-**Result: FAIL for the full run.** The main run lost UART framing after 19,049
+**Result: the first full run failed, and the full rerun at window 24 passed.**
+The first full run (window 64, harness `2b9830c5`) lost UART framing after 19,049
 jobs. Steps 4 and 5 were held back at first (a failed step is recorded and the run
-stops there), then run once each at the owner's request: step 4 passed, step 5
+stops there), then run once each at the owner's request: step 4 passed, and step 5
 lost framing the same way after 9,951 jobs. Step 5 rerun with `--window 8`
-passed: 51,840/51,840 receipts, 320/320 rows. The full run has not been repeated
-at that window, and the 284,160-receipt figure stays withdrawn.
+passed: 51,840/51,840 receipts, 320/320 rows. The full run was then repeated once
+at the default window of 24 on harness `b1e95f6f` ("Rerun step 1" at the end) and
+passed: `receipts verified (tag) : 403200/403200`, `rows bit-exact :
+33792/33792`. The window-64 control (step 2 of that plan) has not been run.
 
 - Machine: MacBook Pro, Apple M1 Pro, macOS 26.5.2 (25F84), Python 3.14.6,
   pyserial 3.5.
@@ -255,9 +258,9 @@ PASS. Got:
 
 Open: why the framing slipped. It slipped twice at window 64, after 19,049 jobs
 and after 9,951 jobs. Between those two runs, all 3,200 jobs of step 4 (also at
-window 64) came back framed. At window 8, 51,840 jobs came back framed. Nothing
-else has been tested, and the full `--all` run at a smaller window has not been
-done. Candidates: the CP2102N's
+window 64) came back framed. At window 8, 51,840 jobs came back framed, and at
+window 24 the full `--all` run did as well (403,200 jobs, "Rerun step 1" at the
+end). Candidates: the CP2102N's
 baud divider at 1,144,744 against the node's (earlier board runs went through a
 CP2102N seen as `usbserial-130` on another Mac); the USB 2.0 hub (the CP2102N
 did not enumerate on the first hub port tried); 64 jobs in flight
@@ -332,3 +335,60 @@ per window is weak evidence on its own. The stronger signal is `longest host pau
 the hex of the failed read: a pause of milliseconds right before a hole at
 window 64 points at the queue; a hole with no pause before it points at the
 link.
+
+### Rerun step 1: `--all` at window 24, 2026-09-27 02:43Z
+
+Run once at the owner's request. Same Mac, port, hub and baud as above, and no
+power cycle since step 3. The checkout was `067e176a`, where the harness is
+`b1e95f6fd5ec43b5be709af86b179750ae8b27a5`, unmodified. `model.bin` had the same
+sha256 as above. Logs: `board_runs/selftest_w24.log` and
+`board_runs/tern_tc_all_w24.log`, each with 0 hits for the key's hex.
+
+**Self-test**, 02:43:34Z. Expected PASS. Got 18/18 `ok` (the 17 checks plus the
+16-byte-hole replay) and `self-test: PASS`, 2.38 s.
+
+**Full run**, 02:43:53Z to 02:45:21Z.
+
+    python3 tern_tc_layer_ax7203.py --all --setkey --window 24 --port /dev/cu.usbserial-1130 \
+        --baud 1144744 --keys ../trinet-keys.txt --model ~/igla-coder-gpu/c_infer/model.bin
+
+Expected 403,200 jobs, `receipts verified (tag) : 403200/403200`, `rows
+bit-exact : 33792/33792`, PASS, about 90 s. Got:
+
+    model.bin: 42 matrices, 16896 rows, 6451200 ternary weights (61.1% nonzero)
+    jobs: 403200 (32-trit chunks x 2 x-vectors)
+    setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+      [ok ] L0/wq        640/640    rows bit-exact
+      [... 40 lines elided: L0/wk to L5/up, every one [ok ] and n/n ...]
+      [ok ] L5/down      640/640    rows bit-exact
+    jobs sent               : 403200 of 403200 planned (window 24)
+    receipts verified (tag) : 403200/403200 under node 0x5452494e
+    rejected                : none
+    rows bit-exact          : 33792/33792  (activations: ternary)
+    elapsed                 : 85.49 s (4716 answers/s)
+    longest host pause      : 22.4 ms (after 142395 answers)
+    RESULT: every row above computed on the AX7203 bit-exact against the
+            int8-weight oracle, and every receipt verified under the key.
+
+- PASS. All 42 ternary matrices of the trained tern_tc (6,451,200 weights, two
+  ternary x-vectors) ran on the existing bitstream. Every one of the 403,200
+  jobs was sent and answered, and every answer passed status, nonce, node id,
+  tag and y. The full log lists all 42 matrices.
+- The key is still the one step 3 installed: setkey got 0x03, and every tag
+  verified under node0's key from `trinet-keys.txt`.
+- No slip in 403,200 jobs, 21 times the 19,049 after which the window-64 run
+  slipped. Window 64 slipped twice in about 32,200 jobs (steps 3, 4 and 5). If
+  the slip rate did not depend on the window, about 25 slips would have been
+  expected here (derived), and there were none.
+- 4,716 answers/s against 4,344 at window 8 and about 4,660 to 4,750 at window
+  64 before the slips: window 24 costs no measurable throughput.
+- The host paused once for 22.4 ms. At 1,144,744 baud (10 bits per byte) the
+  line delivers 1,216 bytes, a full window-64 queue, in about 10.6 ms (derived).
+  A pause this long lets the whole window queue up. At window 24 that is at most
+  456 bytes, and none were lost.
+- What this does not settle. The harness also changed between step 3 and this
+  run: `b1e95f6f` adds timing and hex output around the same write and read
+  calls. Step 5a was clean at window 8 on the old harness, so the harness change
+  is not needed to explain a clean run, but step 2 (the same command with
+  `--window 64` on `b1e95f6f`) is the control that separates the two. It has not
+  been run. Step 3 of the plan (no hub) is not needed, because step 1 passed.
