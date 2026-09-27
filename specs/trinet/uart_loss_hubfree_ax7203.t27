@@ -1,0 +1,142 @@
+// SPDX-License-Identifier: Apache-2.0
+; specs/trinet/uart_loss_hubfree_ax7203.t27 -- pre-registration: the UART loss rate at window 24 with
+; the CP2102N plugged into the Mac with no hub between them, one long arm
+; The one source for this measurement. conformance/uart_loss_hubfree_from_spec.mjs compiles this file
+; with the t27 compiler (wasm), evaluates every test block below, checks the pinned files, reads back
+; the constants it repeats from the diagnostic's and the generation run's generated params, and
+; writes conformance/uart_loss_hubfree_params.py, which the runner
+; conformance/uart_loss_hubfree_ax7203.py reads. `--check` fails on drift. Written 2026-09-27 before
+; any run of it. ASCII, English.
+
+; WHY. The pre-registered generation run (specs/trinet/tern_tc_generate_ax7203.t27) lost 56 answer
+; bytes in call 183 of 192, after 7235186 answers, at window 24 with the CP2102N behind a Genesys
+; USB2.1 hub (05e3:0610). The diagnostic (specs/trinet/uart_loss_diag_ax7203.t27) then counted 0
+; loss events in 2016000 answers at window 24 on the same path. Together: 1 event in 9251186
+; answers behind that hub at window 24. The owner, 2026-09-27, variant 1: move the cable past the
+; hub, and measure first, with the number of answers fixed here so that the bound drops below one
+; loss per generation run.
+
+; WHAT RUNS. The diagnostic's counter, uart_loss_diag_ax7203.run_arm and .summarize, imported and
+; pinned by sha256, never edited. It reads its frame constants (node id, magic, status, resync span,
+; stall limit) from its own params file, also pinned; the runner checks that the ones repeated below
+; are equal. The job list is the diagnostic's: the harness's --all list, JOBS_PER_PASS entries, job i
+; uses entry i mod JOBS_PER_PASS and nonce FIRST_JOB_NONCE + i. One arm, window WINDOW, PASSES
+; passes. The runner adds a USB check before the first byte: it reads the IOUSB plane (ioreg) and
+; refuses to start unless exactly one device USB_VENDOR:USB_PRODUCT is present and no device of
+; class HUB_CLASS sits between it and its host controller.
+
+; PREDICTION. PRED_LOSS_EVENTS loss events (hole > 0, whole or unresolved), no wrong y, instrument
+; check ok, JOBS_PER_ARM sent within LIMIT_S.
+; CLAIM_BELOW_ONE_PER_GENERATION_RUN is yes iff the arm has zero loss events, zero wrong y, sent ==
+; JOBS_PER_ARM, not aborted, not stopped at the limit, and the instrument check is ok. It then says:
+; the one-sided 95 % upper bound on the loss-event rate on this USB path, ln(20) / JOBS_PER_ARM per
+; answer, times JOBS_GEN is below 1. With one or more events the claim is no, and the runner prints
+; the rate, its interval, and the point estimate of events per generation run.
+
+; WHAT IT DOES NOT SAY.
+;   That a generation run without retransmit will pass: at the bound, the chance of no loss in one
+;   generation run is only exp(-1), about 37 %. Showing 95 % would take about 450 million answers.
+;   That the hub caused the 56-byte hole: at the hub path's point rate (1 in 9251186), an arm this
+;   long would see zero events with probability about 8 %, so zero here is weak evidence about the
+;   hub, not proof. The W64 arm showed losses come in bursts; the bound is on events, and a burst is
+;   at least one event. One USB path, one host, one evening. Nothing about the harness PASS criterion.
+;   One attempt; a second only if the first fails before its first job, and then both are recorded.
+
+module trinet_uart_loss_hubfree_ax7203;
+
+pub const KIND : str = "board-diagnostic-preregistration";
+pub const ID : str = "trinet/uart_loss_hubfree_ax7203";
+pub const GENERATED : [1]str = ["conformance/uart_loss_hubfree_params.py"];
+pub const RUNNER : str = "conformance/uart_loss_hubfree_ax7203.py";
+pub const RECORD_DOC : str = "conformance/UART_LOSS_HUBFREE.md";
+pub const LOG_NAME : str = "uart_loss_hubfree_w24";
+
+; --- Code and data of record: imported or read, never edited --------------------------------
+pub const DIAG_SPEC_FILE : str = "specs/trinet/uart_loss_diag_ax7203.t27";
+pub const DIAG_SPEC_SHA256 : str = "5d8587dd09d313118af3313edde9b3b6cbb18de9494b041c239ab7f28eaf52cd";
+pub const DIAG_PARAMS_FILE : str = "conformance/uart_loss_diag_params.py";
+pub const DIAG_PARAMS_SHA256 : str = "4f4881797c56474bf5685120e652a95d26e3f216d5e9f74007db4a04984d0817";
+pub const DIAG_RUNNER_FILE : str = "conformance/uart_loss_diag_ax7203.py";
+pub const DIAG_RUNNER_SHA256 : str = "85657a39bb38cf7670c50ae1ed237d1c913eb063c12dc9af52e41c4c10f17036";
+pub const HARNESS_FILE : str = "conformance/tern_tc_layer_ax7203.py";
+pub const HARNESS_SHA256 : str = "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa";
+pub const MAC32_FILE : str = "conformance/trinet_mac32_conformance_ax7203.py";
+pub const MAC32_SHA256 : str = "11fa651938a0e360a311f63ec4c04de15241ad9a7c6e26175ead084e07ababa2";
+pub const GENERATE_PARAMS_FILE : str = "conformance/tern_tc_generate_params.py";
+pub const GENERATE_PARAMS_SHA256 : str = "2688743591171e56c9ae37d2de1f04e3c3a244a2c803fd57f45d78b6976f0ee4";
+
+; --- Repeated from the diagnostic's params; the generator reads each back --------------------
+pub const NODE_ID : u32 = 1414678862;
+pub const BAUD : u32 = 1144744;
+pub const RESP_LEN : u8 = 19;
+pub const FIRST_JOB_NONCE : u32 = 65536;
+pub const JOBS_PER_PASS : u32 = 403200;
+pub const READ_TIMEOUT_S : u8 = 2;
+; the diagnostic's second arm, the one this repeats on a different USB path
+pub const DIAG_ARM : u8 = 1;
+pub const WINDOW : u8 = 24;
+pub const DIAG_JOBS_PER_ARM : u32 = 2016000;
+
+; --- Repeated from the generation run's params ----------------------------------------------
+pub const JOBS_GEN : u32 = 7682304;
+
+; --- The USB path ---------------------------------------------------------------------------
+; 0x10c4:0xea60, Silicon Labs CP2102N; hubs have bDeviceClass 9
+pub const USB_VENDOR : u16 = 4292;
+pub const USB_PRODUCT : u16 = 60000;
+pub const HUB_CLASS : u8 = 9;
+pub const HUBS_ALLOWED : u8 = 0;
+pub const PRIOR_USB_PATH : str = "CP2102N at 0x00110000 behind a Genesys USB2.1 hub (05e3:0610)";
+
+; --- The arm --------------------------------------------------------------------------------
+pub const PASSES : u8 = 58;
+pub const JOBS_PER_ARM : u32 = 23385600;
+pub const LIMIT_S : u16 = 7200;
+; the diagnostic's W24 arm ran 2016000 answers in 427.5 s (4716/s); the floor stays under 70 % of that
+pub const MIN_ANSWERS_PER_S : u16 = 3300;
+
+; --- Claim rule and prior -------------------------------------------------------------------
+; ln(20) = 2.99573...; rounded up to thousandths so the pass count errs long
+pub const LN20_MILLI : u16 = 2996;
+pub const PRED_LOSS_EVENTS : u8 = 0;
+pub const PRIOR_HUB_W24_EVENTS : u8 = 1;
+pub const PRIOR_HUB_W24_ANSWERS : u32 = 9251186;
+pub const PRIOR_GEN_ANSWERS_BEFORE_HOLE : u32 = 7235186;
+
+test repeats_the_w24_arm {
+    assert WINDOW == 24;
+    assert RESP_LEN * WINDOW < 512;
+    assert DIAG_JOBS_PER_ARM == 5 * JOBS_PER_PASS;
+    assert NODE_ID == 84 * 16777216 + 82 * 65536 + 73 * 256 + 78;
+}
+
+test arm_is_whole_passes {
+    assert JOBS_PER_ARM == PASSES * JOBS_PER_PASS;
+}
+
+test bound_drops_below_one_per_generation_run {
+    assert 1000 * JOBS_PER_ARM >= LN20_MILLI * JOBS_GEN;
+    assert 1000 * (JOBS_PER_ARM - JOBS_PER_PASS) < LN20_MILLI * JOBS_GEN;
+}
+
+test arm_fits_its_limit {
+    assert LIMIT_S * MIN_ANSWERS_PER_S >= JOBS_PER_ARM;
+    assert 10 * MIN_ANSWERS_PER_S <= 7 * 4716;
+    assert LIMIT_S <= 7200;
+}
+
+test nonces_stay_below_the_retry_and_fault_spaces {
+    assert FIRST_JOB_NONCE + JOBS_PER_ARM < 32 * 16777216;
+}
+
+test prior_is_the_two_hub_runs {
+    assert PRIOR_HUB_W24_ANSWERS == PRIOR_GEN_ANSWERS_BEFORE_HOLE + DIAG_JOBS_PER_ARM;
+    assert PRIOR_HUB_W24_EVENTS == 1;
+    assert JOBS_PER_ARM >= 2 * PRIOR_HUB_W24_ANSWERS;
+}
+
+test usb_ids {
+    assert USB_VENDOR == 16 * 256 + 12 * 16 + 4;
+    assert USB_PRODUCT == 14 * 4096 + 10 * 256 + 6 * 16;
+    assert HUBS_ALLOWED == 0;
+}

@@ -134,3 +134,8 @@ A clean 7.7-million-answer run over this link needs either a hub-free UART, whos
 loss rate is not yet measured, or a new pre-registered protocol that re-requests
 a missing nonce and still checks every receipt. The second is a different claim
 and a new spec, not a change to this harness.
+
+Both are now pre-registered, and neither has run on the board:
+`UART_LOSS_HUBFREE.md` (the loss rate with no hub in the path) and
+`TERN_TC_RETRANSMIT.md` (the same generation with lost answers asked for again).
+This record and its FAIL do not change.

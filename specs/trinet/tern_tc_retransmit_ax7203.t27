@@ -1,0 +1,159 @@
+// SPDX-License-Identifier: Apache-2.0
+; specs/trinet/tern_tc_retransmit_ax7203.t27 -- pre-registration: the same 8-token igla-coder
+; generation on the AX7203 node, with lost answers asked for again under fresh nonces
+; The one source for this run. conformance/tern_tc_retransmit_from_spec.mjs compiles this file with
+; the t27 compiler (wasm), evaluates every test block below, checks the pinned files, reads back the
+; constants it repeats from the generation spec's generated params, and writes
+; conformance/tern_tc_retransmit_params.py, which the runner conformance/tern_tc_generate_rt_ax7203.py
+; reads. `--check` fails on drift. Written 2026-09-27 before any run of it. ASCII, English.
+
+; WHY. The pre-registered generation run (specs/trinet/tern_tc_generate_ax7203.t27) failed in call 183
+; of 192: 56 answer bytes never arrived over the UART, 18 of one answer and 2 whole answers, and its
+; harness stops at the first lost byte by design. No answer in that run failed its tag, nonce, node
+; id or value. That run stays FAIL in conformance/TERN_TC_GENERATE.md; this is a new claim with its
+; own record, conformance/TERN_TC_RETRANSMIT.md, not a second attempt at the old one.
+
+; WHAT CHANGES. Only the transport. conformance/tern_tc_retransmit.py keeps every check the layer
+; harness makes on an answer and adds one move: an answer that did not arrive, or arrived without a
+; verifying tag, is asked for again under a fresh nonce. Jobs, activations, model, harness, node
+; RTL and bitstream are the generation run's, pinned below by sha256.
+
+; WHY THE NODE NEEDS NO CHANGE. fpga/portable/trinet_node_core.v (pinned) keeps no nonce state: it
+; latches the request's nonce and echoes it, and answers every complete frame. A re-sent job is a new
+; request to it. Its parser hunts for AA 55 and then takes 22 body bytes, with no timeout; after a
+; lost request byte, FLUSH_BYTES zero bytes complete any partial frame and cannot start one. The key
+; is locked after setkey, so a mangled frame whose op byte reads SETKEY changes nothing.
+
+; WHAT IS NEVER RETRIED (the run stops). A tag that verifies over a y other than the host's own dot
+; product (a lie); a verified answer from another node id; a status other than OK; a second answer
+; to one nonce; a job past MAX_ATTEMPTS nonces; more than MAX_RETRANSMITS retries or MAX_RESYNCS
+; resyncs in the run; a run longer than LIMIT_S.
+
+; PREDICTION (board). Token ids == CPU_INT_IDS of the generation spec; every one of JOBS_EXPECTED
+; jobs credited by exactly one answer whose tag verifies under the node key; every row bit-exact;
+; retransmits <= MAX_RETRANSMITS; resyncs <= MAX_RESYNCS; one node id throughout; elapsed <= LIMIT_S.
+; The runner prints `receipts verified (tag) : N/N` only then, and the retransmit and resync counts
+; next to it, whatever they are.
+; PREDICTION (rehearsal, no board). The same run through the harness's reference cell behind the
+; RTL's frame parser, with the losses scheduled below, ends REHEARSAL OK with the same ids and
+; counts, at least one retransmit per scheduled loss and at least one resync.
+; WHAT IT DOES NOT SAY. It does not say the UART is lossless; it says losses no longer end the run.
+; It does not find the cause of the 56-byte hole. It is not speed. It is not text (the tokenizer is
+; not on this Mac). One attempt; a second only if the first fails before its first job, and then
+; both are recorded.
+
+module trinet_tern_tc_retransmit_ax7203;
+
+pub const KIND : str = "board-run-preregistration";
+pub const ID : str = "trinet/tern_tc_retransmit_ax7203";
+pub const GENERATED : [1]str = ["conformance/tern_tc_retransmit_params.py"];
+pub const RUNNER : str = "conformance/tern_tc_generate_rt_ax7203.py";
+pub const RECORD_DOC : str = "conformance/TERN_TC_RETRANSMIT.md";
+pub const LOG_NAME : str = "gen_tokens_8_rt";
+
+; --- Code and data of record: imported or read, never edited --------------------------------
+pub const GENERATE_SPEC_FILE : str = "specs/trinet/tern_tc_generate_ax7203.t27";
+pub const GENERATE_SPEC_SHA256 : str = "d5734c826b769acae09b911005de2371d52be4b1abc3250551b51ea51bcf5a69";
+pub const GENERATE_PARAMS_FILE : str = "conformance/tern_tc_generate_params.py";
+pub const GENERATE_PARAMS_SHA256 : str = "2688743591171e56c9ae37d2de1f04e3c3a244a2c803fd57f45d78b6976f0ee4";
+pub const GENERATE_RUNNER_FILE : str = "conformance/tern_tc_generate_ax7203.py";
+pub const GENERATE_RUNNER_SHA256 : str = "5d769dd87b761a996d65c3d400f272186a413ecb8cb60159c2992145882bb3c0";
+pub const HARNESS_FILE : str = "conformance/tern_tc_layer_ax7203.py";
+pub const HARNESS_SHA256 : str = "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa";
+pub const NODE_RTL_FILE : str = "fpga/portable/trinet_node_core.v";
+pub const NODE_RTL_SHA256 : str = "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1";
+pub const PROTOCOL_FILE : str = "conformance/tern_tc_retransmit.py";
+pub const PROTOCOL_SHA256 : str = "eda9f8bced1a0f251324f35e1d5843e565dbb283c48a6590318f98eba912833b";
+
+; --- Repeated from the generation spec; the generator reads each back from its params -------
+pub const N_TOKENS : u8 = 8;
+pub const JOBS_EXPECTED : u32 = 7682304;
+pub const JOBS_PER_TOKEN_FULL : u32 = 1209600;
+pub const FIRST_JOB_NONCE : u32 = 65536;
+pub const SETKEY_NONCE : u32 = 2122186753;
+pub const WINDOW : u8 = 24;
+pub const RESP_LEN : u8 = 19;
+pub const BAUD : u32 = 1144744;
+pub const NODE_ID : u32 = 1414678862;
+
+; --- The node's frame (trinet_node_core.v lines 134-152) ------------------------------------
+pub const REQ_LEN : u8 = 24;
+pub const REQ_BODY : u8 = 22;
+
+; --- The protocol ---------------------------------------------------------------------------
+; retry nonces: RETRY_BASE, RETRY_BASE + 1, ... one global counter for the whole run
+pub const RETRY_BASE : u32 = 536870912;
+; the reference cell's 'nonce' fault answers under nonce XOR this bit; retry nonces keep it clear
+pub const REFCELL_NONCE_FAULT_BIT : u32 = 1073741824;
+pub const MAX_ATTEMPTS : u8 = 3;
+pub const MAX_RETRANSMITS : u16 = 256;
+pub const MAX_RESYNCS : u8 = 32;
+pub const FLUSH_BYTES : u8 = 24;
+; one resync: two reads until quiet (the serial timeout is 2 s each) and the flush
+pub const SERIAL_TIMEOUT_S : u8 = 2;
+pub const RESYNC_S_MAX : u8 = 8;
+pub const LIMIT_S : u16 = 3600;
+; the W24 reload after E2 measured 403200 answers in 85.81 s (4699/s); the floor is about half
+pub const MIN_ANSWERS_PER_S : u16 = 2500;
+
+; --- Rehearsal: losses scheduled on the reference cell -----------------------------------------
+; Byte offsets in each stream as it flows, counted from its first byte: the answer stream includes
+; the answers to retransmits, the request stream includes retransmits and flush zeros. Both add whole
+; frames, so a loss keeps its shape (where in a frame it starts, how long it is) while the job it
+; lands on moves earlier by the frames added before it: offset 19008 hits answer 1000, the others hit
+; a few jobs before the index their offset is computed from.
+; answer stream: 16 bytes from byte 8 of an answer; 56 bytes from byte 1 of an answer (the shape of
+; the generation run's hole, near its place); one answer whole
+pub const RX_HOLE_AT : [3]u32 = [19008, 137468535, 57000000];
+pub const RX_HOLE_LEN : [3]u8 = [16, 56, 19];
+; request stream: a w byte of a request (offset 10 in its frame); the trig byte of another (offset 23)
+pub const TX_DROP_AT : [2]u32 = [120000010, 144000023];
+pub const REHEARSAL_LOSSES : u8 = 5;
+
+test node_frame {
+    assert REQ_LEN == 2 + REQ_BODY;
+    assert REQ_BODY == 1 + 4 + 8 + 8 + 1;
+    assert RESP_LEN == 1 + 1 + 1 + 4 + 4 + 8;
+}
+
+test flush_completes_any_partial_frame {
+    assert FLUSH_BYTES >= REQ_BODY;
+    assert FLUSH_BYTES % REQ_LEN == 0;
+}
+
+test nonce_spaces_are_disjoint {
+    assert FIRST_JOB_NONCE + JOBS_PER_TOKEN_FULL * N_TOKENS < RETRY_BASE;
+    assert RETRY_BASE + MAX_RETRANSMITS < REFCELL_NONCE_FAULT_BIT;
+    assert REFCELL_NONCE_FAULT_BIT < SETKEY_NONCE;
+    assert RETRY_BASE == 32 * 16777216;
+    assert REFCELL_NONCE_FAULT_BIT == 64 * 16777216;
+}
+
+test ceilings {
+    assert MAX_ATTEMPTS >= 2;
+    assert MAX_RETRANSMITS >= MAX_ATTEMPTS;
+    assert MAX_RESYNCS <= MAX_RETRANSMITS;
+    assert RESYNC_S_MAX >= 2 * SERIAL_TIMEOUT_S;
+}
+
+test run_fits_its_limit_with_every_ceiling_spent {
+    assert LIMIT_S * MIN_ANSWERS_PER_S >= JOBS_EXPECTED + MAX_RETRANSMITS + MAX_RESYNCS * RESYNC_S_MAX * MIN_ANSWERS_PER_S;
+    assert LIMIT_S <= 3600;
+}
+
+test window_unchanged {
+    assert WINDOW == 24;
+    assert RESP_LEN * WINDOW < 512;
+}
+
+test rehearsal_schedule {
+    assert RX_HOLE_AT[0] == 1000 * RESP_LEN + 8;
+    assert RX_HOLE_AT[1] == 7235186 * RESP_LEN + 1;
+    assert RX_HOLE_AT[2] == 3000000 * RESP_LEN;
+    assert RX_HOLE_LEN[1] == 18 + 2 * RESP_LEN;
+    assert TX_DROP_AT[0] == 5000000 * REQ_LEN + 10;
+    assert TX_DROP_AT[1] == 6000000 * REQ_LEN + REQ_LEN - 1;
+    assert REHEARSAL_LOSSES == 3 + 2;
+    assert 7235186 < JOBS_EXPECTED;
+    assert REHEARSAL_LOSSES * MAX_ATTEMPTS <= MAX_RETRANSMITS;
+}

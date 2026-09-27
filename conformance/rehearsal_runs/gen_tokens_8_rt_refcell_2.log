@@ -1,0 +1,230 @@
+spec specs/trinet/tern_tc_retransmit_ax7203.t27 sha256 4dbdee3431c85e6b; protocol eda9f8bced1a0f25, harness 8a9a5f6ef57fdad6, node RTL 920a0842dbdaec9f (pins checked)
+model ~/igla-coder-gpu/c_infer/model.bin: 6 layers, d 320, ff 864, vocab 8192
+preflight (CPU integer path): ids 1 3 204 276 405 659 85 1516; jobs 7682304, skipped 1994496, rows 135168, calls 192, smallest logit margin 0.0352
+rehearsal losses: answer stream [(19008, 16), (137468535, 56), (57000000, 19)], request stream [120000010, 144000023]
+  t0 L0/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.3 s
+  t0 L0/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      1.0 s
+  t0 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.9 s
+  t0 L0/down       jobs   39360  skipped  12480  receipts   39360/39360   rows   320/320      2.2 s
+  t0 L1/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.3 s
+  t0 L1/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      1.0 s
+  t0 L1/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     5.4 s
+  t0 L1/down       jobs   27840  skipped  24000  receipts   27840/27840   rows   320/320      1.5 s
+  t0 L2/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.3 s
+  t0 L2/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t0 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.8 s
+  t0 L2/down       jobs   30080  skipped  21760  receipts   30080/30080   rows   320/320      1.7 s
+  t0 L3/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.3 s
+  t0 L3/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      1.0 s
+  t0 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.9 s
+  t0 L3/down       jobs   28480  skipped  23360  receipts   28480/28480   rows   320/320      1.6 s
+  t0 L4/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.3 s
+  t0 L4/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      1.0 s
+  t0 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.8 s
+  t0 L4/down       jobs   35520  skipped  16320  receipts   35520/35520   rows   320/320      1.8 s
+  t0 L5/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t0 L5/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t0 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.7 s
+  t0 L5/down       jobs   38080  skipped  13760  receipts   38080/38080   rows   320/320      2.0 s
+token 0: id 1  (53.6 s)
+  t1 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t1 L0/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.9 s
+  t1 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.9 s
+  t1 L0/down       jobs   35840  skipped  16000  receipts   35840/35840   rows   320/320      1.9 s
+  t1 L1/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.5 s
+  t1 L1/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.9 s
+  t1 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.6 s
+  t1 L1/down       jobs   36800  skipped  15040  receipts   36800/36800   rows   320/320      1.9 s
+  t1 L2/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t1 L2/wo         jobs   17280  skipped   1920  receipts   17280/17280   rows   320/320      0.9 s
+  t1 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t1 L2/down       jobs   30400  skipped  21440  receipts   30400/30400   rows   320/320      1.6 s
+  t1 L3/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t1 L3/wo         jobs   17280  skipped   1920  receipts   17280/17280   rows   320/320      0.9 s
+  t1 L3/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.9 s
+  t1 L3/down       jobs   36480  skipped  15360  receipts   36480/36480   rows   320/320      1.9 s
+  t1 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t1 L4/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t1 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t1 L4/down       jobs   30720  skipped  21120  receipts   30720/30720   rows   320/320      1.6 s
+  t1 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t1 L5/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      0.9 s
+  t1 L5/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.7 s
+  t1 L5/down       jobs   35840  skipped  16000  receipts   35840/35840   rows   320/320      2.1 s
+token 1: id 3  (51.7 s)
+  t2 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t2 L0/wo         jobs   17280  skipped   1920  receipts   17280/17280   rows   320/320      1.0 s
+  t2 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t2 L0/down       jobs   30080  skipped  21760  receipts   30080/30080   rows   320/320      1.5 s
+  t2 L1/qkv        jobs   21056  skipped   5824  receipts   21056/21056   rows   448/448      1.1 s
+  t2 L1/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.9 s
+  t2 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t2 L1/down       jobs   25920  skipped  25920  receipts   25920/25920   rows   320/320      1.3 s
+  t2 L2/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t2 L2/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t2 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t2 L2/down       jobs   24000  skipped  27840  receipts   24000/24000   rows   320/320      1.2 s
+  t2 L3/qkv        jobs   21952  skipped   4928  receipts   21952/21952   rows   448/448      1.2 s
+  t2 L3/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.9 s
+  t2 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.9 s
+  t2 L3/down       jobs   27520  skipped  24320  receipts   27520/27520   rows   320/320      1.4 s
+  t2 L4/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t2 L4/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.9 s
+  t2 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.6 s
+  t2 L4/down       jobs   32000  skipped  19840  receipts   32000/32000   rows   320/320      1.8 s
+  t2 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.3 s
+  t2 L5/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      0.9 s
+  t2 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.9 s
+  t2 L5/down       jobs   28800  skipped  23040  receipts   28800/28800   rows   320/320      1.7 s
+token 2: id 204  (49.3 s)
+  t3 L0/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.4 s
+  t3 L0/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.9 s
+  t3 L0/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     5.3 s
+  t3 L0/down       jobs   28800  skipped  23040  receipts   28800/28800   rows   320/320      1.7 s
+  t3 L1/qkv        jobs   18816  skipped   8064  receipts   18816/18816   rows   448/448      1.2 s
+  t3 L1/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.2 s
+  t3 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.3 s
+  t3 L1/down       jobs   33600  skipped  18240  receipts   33600/33600   rows   320/320      1.7 s
+  t3 L2/qkv        jobs   22400  skipped   4480  receipts   22400/22400   rows   448/448      1.2 s
+  t3 L2/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.0 s
+  t3 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.3 s
+  t3 L2/down       jobs   37120  skipped  14720  receipts   37120/37120   rows   320/320      4.1 s
+  t3 L3/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      2.5 s
+  t3 L3/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.8 s
+  t3 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728    16.7 s
+  t3 L3/down       jobs   31680  skipped  20160  receipts   31680/31680   rows   320/320      5.8 s
+  t3 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      4.4 s
+  t3 L4/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      2.2 s
+  t3 L4/gate+up    jobs   91584  skipped  12096  receipts   91584/91584   rows  1728/1728     4.9 s
+  t3 L4/down       jobs   25920  skipped  25920  receipts   25920/25920   rows   320/320      1.4 s
+  t3 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t3 L5/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      0.9 s
+  t3 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.6 s
+  t3 L5/down       jobs   34560  skipped  17280  receipts   34560/34560   rows   320/320      2.1 s
+token 3: id 276  (79.0 s)
+  t4 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.5 s
+  t4 L0/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.9 s
+  t4 L0/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728    10.1 s
+  t4 L0/down       jobs   26880  skipped  24960  receipts   26880/26880   rows   320/320      4.0 s
+  t4 L1/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      3.4 s
+  t4 L1/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.3 s
+  t4 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.3 s
+  t4 L1/down       jobs   30400  skipped  21440  receipts   30400/30400   rows   320/320      2.0 s
+  t4 L2/qkv        jobs   20608  skipped   6272  receipts   20608/20608   rows   448/448      1.3 s
+  t4 L2/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.1 s
+  t4 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.9 s
+  t4 L2/down       jobs   28480  skipped  23360  receipts   28480/28480   rows   320/320      1.9 s
+  t4 L3/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      1.2 s
+  t4 L3/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.0 s
+  t4 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.8 s
+  t4 L3/down       jobs   28160  skipped  23680  receipts   28160/28160   rows   320/320      1.8 s
+  t4 L4/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.8 s
+  t4 L4/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.2 s
+  t4 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     7.8 s
+  t4 L4/down       jobs   35520  skipped  16320  receipts   35520/35520   rows   320/320      3.1 s
+  t4 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.7 s
+  t4 L5/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.2 s
+  t4 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     7.9 s
+  t4 L5/down       jobs   36800  skipped  15040  receipts   36800/36800   rows   320/320      3.4 s
+token 4: id 405  (77.8 s)
+  t5 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      2.0 s
+  t5 L0/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.5 s
+  t5 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.6 s
+  t5 L0/down       jobs   28480  skipped  23360  receipts   28480/28480   rows   320/320      2.2 s
+  t5 L1/qkv        jobs   21504  skipped   5376  receipts   21504/21504   rows   448/448      1.6 s
+  t5 L1/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      1.2 s
+  t5 L1/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     8.4 s
+  t5 L1/down       jobs   30400  skipped  21440  receipts   30400/30400   rows   320/320      2.5 s
+  t5 L2/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      2.1 s
+  t5 L2/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      1.6 s
+  t5 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.9 s
+  t5 L2/down       jobs   28480  skipped  23360  receipts   28480/28480   rows   320/320      2.5 s
+  t5 L3/qkv        jobs   19712  skipped   7168  receipts   19712/19712   rows   448/448      2.6 s
+  t5 L3/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      1.6 s
+  t5 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728    11.7 s
+  t5 L3/down       jobs   35200  skipped  16640  receipts   35200/35200   rows   320/320      3.8 s
+  t5 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      3.4 s
+  t5 L4/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      3.3 s
+  t5 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728    10.1 s
+  t5 L4/down       jobs   32960  skipped  18880  receipts   32960/32960   rows   320/320      2.3 s
+  t5 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.5 s
+  t5 L5/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.4 s
+  t5 L5/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     6.2 s
+  t5 L5/down       jobs   35520  skipped  16320  receipts   35520/35520   rows   320/320      2.5 s
+token 5: id 659  (88.3 s)
+  t6 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.6 s
+  t6 L0/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.2 s
+  t6 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.8 s
+  t6 L0/down       jobs   32640  skipped  19200  receipts   32640/32640   rows   320/320      2.3 s
+  t6 L1/qkv        jobs   21952  skipped   4928  receipts   21952/21952   rows   448/448      1.5 s
+  t6 L1/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.1 s
+  t6 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.1 s
+  t6 L1/down       jobs   32320  skipped  19520  receipts   32320/32320   rows   320/320      2.2 s
+  t6 L2/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.5 s
+  t6 L2/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.1 s
+  t6 L2/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     6.4 s
+  t6 L2/down       jobs   29760  skipped  22080  receipts   29760/29760   rows   320/320      2.1 s
+  t6 L3/qkv        jobs   21056  skipped   5824  receipts   21056/21056   rows   448/448      1.5 s
+  t6 L3/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.2 s
+  t6 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.2 s
+  t6 L3/down       jobs   38080  skipped  13760  receipts   38080/38080   rows   320/320      2.6 s
+  t6 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.6 s
+  t6 L4/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.3 s
+  t6 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.5 s
+  t6 L4/down       jobs   39360  skipped  12480  receipts   39360/39360   rows   320/320      3.1 s
+  t6 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.7 s
+  t6 L5/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.2 s
+  t6 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.6 s
+  t6 L5/down       jobs   40000  skipped  11840  receipts   40000/40000   rows   320/320      3.2 s
+token 6: id 85  (69.6 s)
+  t7 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.7 s
+  t7 L0/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.2 s
+  t7 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.8 s
+  t7 L0/down       jobs   32640  skipped  19200  receipts   32640/32640   rows   320/320      2.5 s
+  t7 L1/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.8 s
+  t7 L1/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.2 s
+  t7 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.6 s
+  t7 L1/down       jobs   33280  skipped  18560  receipts   33280/33280   rows   320/320      2.5 s
+  t7 L2/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.7 s
+  t7 L2/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      1.2 s
+  t7 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.6 s
+  t7 L2/down       jobs   31680  skipped  20160  receipts   31680/31680   rows   320/320      2.5 s
+  t7 L3/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.7 s
+  t7 L3/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.3 s
+  t7 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.7 s
+  t7 L3/down       jobs   31360  skipped  20480  receipts   31360/31360   rows   320/320      2.3 s
+  t7 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.7 s
+  t7 L4/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.3 s
+  t7 L4/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     6.9 s
+  t7 L4/down       jobs   37760  skipped  14080  receipts   37760/37760   rows   320/320      2.8 s
+  t7 L5/qkv        jobs   22400  skipped   4480  receipts   22400/22400   rows   448/448      1.8 s
+  t7 L5/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      1.2 s
+  t7 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     6.5 s
+  t7 L5/down       jobs   35840  skipped  16000  receipts   35840/35840   rows   320/320      2.7 s
+token 7: id 1516  (73.4 s)
+------------------------------------------------------------------
+calls                   : 192 of 192 (4 per layer per token)
+jobs                    : 7682304 of 7682304 (+ 1994496 chunks skipped: activation digit plane all zero)
+requests written        : 7682313 (9 of them retransmits under nonces from 0x20000000)
+reference-cell receipts : 7682304/7682304 under node 0x5452494e
+rows bit-exact          : 135168/135168  (int8 activations from the model's own forward pass)
+transport               : retransmitted jobs 9 (ceiling 256), resyncs 2 (ceiling 32), lost 9, unverified 2, foreign frames 1, late answers 0, bytes skipped while scanning 4
+  event  call 1: nonce 0x000103e8 (job 1000) answered with a tag that does not verify; job queued again
+  event  call 1: resync (unframed read d4 2e ce a5 02 01 ea 03): 440 bytes collected, 24 in flight
+  event  call 1: nonce 0x000103e9 (job 1001) had no answer before nonce 0x000103ea; job queued again
+  event  call 75: nonce 0x002ec6be (job 77310) had no answer before nonce 0x002ec6bf; job queued again
+  event  call 127: nonce 0x004d4b3c (job 25276) answered with a tag that does not verify; job queued again
+  event  call 127: nonce 0x004d4b3d (job 25277) had no answer before nonce 0x004d4b3e; job queued again
+  event  call 151: nonce 0x005c8d7b (job 63995) had no answer before nonce 0x005c8d7c; job queued again
+  event  call 183: resync (frame with a nonce this call never wrote, 0x6f667101): 400 bytes collected, 24 in flight
+  event  call 183: nonce 0x006f666e (job 2158) had no answer before nonce 0x006f6671; job queued again
+  event  call 183: nonce 0x006f666f (job 2159) had no answer before nonce 0x006f6671; job queued again
+  event  call 183: nonce 0x006f6670 (job 2160) had no answer before nonce 0x006f6671; job queued again
+elapsed                 : 542.8 s of 3600 (14182 answers/s in run())
+longest host pause      : 85.2 ms
+------------------------------------------------------------------
+ids refcell: 1 3 204 276 405 659 85 1516
+CPU_INT_IDS: 1 3 204 276 405 659 85 1516
+RESULT: REHEARSAL OK - 8 tokens through the reference cell with 5 scheduled losses recovered; the board was not used.
+exit 0
+15:08:24Z
