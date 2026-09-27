@@ -80,3 +80,38 @@ Stream hashes (sha256): requests `2a976cd5...91e6f6`, responses
   - A UART slip here counts against window 24. It does not count against the
     Z[phi] claim, and it is recorded as a fail.
 - **Log:** `board_runs/gft_zphi_l0.log`.
+
+## Board run: result, 2026-09-27 03:32 UTC: PASS
+
+Run once, as pre-registered. Setup: port `/dev/cu.usbserial-1130` behind the
+same USB hub, 1,144,744 baud, no power cycle since the window-64 control.
+Harness blob `00b4f04c`, importing `tern_tc_layer_ax7203.py` blob `01f85f04`
+(that change touched comments only; the self-test was re-run on it and passed).
+`--setkey` got 0x03 (key already held since 02:10). Every tag then verified
+under the key file, so the key is ours.
+
+| | expected | board |
+|---|---|---|
+| jobs | 403,200 | 403,200 of 403,200 sent, window 24 |
+| receipts | 403200/403200 | `receipts verified (tag) : 403200/403200 under node 0x5452494e` |
+| rows | 5632/5632 | `rows bit-exact : 5632/5632`, 14 of 14 matrix-parts `[ok]` |
+| rejected | none | none |
+| time | ~86 s | 85.35 s (4,724 answers/s); longest host pause 13.4 ms |
+
+**What this shows.** For the 7 ternary matrices of layer 0 of the trained model
+(2,816 outputs), GFTernary weights t*phi applied to one Z[phi] vector give,
+from answers computed and signed by the node, exactly the Z[phi] values of the
+plain-multiplication oracle. The weight step needed no multiplier. The node
+did ternary dots only, and the host did one add per output.
+
+**What it does not show.**
+
+- It is not the TNF accumulator: nothing was rounded.
+- It is not a speed result: same link ceiling as tern_tc, see
+  `TERN_TC_WEAK_POINTS.md` point 2.
+- The receipts carry the limits in weak point 4 (symmetric key, not bound to
+  the FPGA).
+- The activations are synthetic.
+
+Log: `board_runs/gft_zphi_l0.log` (1,827 bytes, 0 key hits). The board was not
+reflashed and openocd was not started.
