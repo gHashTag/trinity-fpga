@@ -38,8 +38,13 @@ precision. That result is now in the paper as a section rather than a footnote.
 
 **The request.** The attached draft is a first version and has not been
 submitted. It is largely a parity and negative result: our format's case is
-multiplier removal by ring closure, decoder cost, and the very low precisions
-where nothing else trains — not precision per bit, where it loses. takum beats it
+multiplier removal by ring closure and decoder cost — not precision per bit, where
+it loses. An earlier draft also claimed the very low precisions, where nothing
+else trains; that claim is withdrawn. Our 4-bit training grid had been built by
+decoding every code, including exponent rows that are not words of the format —
+57 values up to 3,072, where TNF4 has 29 up to 12. On the grid the format has,
+TNF4 trains 8 of 25 MNIST runs, against 12 for fp6 e3m2 and 5 for e2m3, and our
+reference decoders now refuse a code that is not a word. takum beats it
 in several of our own measurements, including near unity at 32 bits and on range,
 where takum reaches ±255 binades and never leaves range where we do.
 
