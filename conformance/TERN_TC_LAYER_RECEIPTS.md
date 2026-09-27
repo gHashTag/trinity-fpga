@@ -302,7 +302,9 @@ jobs, run between them with 64 in flight too, came back whole.
   answers (1,216 bytes) can be in flight towards the host. If the host stops
   reading for long enough, they queue in the USB adapter and the driver, and a
   queue that fills drops bytes. Not measured: the adapter's and the driver's
-  buffer sizes, and whether the host paused.
+  buffer sizes, and whether the host paused. *Superseded by rerun step 2
+  below: the window matters, but the hole at 64 came with no long host pause
+  before it, so the host-pause part of this explanation does not hold.*
 - **Not ruled out: the hub or the cable.** A lost USB transfer would also make
   a contiguous hole.
 

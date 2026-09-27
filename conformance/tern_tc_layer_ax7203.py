@@ -385,10 +385,12 @@ def install_key(link, key, log=print):
 
 
 DEFAULT_WINDOW = 24
-# Jobs in flight. With W in flight, up to W answers (19*W bytes) can be queued
-# between the node's UART and this process while the host is busy elsewhere.
-# The 2026-09-27 board run used 64 (1,216 bytes) and lost 16 bytes of the answer
-# stream after 18,984 jobs; 24 keeps the queue at 456 bytes. The rerun tests it.
+# Jobs in flight. On the AX7203 through a CP2102N and a USB hub (2026-09-27),
+# 64 in flight lost answer bytes in all three long runs (after 18,984, 9,886
+# and 6,679 verified answers), while 24 carried all 403,200 jobs of --all clean
+# on the same harness and setup. The last hole at 64 had no long host pause
+# before it, so the loss is in the link (adapter, driver, hub or cable), not a
+# queue filled while this process was busy; which part is not yet isolated.
 
 
 def run(link, jobs, rows_ref, key, window=DEFAULT_WINDOW, log=print):
@@ -635,8 +637,8 @@ def main():
     a.add_argument("--n_x", type=int, default=2, help="activation vectors per width")
     a.add_argument("--seed", type=int, default=0x7213)
     a.add_argument("--window", type=int, default=DEFAULT_WINDOW,
-                   help="jobs in flight (answers that can queue while the host is "
-                        f"busy: 19 bytes each; default {DEFAULT_WINDOW})")
+                   help="jobs in flight (default "
+                        f"{DEFAULT_WINDOW}; 64 lost UART bytes on the AX7203 link)")
     a.add_argument("--setkey", action="store_true",
                    help="install the key first (op 0x02) and verify the ack")
     a.add_argument("--emit-requests", metavar="HEX",
