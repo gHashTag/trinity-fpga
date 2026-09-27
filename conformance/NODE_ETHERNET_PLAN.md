@@ -747,6 +747,23 @@ tri fpga-keycheck
   "runtest 2000" -c "shutdown"`. `tri fpga-flash` adds the payload check, the
   UART lock and the log.
 
+**Prior art (searched 2026-09-27, two web searches plus gh).** No public
+report was found of an Artix-7 RGMII design built with the open flow that
+answers ARP or ping on a board. The nearest are:
+
+- openXC7/nextpnr#35 (jrrk2): a VC707 SoC whose netlist includes a boot
+  loader doing DHCP, ARP and TFTP. It is Virtex-7 over SGMII on a GTX, not
+  RGMII. The PR is open and unmerged, and it does not claim a board run.
+- openXC7/nextpnr#22: IDDR does not capture on this board. It is open, with 25
+  comments, last updated 2026-09-22. E3 works around it with fabric capture.
+
+So an H1 would be worth a comment on openXC7/nextpnr#22 with the logs: fabric
+capture at 100M answered a ping. Two things limit the wording:
+
+- **Not "first".** A search that finds nothing does not show that nothing
+  exists.
+- **Nothing is claimed before the verdict.**
+
 **Where the files point.** This section and the one before it were drafted as
 `conformance/E3_DRAFT_SECTION.md` and merged here. The comment in
 `specs/fpga/constraints/eth_arp_icmp_ax7203.xdc` still names the draft. That
