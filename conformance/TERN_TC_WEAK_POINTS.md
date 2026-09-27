@@ -186,3 +186,34 @@ and does not count. Any other clean/empty pattern refutes the reading, and then
 the edges belong to the node. Afterwards the port gets 24 zero bytes and one
 640-job `wk` layer-0 check, as after the wide sweep (that check passed at
 03:46Z: `receipts verified (tag) : 640/640`, `rows bit-exact : 64/64`).
+
+**Result, 03:49Z and 03:50Z: the prediction held at every step.** Each sweep ran
+once (logs `board_runs/edge_sweep_1066667.log`, `edge_sweep_1170732.log`).
+
+| sweep | below the boundary | at it (+/-0.01 %) | above the boundary |
+|---|---|---|---|
+| 1,066,667 (N 23/22) | 1,065,066 / 1,065,599 / 1,066,132: 0/64 | 1,066,665: 0/64 | 1,067,198 / 1,067,731 / 1,068,264: 64/64 |
+| 1,170,732 (N 21/20) | 1,168,975 / 1,169,560 / 1,170,145: 64/64 | 1,170,730: 64/64 | 1,171,315 / 1,171,900 / 1,172,485: 0/64 |
+
+Both boundary steps also match the rounding: 24 MHz / 1,066,665 = 22.50004
+rounds to 23, and 24 MHz / 1,170,730 = 20.50004 rounds to 21. So both edges lie
+within one step (0.05 %) of the adapter's divider boundaries. The node's own
+tolerance does not show in this data. The tool printed "CFGMCLK 64.06" for one
+sweep and "70.19" for the other, which is what its centre-times-60 rule gives
+when the edges are the adapter's. Afterwards: 24 zero bytes (nothing came back)
+and the 640-job check, `receipts verified (tag) : 640/640`, `rows bit-exact : 64/64`.
+
+**What changes (derived):**
+
+- The link runs at 1,142,857 baud on the wire, not 1,144,744. The ceiling in
+  point 2 becomes 4,762 jobs/s, and window 24 reached 99.0 % of it.
+- Any requested rate from 1,116,280 to 1,170,731 is the same wire rate. The only
+  other working wire rate is 1,090,909 (requested 1,066,668 to 1,116,279).
+  "Use 1118978" changes nothing on the wire.
+- CFGMCLK: between 65.6 and 68.7 MHz, under a symmetric-tolerance assumption.
+  The sweep cannot narrow this and cannot measure the drift margin. That needs
+  a finer rate grid: an adapter with a different clock, or the node timing its
+  own clock against a known one.
+- `trinet_baud_sweep.py` assumes the host rate is continuous. Its "USE THIS
+  RATE" and "implied CFGMCLK" lines are only meaningful where the adapter's rate
+  grid is finer than the sweep step, which is not so for a CP2102N near 1 Mbaud.
