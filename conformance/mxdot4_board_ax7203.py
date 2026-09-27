@@ -7,7 +7,7 @@ specs/trinet/mxdot4_on_board_ax7203.t27 through the generated mxdot4_board_param
 expected words come from mxfp_ref.py and block_tnf.py through mxdot4_board_vectors.requests().
 
     python3 mxdot4_board_ax7203.py --self-test
-    tri fpga-run mxdot4_board_ax7203 -- python3 conformance/mxdot4_board_ax7203.py --port /dev/cu.usbserial-1130
+    tri fpga-run mxdot4_board_ax7203 --limit 1800 -- python3 mxdot4_board_ax7203.py --port /dev/cu.usbserial-1130   (runs in conformance/)
 
 Each response must be RESP_OK, echo the request's SEQ and carry the reference word. A wrong
 word is a fail and the run goes on. A short, unframed or out-of-sequence response means the

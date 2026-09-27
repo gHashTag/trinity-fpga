@@ -309,12 +309,13 @@ and `# exit=0`.
 - **Cost.** The TRI-NET node is off the board. No receipt run (section 1) is
   possible until it is reloaded and re-keyed.
 
-## 9. MXFP4 against TNF4 in one cell: cost and exactness (simulated; not on the board)
+## 9. MXFP4 against TNF4 in one cell: cost and exactness
 
 The owner, 2026-09-27: «делай вариант 2, TNF против MXFP4». This builds a
 32-element block dot product for both formats with the section 8 method and
-takes it as far as simulation. **The board has not run it.** Loading it needs
-the owner's yes and replaces the TNF16 design.
+takes it through simulation. The owner then said yes to the load («да, прошей
+MXDOT4 и запусти прогон»), and the board ran it: see "Result on the board" at
+the end of this section. The load replaced the TNF16 design.
 
 - **What this axis can and cannot say.** It measures cost (LUT, FF, Fmax) and
   exactness of one hardware cell. It says nothing about quality. The block
@@ -430,7 +431,7 @@ Fmax is the last "Max frequency" line of each nextpnr log. The slowest,
 - What is robust is structural: TNF4 is a subset of MXFP4's values at the
   same bit width and the same datapath.
 
-### Bitstream (built, not loaded)
+### Bitstream
 
 - Build command: `tri fpga-build --top mxdot4_board_ax7203 --src
   fpga/tnet/mxdot4_board_params.v fpga/tnet/mxdot4_core.v
@@ -440,11 +441,12 @@ Fmax is the last "Max frequency" line of each nextpnr log. The slowest,
 - File sha256 `dec2ada9…d01a`. Payload `57676373…1634`, one build.
   `artifacts/bitstreams/mxdot4_board_ax7203.manifest.json` has the input
   hashes, the tools and the yosys script.
-- **Run command, if the owner says yes to the load,** from the repository:
+- **Run command.** `tri fpga-run` runs its command from `conformance/`:
   `tri fpga-run mxdot4_board_ax7203 --limit 1800 -- python3
-  conformance/mxdot4_board_ax7203.py --port /dev/cu.usbserial-1130`. The
-  window is 6: 6 × 38 = 228 bytes in flight, under the 240 that section 8
-  carried.
+  mxdot4_board_ax7203.py --port /dev/cu.usbserial-1130`. An earlier version
+  of this line had `conformance/` in the script path, which would not have
+  been found; it was caught before the run. The window is 6: 6 × 38 = 228
+  bytes in flight, under the 240 that section 8 carried.
 - **PASS** means `MXDOT4 RESULT: 251616/251616 bit-exact (fails=0, lost=0)`
   and exit 0. One attempt, as in section 8.
 - **Duration (derived).** 251,616 × 38 bytes is 83.7 s on the wire at
@@ -452,3 +454,40 @@ Fmax is the last "Max frequency" line of each nextpnr log. The slowest,
 - **What a board PASS would add:** the cell computes both formats exactly on
   silicon. It would not add a quality claim, and it would not change the
   cost reading above.
+
+### Result on the board, 08:02 UTC (measured)
+
+**PASS.** `board_runs/mxdot4_board_ax7203.log` ends with `MXDOT4 RESULT:
+251616/251616 bit-exact (fails=0, lost=0)`, which is the spec's `PASS_LINE`,
+and `# exit=0`.
+
+- **Load.** `board_runs/mxdot4_flash.log`:
+  - bit sha256 `dec2ada9…d01a`, the committed file;
+  - IDCODE 0x13636093;
+  - "loaded file ... in 778s";
+  - exit 0, 07:42:22 to 07:58:35 UTC. That span is 973 s; openocd reports
+    778.8 s for the load, and the log does not account for the other 194 s.
+- **Run.** One attempt, 07:58:47 to 08:02:02 UTC.
+  - The log names the spec sha `e63d4a31…483d` and the vector sha
+    `107843f1…cb2d`, both the committed ones.
+  - Every one of the 10 groups (pinned, edge, scales, top, uniform; MXFP4 and
+    TNF4) is complete.
+- **Link.** Window 6, the UART behind the hub, nothing lost.
+  - The requests took 178.0 s, 1,413 answers per second. That is 2.1 times
+    the 83.7 s wire floor.
+  - Derived: six requests in flight per round trip at 1,413 answers per
+    second is 4.2 ms per round, of which 2.0 ms is the wire. The rest is the
+    USB round trip, so the window, not the board, sets the rate.
+  - The host spent 14.9 s building the expected words before the first
+    request.
+- **What this adds.** One cell on this board computes 32-element block dot
+  products for MXFP4 and for TNF4 bit-exactly against `mxfp_ref.py` and
+  `block_tnf.py`, through one datapath that differs only in the element
+  table.
+- **What it does not add.**
+  - It is not a quality result. The block-axis perplexity verdict (MXFP4 21.94
+    against TNF4 36.72) is unchanged, and so is the closed publication.
+  - It does not change the cost reading: there is no robust cost difference.
+  - It does not measure the clock.
+- **Cost.** The TNF16 design and the TRI-NET node are both off the board. No
+  receipt run (section 1) is possible until the node is reloaded and re-keyed.
