@@ -1,4 +1,4 @@
-% ---- tnf_paper.tex lines 5848-6208: How a comparison fails while every measurement in it is correct ----
+% ---- tnf_paper.tex lines 5866-6226: How a comparison fails while every measurement in it is correct ----
 \section{How a comparison fails while every measurement in it is correct}
 \label{sec:selfcheck}
 
@@ -351,7 +351,7 @@ label formats turns out to settle it.
 
 
 
-% ---- tnf_paper.tex lines 1235-1298: The comparison at matched physical width ----
+% ---- tnf_paper.tex lines 1235-1316: The comparison at matched physical width ----
 \section{The comparison at matched physical width}\label{sec:matchedwidth}
 
 Two paragraphs above we disqualified a competitor on exactly the grounds this
@@ -370,24 +370,25 @@ looks matched and is not.
 \begin{table}[t]\centering
 \caption{Every rung against posit at its own \emph{physical} width, computed
 from the committed reference implementations rather than quoted. ``Values'' counts
-distinct non-zero decodings; ``step at $1.0$'' is the local relative gap between
-neighbours, which bounds the rounding error in the working range.}
+distinct non-zero decodings of the words the format produces (an exponent field
+above the special row is not a TNF word); ``step at $1.0$'' is the local relative
+gap between neighbours, which bounds the rounding error in the working range.}
 \label{tab:matchedwidth}
 \begin{tabular}{llrrr}
 \toprule
 bits & format & values & binades & step at $1.0$ \\
 \midrule
-19 & TNF16 $(4t,11m)$ & $516{,}096$          & $127.0$ & $0.024\%$ \\
+19 & TNF16 $(4t,11m)$ & $323{,}584$          & $79.0$  & $0.024\%$ \\
 19 & posit19 $es{=}1$ & $\mathbf{524{,}286}$ & $68.0$  & $\mathbf{0.002\%}$ \\
 19 & posit19 $es{=}2$ & $\mathbf{524{,}286}$ & $\mathbf{136.0}$ & $\mathbf{0.003\%}$ \\
 19 & takum19          & $\mathbf{524{,}286}$ & $\mathbf{510.0}$ & $\mathbf{0.003\%}$ \\
 \midrule
-10 & TNF8 $(3t,4m)$   & $960$              & $31.0$ & $3.125\%$ \\
-10 & posit10 $es{=}1$ & $\mathbf{1{,}022}$ & $32.0$ & $\mathbf{0.781\%}$ \\
+10 & TNF8 $(3t,4m)$   & $800$              & $25.0$ & $3.125\%$ \\
+10 & posit10 $es{=}1$ & $\mathbf{1{,}022}$ & $\mathbf{32.0}$ & $\mathbf{0.781\%}$ \\
 10 & posit10 $es{=}2$ & $\mathbf{1{,}022}$ & $\mathbf{64.0}$ & $\mathbf{1.562\%}$ \\
 \midrule
-6  & TNF4 $(2t,1m)$   & $56$          & $14.6$ & $25.0\%$ \\
-6  & posit6 $es{=}1$  & $\mathbf{62}$ & $16.0$ & $\mathbf{12.5\%}$ \\
+6  & TNF4 $(2t,1m)$   & $28$          & $6.6$  & $25.0\%$ \\
+6  & posit6 $es{=}1$  & $\mathbf{62}$ & $\mathbf{16.0}$ & $\mathbf{12.5\%}$ \\
 6  & posit6 $es{=}2$  & $\mathbf{62}$ & $\mathbf{32.0}$ & $25.0\%$ \\
 \bottomrule
 \end{tabular}
@@ -397,15 +398,32 @@ bits & format & values & binades & step at $1.0$ \\
 ladder occupies, posit holds more representable values than TNF and a finer step
 at unity --- by $12\times$ at 19 bits, $4\times$ at 10 and $2\times$ at 6. Worse
 for us, posit with $es{=}2$ \emph{weakly dominates} TNF on both coordinates
-simultaneously at all three: more binades \emph{and} a step no coarser. The
+simultaneously at all three: more binades \emph{and} a step no coarser. At 10 and
+6 bits posit with $es{=}1$ dominates on every column at once. The
 no-survivors corollary of \companion{the taper-catalogue section} does not survive being
 restated at matched physical width, and is withdrawn to a matched-\emph{name}
 claim.
 
 The value deficit is not an encoding accident. A ternary exponent does not tile
-a binary field: four trits need seven bits and use $81$ of $128$ codes, so
-$8{,}190$ of the $2^{19}$ words are unreachable. No packing repairs this; it is
-what a ternary exponent costs in a binary container.
+a binary field: four trits need seven bits and use $81$ of $128$ codes, so $47$
+exponent rows of $4{,}096$ words --- $192{,}512$ of the $2^{19}$ words, more than a
+third --- are unreachable: no rounding and no arithmetic produces them. With the
+zero and special rows, $200{,}704$ words carry no finite non-zero value, against
+two for posit19. No packing repairs this; it is what a ternary exponent costs in
+a binary container.
+
+\paragraph{A correction, and an instance of this paper's own failure mode.}
+An earlier revision of Table~\ref{tab:matchedwidth} counted those rows. The
+reference decoder maps an exponent field above the special row to an ordinary
+power of two, while the encoder never writes one, so enumerating all $2^{19}$
+codes reported $516{,}096$ values and $127$ binades for TNF16 ($960$ and $31$
+for TNF8, $56$ and $14.6$ for TNF4), and the prose quoted $8{,}190$ unreachable
+words --- the difference of two value counts, not a count of words. The number
+checker passed $8{,}192$ against the quoted $8{,}190$ because its relative
+tolerance overrode an exact one. It is the failure Section~\ref{sec:selfcheck}
+is about: every enumeration was correct, and the comparison built on it counted
+words the format never produces. Counting only the words the format produces widens
+every gap in the table; the conclusion stands and is stronger.
 
 \paragraph{What the negative result does not touch.} None of the above is a
 cost figure, and the case for this format was never precision per bit. The
@@ -417,7 +435,7 @@ dominates or where nothing else trains --- which is precisely the claim this
 paper should be read as making.
 
 
-% ---- tnf_paper.tex lines 1382-1437: Two width defects, and why they generalise ----
+% ---- tnf_paper.tex lines 1400-1455: Two width defects, and why they generalise ----
 \section{Two width defects, and why they generalise}\label{sec:width}
 
 \triptych{canon-tnf-12-width.png}{The two width defects of this section: a bus wide enough only for the configuration that was tested, the silent truncation this produced, and the clean sweep once every width is derived from the format's own parameters.}{fig:canon-width}
@@ -463,7 +481,7 @@ that was tested} is a silent-truncation trap at the next one, and it will not be
 caught by a testbench written against the tested configuration.
 
 
-% ---- tnf_paper.tex lines 6322-6398: What the formal statements are, and what they are ----
+% ---- tnf_paper.tex lines 6340-6416: What the formal statements are, and what they are ----
 \section{What the formal statements are, and what they are
 not}\label{sec:statusofstatements}
 
@@ -542,7 +560,7 @@ scale-grid refinement can be expected to go. Both are cited above at the points
 they bear on, and neither is treated as a matter of opinion.
 
 
-% ---- tnf_paper.tex lines 6209-6321: Adjacent work this paper is measured against ----
+% ---- tnf_paper.tex lines 6227-6339: Adjacent work this paper is measured against ----
 \section{Adjacent work this paper is measured against}\label{sec:adjacent}
 
 Four bodies of work published while this paper was being prepared bound its
@@ -657,7 +675,7 @@ systematically~\cite{akhtaruzzaman2024phi}, and the present rule should be read
 against that survey rather than as an isolated idea.
 
 
-% ---- tnf_paper.tex lines 7627-7758: Limitations ----
+% ---- tnf_paper.tex lines 7645-7776: Limitations ----
 \section{Limitations}\label{sec:limitations-anchor}\label{sec:limits}
 
 \triptych{canon-tnf-32-limits.png}{Limitations: the fabric, the twin oracle, and the price of range.}{fig:canon-limits}
@@ -783,7 +801,7 @@ and should be read as such.
 
 
 
-% ---- tnf_paper.tex lines 7759-7786: Reproducibility ----
+% ---- tnf_paper.tex lines 7777-7804: Reproducibility ----
 \section*{Reproducibility}
 
 The reference oracle, the RTL, the equivalence testbenches and the synthesis

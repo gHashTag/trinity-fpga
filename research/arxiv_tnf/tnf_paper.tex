@@ -172,7 +172,7 @@ the committed reference implementations, posit holds more representable values
 than TNF and a finer step at unity at every width the ladder occupies --- $12\times$
 finer at 19 bits, $4\times$ at 10, $2\times$ at 6 --- and posit with $es{=}2$ weakly
 dominates on both coordinates at all three. A ternary exponent does not tile a
-binary field: four trits use $81$ of $128$ codes, leaving $8{,}190$ of the $2^{19}$
+binary field: four trits use $81$ of $128$ codes, leaving $192{,}512$ of the $2^{19}$
 words unreachable. The no-survivors corollary is accordingly withdrawn to a
 matched-\emph{name} claim (Section~\ref{sec:matchedwidth}). The case for this
 format was never precision per bit; it is multiplier removal, decode cost and the
@@ -1250,24 +1250,25 @@ looks matched and is not.
 \begin{table}[t]\centering
 \caption{Every rung against posit at its own \emph{physical} width, computed
 from the committed reference implementations rather than quoted. ``Values'' counts
-distinct non-zero decodings; ``step at $1.0$'' is the local relative gap between
-neighbours, which bounds the rounding error in the working range.}
+distinct non-zero decodings of the words the format produces (an exponent field
+above the special row is not a TNF word); ``step at $1.0$'' is the local relative
+gap between neighbours, which bounds the rounding error in the working range.}
 \label{tab:matchedwidth}
 \begin{tabular}{llrrr}
 \toprule
 bits & format & values & binades & step at $1.0$ \\
 \midrule
-19 & TNF16 $(4t,11m)$ & $516{,}096$          & $127.0$ & $0.024\%$ \\
+19 & TNF16 $(4t,11m)$ & $323{,}584$          & $79.0$  & $0.024\%$ \\
 19 & posit19 $es{=}1$ & $\mathbf{524{,}286}$ & $68.0$  & $\mathbf{0.002\%}$ \\
 19 & posit19 $es{=}2$ & $\mathbf{524{,}286}$ & $\mathbf{136.0}$ & $\mathbf{0.003\%}$ \\
 19 & takum19          & $\mathbf{524{,}286}$ & $\mathbf{510.0}$ & $\mathbf{0.003\%}$ \\
 \midrule
-10 & TNF8 $(3t,4m)$   & $960$              & $31.0$ & $3.125\%$ \\
-10 & posit10 $es{=}1$ & $\mathbf{1{,}022}$ & $32.0$ & $\mathbf{0.781\%}$ \\
+10 & TNF8 $(3t,4m)$   & $800$              & $25.0$ & $3.125\%$ \\
+10 & posit10 $es{=}1$ & $\mathbf{1{,}022}$ & $\mathbf{32.0}$ & $\mathbf{0.781\%}$ \\
 10 & posit10 $es{=}2$ & $\mathbf{1{,}022}$ & $\mathbf{64.0}$ & $\mathbf{1.562\%}$ \\
 \midrule
-6  & TNF4 $(2t,1m)$   & $56$          & $14.6$ & $25.0\%$ \\
-6  & posit6 $es{=}1$  & $\mathbf{62}$ & $16.0$ & $\mathbf{12.5\%}$ \\
+6  & TNF4 $(2t,1m)$   & $28$          & $6.6$  & $25.0\%$ \\
+6  & posit6 $es{=}1$  & $\mathbf{62}$ & $\mathbf{16.0}$ & $\mathbf{12.5\%}$ \\
 6  & posit6 $es{=}2$  & $\mathbf{62}$ & $\mathbf{32.0}$ & $25.0\%$ \\
 \bottomrule
 \end{tabular}
@@ -1277,15 +1278,32 @@ bits & format & values & binades & step at $1.0$ \\
 ladder occupies, posit holds more representable values than TNF and a finer step
 at unity --- by $12\times$ at 19 bits, $4\times$ at 10 and $2\times$ at 6. Worse
 for us, posit with $es{=}2$ \emph{weakly dominates} TNF on both coordinates
-simultaneously at all three: more binades \emph{and} a step no coarser. The
+simultaneously at all three: more binades \emph{and} a step no coarser. At 10 and
+6 bits posit with $es{=}1$ dominates on every column at once. The
 no-survivors corollary of Section~\ref{sec:catalogue} does not survive being
 restated at matched physical width, and is withdrawn to a matched-\emph{name}
 claim.
 
 The value deficit is not an encoding accident. A ternary exponent does not tile
-a binary field: four trits need seven bits and use $81$ of $128$ codes, so
-$8{,}190$ of the $2^{19}$ words are unreachable. No packing repairs this; it is
-what a ternary exponent costs in a binary container.
+a binary field: four trits need seven bits and use $81$ of $128$ codes, so $47$
+exponent rows of $4{,}096$ words --- $192{,}512$ of the $2^{19}$ words, more than a
+third --- are unreachable: no rounding and no arithmetic produces them. With the
+zero and special rows, $200{,}704$ words carry no finite non-zero value, against
+two for posit19. No packing repairs this; it is what a ternary exponent costs in
+a binary container.
+
+\paragraph{A correction, and an instance of this paper's own failure mode.}
+An earlier revision of Table~\ref{tab:matchedwidth} counted those rows. The
+reference decoder maps an exponent field above the special row to an ordinary
+power of two, while the encoder never writes one, so enumerating all $2^{19}$
+codes reported $516{,}096$ values and $127$ binades for TNF16 ($960$ and $31$
+for TNF8, $56$ and $14.6$ for TNF4), and the prose quoted $8{,}190$ unreachable
+words --- the difference of two value counts, not a count of words. The number
+checker passed $8{,}192$ against the quoted $8{,}190$ because its relative
+tolerance overrode an exact one. It is the failure Section~\ref{sec:selfcheck}
+is about: every enumeration was correct, and the comparison built on it counted
+words the format never produces. Counting only the words the format produces widens
+every gap in the table; the conclusion stands and is stronger.
 
 \paragraph{What the negative result does not touch.} None of the above is a
 cost figure, and the case for this format was never precision per bit. The

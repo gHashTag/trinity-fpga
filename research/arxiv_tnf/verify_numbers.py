@@ -31,7 +31,9 @@ def check(label, got, want, tol=0.02):
         return
     d = abs(got - want)
     rel = d / max(abs(want), 1e-9)
-    if d <= tol or rel <= 0.005:
+    # tol=0 means exact. The relative allowance used to apply to it too, and so
+    # passed 8192 against a quoted 8190 (see W993 below).
+    if d <= tol or (tol > 0 and rel <= 0.005):
         print(f"  ok  {label}: {got:.2f} (цитируется {want:.2f})")
         ok += 1
     else:
@@ -997,10 +999,20 @@ if cm:
     check("TNF4 шириной 6 бит", lw["TNF4"], 6, tol=0)
     m = cm["matched_width_results"]
     t19 = m["19_bits"]["TNF16 (4t,11m)"]; p19 = m["19_bits"]["posit19 es=1"]
+    # The TNF rows of this record count every code, including exponent fields
+    # above the special row that no computation produces; W993 supersedes them.
+    # The paper now quotes these figures only in its correction paragraph.
     check("19 бит: значений у TNF16", t19["values"], 516096, tol=0)
     check("19 бит: значений у posit19", p19["values"], 524286, tol=0)
     check("19 бит: TNF беднее по значениям", p19["values"] > t19["values"], True, tol=0)
-    check("недостижимых кодов", 2**19 - t19["values"], 8190, tol=0)
+    check("W991 all codes: the quoted 8190 is a difference of value counts",
+          p19["values"] - t19["values"], 8190, tol=0)
+    check("W991 all codes: what the checker computed and passed", 2**19 - t19["values"], 8192, tol=0)
+    check("W991 all codes: TNF16 binades", t19["binades"], 127.0, tol=0)
+    check("W991 all codes: TNF8 values", m["10_bits"]["TNF8 (3t,4m)"]["values"], 960, tol=0)
+    check("W991 all codes: TNF8 binades", m["10_bits"]["TNF8 (3t,4m)"]["binades"], 31.0, tol=0)
+    check("W991 all codes: TNF4 values", m["6_bits"]["TNF4 (2t,1m)"]["values"], 56, tol=0)
+    check("W991 all codes: TNF4 binades", m["6_bits"]["TNF4 (2t,1m)"]["binades"], 14.6, tol=0)
     check("19 бит: шаг в 1.0 хуже во сколько раз",
           t19["step_at_1_pct"] / p19["step_at_1_pct"], 12.0, tol=0.5)
     t10 = m["10_bits"]["TNF8 (3t,4m)"]; p10 = m["10_bits"]["posit10 es=1"]
@@ -1016,6 +1028,68 @@ if cm:
     check("сказано, что это не про цену",
           "cost figure" in cm["what_this_does_not_say"], True, tol=0)
     check("dot4: канонических чтений", len(cm["die_reads_canonical"]), 2, tol=0)
+
+# W993: the matched-width table, counting for TNF only the words it produces.
+mw = rec("matched_width_w993.json")
+if mw:
+    print("\n== matched physical width, words the format produces (W993)")
+    r = mw["matched_width_results"]
+    quoted = {  # tab:matchedwidth, row by row: values, binades, step at 1.0 in %
+        ("19_bits", "TNF16 (4t,11m)"): (323584, 79.0, 0.024),
+        ("19_bits", "posit19 es=1"): (524286, 68.0, 0.002),
+        ("19_bits", "posit19 es=2"): (524286, 136.0, 0.003),
+        ("19_bits", "takum19"): (524286, 510.0, 0.003),
+        ("10_bits", "TNF8 (3t,4m)"): (800, 25.0, 3.125),
+        ("10_bits", "posit10 es=1"): (1022, 32.0, 0.781),
+        ("10_bits", "posit10 es=2"): (1022, 64.0, 1.562),
+        ("6_bits", "TNF4 (2t,1m)"): (28, 6.6, 25.0),
+        ("6_bits", "posit6 es=1"): (62, 16.0, 12.5),
+        ("6_bits", "posit6 es=2"): (62, 32.0, 25.0),
+    }
+    for (w, name), (v, b, st) in quoted.items():
+        row = r[w][name]
+        check(f"{name}: values", row["values"], v, tol=0)
+        check(f"{name}: binades", row["binades"], b, tol=0)
+        check(f"{name}: step at 1.0 (%)", row["step_at_1_pct"], st, tol=0)
+
+    def dominates(a, b, strict):
+        better = (a["values"] > b["values"], a["binades"] > b["binades"],
+                  a["step_at_1_pct"] < b["step_at_1_pct"])
+        no_worse = (a["values"] >= b["values"], a["binades"] >= b["binades"],
+                    a["step_at_1_pct"] <= b["step_at_1_pct"])
+        return all(better) if strict else all(no_worse)
+
+    tnf = {"19_bits": "TNF16 (4t,11m)", "10_bits": "TNF8 (3t,4m)", "6_bits": "TNF4 (2t,1m)"}
+    for w, n in (("19_bits", 19), ("10_bits", 10), ("6_bits", 6)):
+        check(f"{n} bits: posit es=2 weakly dominates TNF",
+              dominates(r[w][f"posit{n} es=2"], r[w][tnf[w]], strict=False), True, tol=0)
+    for w, n in (("10_bits", 10), ("6_bits", 6)):
+        check(f"{n} bits: posit es=1 dominates TNF on every column",
+              dominates(r[w][f"posit{n} es=1"], r[w][tnf[w]], strict=True), True, tol=0)
+    check("19 bits: TNF16 still has more binades than posit19 es=1",
+          r["19_bits"]["TNF16 (4t,11m)"]["binades"] > r["19_bits"]["posit19 es=1"]["binades"],
+          True, tol=0)
+    for w, n, ratio, tol in (("19_bits", 19, 12.0, 0.5), ("10_bits", 10, 4.0, 0.05),
+                             ("6_bits", 6, 2.0, 0.05)):
+        check(f"{n} bits: posit es=1 step finer by", r[w][tnf[w]]["step_at_1_pct"]
+              / r[w][f"posit{n} es=1"]["step_at_1_pct"], ratio, tol=tol)
+
+    c16 = mw["tnf_code_census"]["TNF16 (4t,11m)"]
+    check("TNF16: trit-word exponent rows", c16["trit_word_rows"], 81, tol=0)
+    check("TNF16: exponent rows", c16["exponent_rows"], 128, tol=0)
+    check("TNF16: rows above the special row", c16["rows_above_special"], 47, tol=0)
+    check("TNF16: words per row", c16["words_per_row"], 4096, tol=0)
+    check("TNF16: unreachable words", c16["words_outside_format"], 192512, tol=0)
+    check("TNF16: unreachable words are more than a third",
+          3 * c16["words_outside_format"] > 2**19, True, tol=0)
+    check("TNF16: words without a finite non-zero value (paper B)",
+          c16["words_without_finite_nonzero_value"], 200704, tol=0)
+    check("TNF16: every produced word survives encode(decode(w))",
+          c16["roundtrip_below_special_ok"], c16["words_with_finite_nonzero_value"], tol=0)
+    check("TNF16: no word above the special row survives it",
+          c16["above_special_survive_roundtrip"], 0, tol=0)
+    check("W991 TNF rows reproduced by counting every code",
+          all(mw["w991_rows_reproduced_by_all_codes"].values()), True, tol=0)
 
 # W992: the chipdb deletion, its audit, and the sequencing error.
 dl = rec("deletion_w992.json")

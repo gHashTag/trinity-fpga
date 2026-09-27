@@ -38,6 +38,8 @@ Usage:  python3 make-series.py [--check]
         --check  regenerate into memory and fail if the files on disk differ
 """
 
+import difflib
+import hashlib
 import re
 import subprocess
 import sys
@@ -52,14 +54,14 @@ SOURCE = HERE.parent / "tnf_paper.tex"
 
 RANGES = {
     "a": [
-        (1235, 1299),   # The comparison at matched physical width
-        (1382, 1438),   # Two width defects, and why they generalise
-        (5848, 6209),   # How a comparison fails while every measurement is correct
-        (6209, 6322),   # Adjacent work this paper is measured against
-        (6322, 6399),   # What the formal statements are, and what they are
-        (6399, 6862),   # Three results added in this revision
-        (7627, 7759),   # Limitations
-        (7759, 7787),   # Reproducibility, Disclosure
+        (1235, 1317),   # The comparison at matched physical width
+        (1400, 1456),   # Two width defects, and why they generalise
+        (5866, 6227),   # How a comparison fails while every measurement is correct
+        (6227, 6340),   # Adjacent work this paper is measured against
+        (6340, 6417),   # What the formal statements are, and what they are
+        (6417, 6880),   # Three results added in this revision
+        (7645, 7777),   # Limitations
+        (7777, 7805),   # Reproducibility, Disclosure
     ],
     "b": [
         (452, 486),     # The format
@@ -67,31 +69,31 @@ RANGES = {
         (586, 1004),    # The law is general, and it measures tapering
         (1004, 1084),   # Accuracy
         (1084, 1235),   # The 16-bit field
-        (1299, 1382),   # Hardware
-        (1478, 1641),   # What the law says about improving the ladder
-        (1641, 2029),   # Why ternary, and exactly how much
-        (3587, 3876),   # Two formats close a ternary node
-        (4342, 4798),   # Fineness costs registers, not adders
+        (1317, 1400),   # Hardware
+        (1496, 1659),   # What the law says about improving the ladder
+        (1659, 2047),   # Why ternary, and exactly how much
+        (3605, 3894),   # Two formats close a ternary node
+        (4360, 4816),   # Fineness costs registers, not adders
     ],
 }
 
 # Paper C is the record: the whole body, cut nowhere.
-RANGES["c"] = [(186, 7787)]
+RANGES["c"] = [(186, 7805)]
 
 # Paper D is A without its revision notes. It keeps the two measurements that
 # are the contribution, the six failure modes that are the subject, the worked
 # example, the epistemics, the related work and the limitations -- and drops
-# 6399-6862 (3,984 words), which is addressed to a reader of the previous
+# 6417-6880 (3,984 words), which is addressed to a reader of the previous
 # version and means nothing to a reader meeting the work here. That cut is also
 # what brings the ISQED rendering of it inside ten pages.
 RANGES["d"] = [
-    (5848, 6209),   # How a comparison fails while every measurement is correct
-    (1235, 1299),   # The comparison at matched physical width  (worked example)
-    (1382, 1438),   # Two width defects, and why they generalise
-    (6322, 6399),   # What the formal statements are, and what they are not
-    (6209, 6322),   # Adjacent work this paper is measured against
-    (7627, 7759),   # Limitations
-    (7759, 7787),   # Reproducibility, Disclosure
+    (5866, 6227),   # How a comparison fails while every measurement is correct
+    (1235, 1317),   # The comparison at matched physical width  (worked example)
+    (1400, 1456),   # Two width defects, and why they generalise
+    (6340, 6417),   # What the formal statements are, and what they are not
+    (6227, 6340),   # Adjacent work this paper is measured against
+    (7645, 7777),   # Limitations
+    (7777, 7805),   # Reproducibility, Disclosure
 ]
 
 # --- renderings, not cuts ----------------------------------------------------
@@ -116,6 +118,20 @@ STRIP_FIGURES = {"d-isqed"}
 # Renderings that stand alone. A reference leaving one of these cannot name a
 # sibling document, so every destination collapses to \extended.
 STANDALONE = {"d-isqed"}
+
+# Renderings already handed to a venue. The ISQED rendering was submitted as
+# paper 66, and the venue holds that text: a correction to it is an erratum the
+# owner sends, not a regeneration here. Its files are checked against the hash
+# of what was submitted instead of being written, and every later step (the
+# pruned bibliography, the double-blind gate) reads the frozen text. The cut is
+# still rendered, so the build says how far the source has moved since; that is
+# information, not a problem.
+FROZEN = {
+    "paper-d-isqed-body.tex":
+        "bbe4e784ed54bde207871e88569e606db864e56c7b38a87b29588fe10bb9ed2c",
+    "paper-d-isqed-newsection.tex":
+        "99d0effc6a97f45787d5db8c4b27b32f10c98c56cb0e2c7b7fbda5206ae9cdf5",
+}
 
 # Which files each rendering is assembled from. Listed rather than globbed:
 # paper-d-*.tex also matches the ISQED rendering's files, so a glob would hand
@@ -670,6 +686,19 @@ def build_body(src, paper, problems):
     return text
 
 
+def frozen(path, generated, problems):
+    """The submitted text of a frozen file, after checking it is still that text."""
+    text = path.read_text(encoding="utf-8") if path.exists() else ""
+    if hashlib.sha256(text.encode("utf-8")).hexdigest() != FROZEN[path.name]:
+        problems.append(f"{path.name} is frozen and no longer matches what was submitted")
+    elif generated != text:
+        diff = difflib.unified_diff(text.splitlines(), generated.splitlines(), n=0)
+        moved = sum(1 for l in diff if l[:1] in "+-" and l[:3] not in ("+++", "---"))
+        print(f"{path.name:22} frozen as submitted; rendering the source now "
+              f"would change {moved} lines (not written)")
+    return text
+
+
 def main():
     check = "--check" in sys.argv
     src = read_source()
@@ -706,14 +735,22 @@ def main():
     # second hand-maintained original.
     newsec = fit_two_columns((HERE / "paper-a-newsection.tex").read_text(encoding="utf-8"))
     newsec_path = HERE / "paper-d-isqed-newsection.tex"
-    if check:
+    if newsec_path.name in FROZEN:
+        newsec = frozen(newsec_path, newsec, problems)
+    elif check:
         if not newsec_path.exists() or newsec_path.read_text(encoding="utf-8") != newsec:
             problems.append(f"d-isqed: {newsec_path.name} on disk differs from generated")
     else:
         newsec_path.write_text(newsec, encoding="utf-8")
 
     for paper in PAPERS:
-        body = build_body(src, paper, problems)
+        path = HERE / BODY[paper]
+        if path.name in FROZEN:
+            # A rewrite that no longer matches the moved source says nothing
+            # about the frozen text, so its complaints are not collected.
+            body = frozen(path, build_body(src, paper, []), problems)
+        else:
+            body = build_body(src, paper, problems)
         # A label used and not defined here is a reference this script failed to
         # route. The LaTeX build would print it as ?? and still exit 0.
         # The wrapper documents carry labels too (the budget convention is in
@@ -726,8 +763,9 @@ def main():
         dangling = used_labels(body) - defined_labels(body) - wrapper
         for label in sorted(dangling):
             problems.append(f"{paper}: unrouted reference \\ref{{{label}}}")
-        path = HERE / BODY[paper]
-        if check:
+        if path.name in FROZEN:
+            pass
+        elif check:
             old = path.read_text(encoding="utf-8") if path.exists() else None
             if old != body:
                 problems.append(f"{paper}: {path.name} on disk differs from generated")

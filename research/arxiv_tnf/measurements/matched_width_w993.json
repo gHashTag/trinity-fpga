@@ -1,0 +1,154 @@
+{
+  "wave": "W993",
+  "what": "tab:matchedwidth recomputed from the committed oracles, counting for TNF only the words the format produces",
+  "instrument": "python3 matched_width.py --write",
+  "supersedes": {
+    "record": "compare_w991.json",
+    "fields": [
+      "matched_width_results (the three TNF rows)",
+      "the_finding (the value counts)",
+      "why_the_value_count_is_short"
+    ],
+    "why": "tnf_ref.decode reads an exponent field above offset_max as an ordinary power of two; tnf_ref.encode sends every such magnitude to infinity. W991 enumerated all codes and so counted words no computation produces. Its 8190 is posit19's value count minus TNF16's all-codes count, not a count of unreachable words; 2^19 minus that count is 8192."
+  },
+  "definition": {
+    "values": "distinct non-zero finite values; for TNF, of the words whose exponent field is below offset_max (the words encode produces)",
+    "binades": "log2(largest positive value / smallest positive value)",
+    "step_at_1_pct": "1 minus the largest value below 1.0, in percent"
+  },
+  "matched_width_results": {
+    "19_bits": {
+      "TNF16 (4t,11m)": {
+        "values": 323584,
+        "binades": 79.0,
+        "step_at_1_pct": 0.024
+      },
+      "posit19 es=1": {
+        "values": 524286,
+        "binades": 68.0,
+        "step_at_1_pct": 0.002
+      },
+      "posit19 es=2": {
+        "values": 524286,
+        "binades": 136.0,
+        "step_at_1_pct": 0.003
+      },
+      "takum19": {
+        "values": 524286,
+        "binades": 510.0,
+        "step_at_1_pct": 0.003
+      }
+    },
+    "10_bits": {
+      "TNF8 (3t,4m)": {
+        "values": 800,
+        "binades": 25.0,
+        "step_at_1_pct": 3.125
+      },
+      "posit10 es=1": {
+        "values": 1022,
+        "binades": 32.0,
+        "step_at_1_pct": 0.781
+      },
+      "posit10 es=2": {
+        "values": 1022,
+        "binades": 64.0,
+        "step_at_1_pct": 1.562
+      }
+    },
+    "6_bits": {
+      "TNF4 (2t,1m)": {
+        "values": 28,
+        "binades": 6.6,
+        "step_at_1_pct": 25.0
+      },
+      "posit6 es=1": {
+        "values": 62,
+        "binades": 16.0,
+        "step_at_1_pct": 12.5
+      },
+      "posit6 es=2": {
+        "values": 62,
+        "binades": 32.0,
+        "step_at_1_pct": 25.0
+      }
+    }
+  },
+  "tnf_all_codes_as_in_w991": {
+    "TNF16 (4t,11m)": {
+      "values": 516096,
+      "binades": 127.0,
+      "step_at_1_pct": 0.024
+    },
+    "TNF8 (3t,4m)": {
+      "values": 960,
+      "binades": 31.0,
+      "step_at_1_pct": 3.125
+    },
+    "TNF4 (2t,1m)": {
+      "values": 56,
+      "binades": 14.6,
+      "step_at_1_pct": 25.0
+    }
+  },
+  "w991_rows_reproduced_by_all_codes": {
+    "TNF16 (4t,11m)": true,
+    "posit19 es=1": true,
+    "posit19 es=2": true,
+    "takum19": true,
+    "TNF8 (3t,4m)": true,
+    "posit10 es=1": true,
+    "posit10 es=2": true,
+    "TNF4 (2t,1m)": true,
+    "posit6 es=1": true,
+    "posit6 es=2": true
+  },
+  "tnf_code_census": {
+    "TNF16 (4t,11m)": {
+      "physical_bits": 19,
+      "exponent_field_bits": 7,
+      "exponent_rows": 128,
+      "trit_word_rows": 81,
+      "rows_above_special": 47,
+      "words_per_row": 4096,
+      "words_outside_format": 192512,
+      "words_with_finite_nonzero_value": 323584,
+      "words_without_finite_nonzero_value": 200704,
+      "roundtrip_below_special_ok": 323584,
+      "roundtrip_below_special_changed": 0,
+      "above_special_decoded_finite": 192512,
+      "above_special_survive_roundtrip": 0
+    },
+    "TNF8 (3t,4m)": {
+      "physical_bits": 10,
+      "exponent_field_bits": 5,
+      "exponent_rows": 32,
+      "trit_word_rows": 27,
+      "rows_above_special": 5,
+      "words_per_row": 32,
+      "words_outside_format": 160,
+      "words_with_finite_nonzero_value": 800,
+      "words_without_finite_nonzero_value": 224,
+      "roundtrip_below_special_ok": 800,
+      "roundtrip_below_special_changed": 0,
+      "above_special_decoded_finite": 160,
+      "above_special_survive_roundtrip": 0
+    },
+    "TNF4 (2t,1m)": {
+      "physical_bits": 6,
+      "exponent_field_bits": 4,
+      "exponent_rows": 16,
+      "trit_word_rows": 9,
+      "rows_above_special": 7,
+      "words_per_row": 4,
+      "words_outside_format": 28,
+      "words_with_finite_nonzero_value": 28,
+      "words_without_finite_nonzero_value": 36,
+      "roundtrip_below_special_ok": 28,
+      "roundtrip_below_special_changed": 0,
+      "above_special_decoded_finite": 28,
+      "above_special_survive_roundtrip": 0
+    }
+  },
+  "the_finding": "posit with es=2 still weakly dominates TNF on range and step at all three widths, and the value gap is 24.5 times the 8190 W991 reported: at 19 bits 323584 values against 524286, a deficit of 200702. At 10 and 6 bits posit with es=1 now also dominates on every column."
+}

@@ -245,6 +245,54 @@ moved. Paper 66 is not revised.
 `thebibliography` block. It used to be a hand copy, and a hand copy is one more
 place to forget an entry. `--check` fails if it drifts.
 
+## The matched-width table, corrected (2026-09-27)
+
+`tab:matchedwidth` counted TNF words that do not exist. `tnf_ref.decode` reads
+an exponent field above the special row as an ordinary power of two, but
+`tnf_ref.encode` sends every such magnitude to infinity. So no rounding and no
+arithmetic ever produces those words. Enumerating all codes, as W991 did,
+counted them anyway.
+
+| rung | values (W991 → W993) | binades (W991 → W993) |
+|---|---:|---:|
+| TNF16, 19 bits | 516,096 → 323,584 | 127.0 → 79.0 |
+| TNF8, 10 bits | 960 → 800 | 31.0 → 25.0 |
+| TNF4, 6 bits | 56 → 28 | 14.6 → 6.6 |
+
+- The source of the corrected figures is `measurements/matched_width_w993.json`
+  (`python3 matched_width.py --write`). It supersedes the TNF rows of
+  `compare_w991.json` and reproduces W991 exactly when every code is counted.
+- The step column and the posit and takum rows do not change.
+- "Unreachable" was quoted as 8,190. That is posit19's value count minus
+  516,096, not a count of words. The words above the special row number 47 × 4,096
+  = **192,512**. With the zero and special rows, **200,704** carry no finite
+  non-zero value; that is paper B's figure.
+- `verify_numbers.py` passed the old figure because its relative allowance
+  overrode `tol=0`. `tol=0` is now exact. The same 3 earlier divergences remain,
+  and no other check flipped.
+- The conclusion gets stronger:
+  - posit with es=2 still weakly dominates at every width;
+  - at 10 and 6 bits posit with es=1 now dominates on every column.
+- The manuscript says all this in a new paragraph, "A correction, and an instance
+  of this paper's own failure mode".
+
+**Where it lands.**
+
+| rendering | what changed |
+|---|---|
+| A, C and D (series) | table, prose and the correction paragraph |
+| C's abstract | 192,512 instead of 8,190 |
+| B | the wording of its abstract only: "without a finite non-zero value" instead of "unreachable" |
+
+**The ISQED rendering is frozen.** `make-series.py` now holds the sha256 of the
+submitted `paper-d-isqed-body.tex` and `paper-d-isqed-newsection.tex` in
+`FROZEN`. It checks both files against those hashes and does not write them.
+`bibliography-anon.tex` and the double-blind gate read the frozen text, and the
+build prints how many lines a fresh rendering would change.
+
+Paper 66 therefore still carries the old table. Whether to send the venue an
+erratum, or fix it at camera-ready, is the owner's call.
+
 ## Where these go
 
 `paper-d-isqed` goes to ISQED 2027. Paper C is the citable record, for Zenodo.
