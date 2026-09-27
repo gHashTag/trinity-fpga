@@ -217,3 +217,36 @@ and the 640-job check, `receipts verified (tag) : 640/640`, `rows bit-exact : 64
 - `trinet_baud_sweep.py` assumes the host rate is continuous. Its "USE THIS
   RATE" and "implied CFGMCLK" lines are only meaningful where the adapter's rate
   grid is finer than the sweep step, which is not so for a CP2102N near 1 Mbaud.
+
+**Update, 04:05Z: the older per-chip figures have the same defect.**
+The section "Entered 2026-08-03" of `docs/TRI_NET_REPORT_2026-08-02.md`, and
+the block with `node0_cfgmclk_mhz 70.46` in
+`specs/trinet/ternary_hw_verification.t27`, record three boards swept in 0.5 %
+host-rate steps, with CFGMCLK taken as window centre x 60 (BAUD_DIV 60).
+Every one of the five recorded edges lies within one sweep step of a
+24 MHz / N divider boundary (offsets +0.42, -0.24, +0.15, -0.11 and -0.19 %,
+derived). The adapter on those boards is not recorded; the edges are what
+identify the grid. Mapped through 24 MHz / N (derived, `tri fpga-wire`):
+
+| node | recorded window | wire rates inside it | recorded CFGMCLK |
+|---|---|---|---|
+| node0 | 1,121,020 – 1,227,778 | 1,142,857 and 1,200,000 (N 21, 20) | 70.46 |
+| node1 | 1,068,248 – 1,169,444 | 1,090,909 and 1,142,857 (N 22, 21) | 67.13 |
+| node2 | 1,121,020 – 1,168,468 | 1,142,857 only (N 21) | 68.69 |
+
+Each window is one or two whole divider bins, give or take the sweep step, so
+each "centre x 60" is the middle of the bins that passed, not the chip's clock.
+node1's centre 1,118,846 and node2's centre 1,144,744 are the same wire rate,
+1,142,857.
+The "4.97 % spread" between node0 and node1 is one step of the adapter's
+grid (their windows are the same two-bin width, shifted by one bin). The record's one
+open item, node2's soft upper edge "96-98 % clean over 1174399..1227778", is
+the N = 20 bin (1,170,732 to 1,230,769 requested), so it is one wire rate,
+1,200,000, at the edge of node2's tolerance, not a range. This board today
+passes the same bins as node1 did then. That is consistent with any clock in
+the shared band and does not identify the chip. The single-board figure
+71.18 MHz (2026-08-02, BAUD_DIV 434, about 164 kbaud) is not affected in the
+same way: there the grid is about 0.7 %, finer than its window. It does not
+fit this board's bound, so it was either another board or another bitstream;
+the record does not say which board. The record is not edited here. Superseding it in the spec is a task for a compile-checked
+edit.
