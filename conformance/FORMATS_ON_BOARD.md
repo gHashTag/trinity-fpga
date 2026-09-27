@@ -175,3 +175,100 @@ The owner said yes to this flash and run on 2026-09-27: «да, прошей GF8
   (0.71 ms per pair). Stop-and-wait over USB sets that pace, not the design.
 - **Cost.** The GF8 load replaced the TRI-NET node. Until the node is reloaded
   and re-keyed, no receipt run (section 1) is possible on this board.
+
+## 8. Pre-registered: TNF16 add and mul, every request (written before the run)
+
+The owner, 2026-09-27: «так у на TNF лучший формат !!!», then «сделай его
+сразу». TNF has never run on a board (section 4). This is one load and one run.
+The owner types the sudo password for the load.
+
+- **Spec, the one source:** `specs/trinet/tnf16_on_board_ax7203.t27`, sha256
+  `703b35c0…6889`. It holds the format, the wire, the vector counts, the pass
+  line and the guard bits. `conformance/tnf16_board_from_spec.mjs` compiles it
+  with the t27 compiler (wasm `bb39b9a5…`), evaluates its 8 test blocks
+  (54 asserts, 0 failures), and writes `fpga/tnet/tnf16_board_params.v` and
+  `conformance/tnf16_board_params.py`. `--check` reports drift.
+- **Format:** `conformance/tnf_ref.py` `TNFFormat(4, 11)`, ladder v2-spec, the
+  format the pinned vectors were generated from. The word has 19 bits: sign,
+  a 7-bit offset and 11 mantissa bits.
+- **RTL:**
+  - `fpga/tnet/tnf16_core.v` is a six-stage core, one request per clock. The
+    adder keeps 3 guard bits plus a sticky bit.
+  - `fpga/vivado/tnf16_board_ax7203.v` is the board top. Its UART is the
+    TRI-NET node's, the same divider 60 on the same CFGMCLK.
+- **Bitstream:**
+  - Build command: `tri fpga-build --top tnf16_board_ax7203 --src
+    fpga/tnet/tnf16_board_params.v fpga/tnet/tnf16_core.v
+    fpga/vivado/tnf16_board_ax7203.v --no-node-params --nosrl`.
+  - File sha256 `1820b114…370b`. Payload `6d4e0dd3…fd47`, the same in two
+    builds. `artifacts/bitstreams/tnf16_board_ax7203.manifest.json` records
+    the input hashes, the tools and the yosys script.
+  - Post-route size is 838 LUTX. Fmax is 126.87 MHz against CFGMCLK's
+    65.6–68.7 MHz.
+  - Without `--nosrl`, yosys made 19 SRL16E, and router1 did not finish in two
+    runs of more than 13 minutes. The builder now stops on SRL cells unless one
+    of the two flags is given.
+- **Command,** from `conformance/`: `tri fpga-run tnf16_board_ax7203 --limit
+  1800 -- python3 tnf16_board_ax7203.py --port /dev/cu.usbserial-1130`. The
+  host runs at 1,144,744 baud (1,142,857 on the wire) with window 24.
+- **Vectors:** 1,035,886 requests, sha256 `2b1ea80b…2c38`. The host prints
+  this and `tnf16_board_vectors.py --write` produces it.
+  - 1,038 pinned rows from `tnf16_v2-spec_tnf-vectors-3.vec`.
+  - 34,848 edge pairs: 132 codes crossed, for each op.
+  - 500,000 uniform random requests.
+  - 500,000 near random requests: add near cancellation; mul near underflow,
+    unity and overflow.
+  - Expected words come from `tnf_ref.py`.
+- **PASS** means the log has the line `TNF16 RESULT: 1035886/1035886
+  bit-exact (fails=0, lost=0)` and exit 0. Anything else is a FAIL and is
+  recorded as it stands. If the run is stopped at the 1,800 s limit, it is
+  recorded as incomplete.
+- **Telling link from arithmetic.** Every response echoes the request's SEQ.
+  - A wrong word counts as a fail, and the run goes on.
+  - A short, unframed or out-of-sequence response stops the run with a
+    `! LINK:` line. Every request not answered by then counts as lost.
+  - So `fails` counts arithmetic and `lost` counts the link.
+- **One attempt.** A second run is allowed only if the first fails before its
+  first response (port busy, no answer). Both logs are then kept.
+- **Before the board (simulated):**
+  - **Core RTL (Icarus):** all 1,035,886 requests bit-exact. Latency is 6.
+    Idle inputs carried junk, and 10/10 unknown opcodes were flagged.
+  - **Python model** of the same datapath: 1,035,886/1,035,886.
+  - **UART top from the pins:** 401 frames pass at 0, −43,000 and
+    +1,875 ppm, the ends of the CFGMCLK band. The bench fails at −50,000.
+  - **Host self-test:** every one of six injected faults is caught.
+  - **Gate level:** the yosys netlist was simulated with yosys's
+    `xilinx/cells_sim.v`. The yosys command matches the builder's (in the
+    manifest). This is before place and route.
+    - Core: 1,035,886/1,035,886 bit-exact, in 7 parallel chunks whose
+      concatenation has the vector sha above. Latency is 6 and 7/7 bad
+      opcodes were flagged.
+    - Whole top from the UART pins: 401 frames, 2,005/2,005 response bytes,
+      at 0 ppm.
+  - **The checks can fail** (controls):
+    - one expected word flipped gives `fails=1`;
+    - the zero-significand bug fixed during this work gives FAIL;
+    - 2 guard bits instead of 3 give 1,358 fails in both the model and the RTL.
+- **Link margin (derived).** The slow end of the band is −43,333 ppm, and the
+  bench passes at −43,000 and fails at −50,000. The margin at that end is
+  thin, and a slow chip would show up as `lost`. The same receiver on this
+  chip carried 403,200/403,200 node jobs at this rate.
+- **Duration.** 1,035,886 requests of 10 bytes take 91 s on the wire. That is
+  the floor for this run, not a prediction of how long it will take.
+- **What a PASS says and does not say.**
+  - It says this RTL computes the reference TNF16 add and mul bit-exact on
+    this board for every listed vector.
+  - It says nothing about TNF against other formats. The TNF paper stays
+    closed until TNF beats MXFP4 on the block axis.
+  - 838 LUTX includes a UART, a parser and six pipeline stages cut for a slow
+    clock, so it is not a TNF cost figure.
+- **Four TNF16 definitions (found while writing the spec):**
+  - t27 `specs/numeric/tnf16.t27`: 4 trits as 2-bit codes, M=11, 20 bits.
+  - `tnf_ref.py` v2-spec: 19 bits. This is the one on the board.
+  - `tnf16_ref.py` v1-research: M=9.
+  - `bnf_decode.v` `tnf16_decode`: M=8, 16 bits. This is the RTL behind the
+    TNF16 row of `fpga/tnet/MATRIX.md` on main (514 LUT, 74.37 MHz), so that
+    row does not describe this format.
+  - The t27 file's header still says "9-bit precision" beside M = 11.
+- **Cost.** The load replaces the GF8 design. The TRI-NET node stays off until
+  it is reloaded and re-keyed.

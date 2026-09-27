@@ -187,6 +187,10 @@ def main():
     ap.add_argument("--seed-search", action="store_true",
                     help="CI behaviour: heap then sa, seeds 1..8, first routed wins")
     ap.add_argument("--name", help="bitstream basename (default trinet_node<N>)")
+    ap.add_argument("--nosrl", action="store_true",
+                    help="synth_xilinx -nosrl: plain flip-flops, no SRL16E/SRLC32E")
+    ap.add_argument("--allow-srl", action="store_true",
+                    help="go on to nextpnr even if yosys inferred shift-register LUTs")
     args = ap.parse_args()
 
     out = os.path.abspath(args.out)
@@ -208,13 +212,20 @@ def main():
     if params:
         chparam = "chparam %s %s; " % (" ".join("-set %s %s" % kv for kv in params.items()), args.top)
     json_out = os.path.join(out, "node.json")
-    ys = ("read_verilog %s; %ssynth_xilinx -flatten -abc9 -nocarry -nodsp -arch xc7 -top %s; "
-          "setundef -zero -params; write_json %s" % (" ".join(srcs), chparam, args.top, json_out))
+    ys = ("read_verilog %s; %ssynth_xilinx -flatten -abc9 -nocarry -nodsp%s -arch xc7 -top %s; "
+          "setundef -zero -params; write_json %s"
+          % (" ".join(srcs), chparam, " -nosrl" if args.nosrl else "", args.top, json_out))
     steps.append(run_step("yosys", ["yosys", "-q", "-l", os.path.join(out, "yosys.full.log"),
                                     "-p", ys], out, [json_out]))
     with open(os.path.join(out, "yosys.full.log")) as f:
-        if re.search(r"^ *\d+ +DSP48", f.read(), re.M):
-            sys.exit("DSP48 inferred -- CI guard would fail")
+        ystat = f.read()
+    if re.search(r"^ *\d+ +DSP48", ystat, re.M):
+        sys.exit("DSP48 inferred -- CI guard would fail")
+    # 2026-09-27: tnf16_board_ax7203 with 19 SRL16E sat in router1 for over 13 min
+    # (two runs); the same netlist with -nosrl routed in 28 s. The node has none.
+    if re.search(r"^ *\d+ +SRL(16E|C32E)", ystat, re.M) and not args.allow_srl:
+        sys.exit("SRL16E/SRLC32E inferred: router1 did not finish on such a netlist on this Mac. "
+                 "Rebuild with --nosrl (or --allow-srl to try anyway).")
 
     # 2. nextpnr-xilinx
     fasm = os.path.join(out, "node.fasm")
@@ -265,7 +276,7 @@ def main():
 
     manifest = {
         "top": args.top, "part": args.part, "node": args.node, "params": params,
-        "rev": args.rev, "placer_seed": chosen, "freq": args.freq,
+        "rev": args.rev, "placer_seed": chosen, "freq": args.freq, "yosys_script": ys,
         "chipdb": args.chipdb, "db_root": args.db_root,
         "required_features_fasm": os.path.exists(req),
         "inputs": {os.path.basename(p): sha256(p) for p in srcs + [xdc]},
