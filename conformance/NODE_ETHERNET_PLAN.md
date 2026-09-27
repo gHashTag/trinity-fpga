@@ -179,6 +179,71 @@ pins and, in `ax7203.xdc`, the user LEDs share bank 16 with different
 IOSTANDARDs, so one of the two files is wrong. The flash command is printed by
 `tri fpga-build`, not run. It needs the owner's yes.
 
+### E2 on the board, 2026-09-27 12:14Z to 12:42Z (measured)
+
+The owner said yes to both flashes ("все три", variant 1 of the loop report)
+and typed the sudo password for each. One attempt, no reruns.
+
+| step | log | result |
+|---|---|---|
+| flash E2, payload `0b6d7820…c5ceeac1` | `board_runs/e2_flash.log` | loaded, 12:14:19Z to 12:27:37Z |
+| read 6 report lines at 1144744 baud | `board_runs/e2_phy_status.log` | 6 of 6 lines read, 12:27:37Z to 12:27:40Z |
+| flash the node back, CI payload `ee75d97b…3f39f03` | `board_runs/node0_restore_after_e2.log` | loaded, 12:27:40Z to 12:40:39Z |
+| `--setkey`, then `--all --window 24` | `board_runs/tern_tc_all_w24_after_e2.log` | `receipts verified (tag) : 403200/403200 under node 0x5452494e`, rows 33792/33792, 85.81 s, exit 0 |
+
+All four logs have 0 hits for the key and are under 4 KB.
+
+**What the six lines say,** field by field:
+
+| field | n=2 to n=6 | n=7 | reading |
+|---|---|---|---|
+| `pm`, `id` | `00000000`, `FFFFFFFF` | same | **no address of 32 answered MDIO**: no PHY pulled TA low, every read is all ones |
+| `ib` high nibble | `1` | `1` | bit 1 clear: no MDIO answer; bit 0 set: in-band status was seen on RXD |
+| `ib` low nibble | `0` | `C` | the link bit is clear on every line. `C` has the 1000 and full-duplex bits set with link down |
+| `rc` (RXC) | 24.91 to 24.92 MHz | 124.52 MHz | the PHY clocks RXC, so it is out of reset and powered |
+| `fr` | 0 | 0 | no frames |
+
+**A display artefact, corrected in the reader after this run.** Each decoded
+line printed `speed=1000 fd=True`. Those two fields come from the MDIO PHY
+control register `pc`, which read `FFFF` because nobody answered, so they said
+nothing. The reader now prints them as `-` when no PHY answered. In `--port`
+mode it also prints a `board:` line with the counts of MDIO answers, in-band
+status and in-band link, and says that its `RESULT` counts lines read, not a PHY
+verdict. The log above is the unchanged original; `--parse` on it now prints
+`speed=- fd=-`.
+
+**What it shows.**
+
+1. **MDIO is silent at every address.** This is a real failure and is not
+   explained yet. The PHY is alive (RXC runs and changes rate), so a held reset
+   is unlikely. Candidates are listed below.
+2. **Link did not come up within the read, which is inconclusive.** The six
+   lines are one poll each, about 0.5 s apart, so the read covered about 3 s
+   right after the PHY reset. The RXC rate and the in-band nibble changed on the
+   last line (25 to 125 MHz, `0` to `C`), which fits a PHY still negotiating
+   1000 full duplex when the read stopped. Gigabit auto-negotiation commonly
+   takes about 3 s. `--lines 6` was carried over from the simulation, whose
+   timers are scaled. On the board it is too short.
+3. **The node came back.** It is the same CI bitstream as at 08:51Z, and the W24
+   control passed again with every receipt verified.
+
+**For the next E2 read (needs a flash, so the owner's yes).** Read at least 40
+lines, about 20 s, which is more than one no-link reset period (14.7 to
+15.3 s). Note in the log what the cable's other end is.
+
+**Hypotheses for the silent MDIO** (none tested):
+
+- MDC or MDIO lands on the wrong package pin, or the two are swapped. The
+  constraint file follows LiteX's `alinx_ax7203` (B16 MDC, B15 MDIO); the
+  routed FASM has not been checked against it.
+- The MDIO output enable does not reach the IOB, so the FPGA never drives the
+  line. The testbench counted contention only at RTL level, and the gate netlist
+  has no `mdio_oe` net to probe.
+- The PHY needs an MDIO pull-up that the board does not fit, and the FPGA does
+  not enable one.
+- The PHY is not the one the model assumes. That alone would not explain
+  silence at all 32 addresses, because registers 2 and 3 are standard.
+
 ## Security notes for E4
 
 - Anyone on the LAN can send requests. They can use up capacity, but without

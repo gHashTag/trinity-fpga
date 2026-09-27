@@ -160,3 +160,10 @@ and picked the CI artifact over the local build.
 - **Cost.** MXDOT4 is off the board. The node, and its key, last until the next
   power cycle or load.
 
+
+## Reload after E2, 2026-09-27 12:40Z (measured)
+
+Same CI payload `ee75d97b…3f39f03`, owner's yes and sudo. The window-24 control
+passed again: `403200/403200` receipts verified, rows 33792/33792, 85.81 s.
+The record, with the E2 read before it, is in `NODE_ETHERNET_PLAN.md`, "E2 on
+the board".

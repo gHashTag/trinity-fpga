@@ -1,0 +1,18 @@
+# start 2026-09-27T12:14:19Z
+# bit /tmp/trinet-node-build/e2/eth_phy_status_ax7203.bit payload 0b6d7820fbf96b2e7d4113b63e1eff638e5cbcd55769fd6f3ab6c787c5ceeac1
+# owner yes: все три (owner, 2026-09-27, to variant 1: "Сеть и возврат узла. Вы вводите пароль для E2, плата сообщает, видит ли она сеть. Сразу за этим вторая прошивка возвращает узел TRI-NET ... Нужны два «да», по одному на прошивку.")
+# usb HUB ['0x110000']
+# cmd sudo /opt/homebrew/bin/openocd -f fpga/openxc7-synth/ax7203_al321.cfg -c init -c pld load 0 /tmp/trinet-node-build/e2/eth_phy_status_ax7203.bit -c runtest 2000 -c shutdown
+Open On-Chip Debugger 0.12.0
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+xc7_program
+Info : clock speed 100 kHz
+Info : JTAG tap: xc7.tap tap/device found: 0x13636093 (mfg: 0x049 (Xilinx), part: 0x3636, ver: 0x1)
+Warn : gdb services need one or more targets defined
+loaded file /tmp/trinet-node-build/e2/eth_phy_status_ax7203.bit to pld device 0 in 778s 820106us
+
+shutdown command invoked
+# exit=0
+# end 2026-09-27T12:27:37Z

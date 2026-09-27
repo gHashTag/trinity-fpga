@@ -1,0 +1,24 @@
+# start 2026-09-27T12:27:37Z
+# usb HUB ['0x110000']
+# usb clients 57 {'BrowserOS neo': 1, 'FwUpdateManagerd': 56}
+# cmd python3 eth_phy_status_ax7203.py --port /dev/cu.usbserial-110 --lines 6
+# limit 120 s
+reading 6 report lines from /dev/cu.usbserial-110 at 1144744 (E2 bitstream must be on the board)
+  E2 n=0002 rt=00 pm=00000000 id=FFFFFFFF g9=FFFF>FFFF a4=FFFF>FFFF cr=FFFF sr=FFFF/FFFF pc=FFFF ib=10 rc=05EF63 fr=0000
+    n=2 retries=0 phys@[] id=FFFFFFFF link=down speed=1000 fd=True in-band link=False frames=0 rxc~24.91 MHz
+  E2 n=0003 rt=00 pm=00000000 id=FFFFFFFF g9=FFFF>FFFF a4=FFFF>FFFF cr=FFFF sr=FFFF/FFFF pc=FFFF ib=10 rc=05EF5B fr=0000
+    n=3 retries=0 phys@[] id=FFFFFFFF link=down speed=1000 fd=True in-band link=False frames=0 rxc~24.91 MHz
+  E2 n=0004 rt=00 pm=00000000 id=FFFFFFFF g9=FFFF>FFFF a4=FFFF>FFFF cr=FFFF sr=FFFF/FFFF pc=FFFF ib=10 rc=05EF99 fr=0000
+    n=4 retries=0 phys@[] id=FFFFFFFF link=down speed=1000 fd=True in-band link=False frames=0 rxc~24.91 MHz
+  E2 n=0005 rt=00 pm=00000000 id=FFFFFFFF g9=FFFF>FFFF a4=FFFF>FFFF cr=FFFF sr=FFFF/FFFF pc=FFFF ib=10 rc=05EFE4 fr=0000
+    n=5 retries=0 phys@[] id=FFFFFFFF link=down speed=1000 fd=True in-band link=False frames=0 rxc~24.92 MHz
+  E2 n=0006 rt=00 pm=00000000 id=FFFFFFFF g9=FFFF>FFFF a4=FFFF>FFFF cr=FFFF sr=FFFF/FFFF pc=FFFF ib=10 rc=05EF33 fr=0000
+    n=6 retries=0 phys@[] id=FFFFFFFF link=down speed=1000 fd=True in-band link=False frames=0 rxc~24.91 MHz
+  E2 n=0007 rt=00 pm=00000000 id=FFFFFFFF g9=FFFF>FFFF a4=FFFF>FFFF cr=FFFF sr=FFFF/FFFF pc=FFFF ib=1C rc=1DAB77 fr=0000
+    n=7 retries=0 phys@[] id=FFFFFFFF link=down speed=1000 fd=True in-band link=False frames=0 rxc~124.52 MHz
+RESULT PASS
+real 2.77
+user 0.04
+sys 0.02
+# exit=0
+# end 2026-09-27T12:27:40Z

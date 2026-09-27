@@ -69,8 +69,10 @@ def parse(text):
 
 
 def describe(r, mclk_hz=None, win_log2=FULL['WIN_LOG2']):
+    # speed and fd come from the MDIO register pc; with no PHY answering it reads FFFF and means nothing
+    speed, fd = (r['speed'], r['full_duplex']) if r['answered'] else ('-', '-')
     s = (f"n={r['n']} retries={r['rt']} phys@{[a for a in range(32) if r['pm'] >> a & 1]} id={r['id']:08X} "
-         f"link={'up' if r['link'] else 'down'} speed={r['speed']} fd={r['full_duplex']} "
+         f"link={'up' if r['link'] else 'down'} speed={speed} fd={fd} "
          f"in-band link={r['ib_link']}{' ' + str(r['ib_speed']) if r['ib_link'] else ''} frames={r['fr']}")
     if mclk_hz:
         s += f" rxc~{r['rc'] * mclk_hz / 2 ** win_log2 / 1e6:.2f} MHz"
@@ -219,13 +221,17 @@ def read_port(port, baud, count):
     mid = sum(CFGMCLK_HZ) / 2
     print(f'reading {count} report lines from {port} at {baud} (E2 bitstream must be on the board)')
     with serial.Serial(port, baud, timeout=2) as ser:
-        got, t0 = 0, time.time()
+        got, t0, rows = 0, time.time(), []
         while got < count and time.time() - t0 < count * 1.5 + 5:
             raw = ser.readline().decode('ascii', 'replace')
             r = parse(raw)
             if r:
                 got += 1
                 print(f'  {raw.strip()}\n    {describe(r, mid)}')
+                rows.append(r)
+    print(f'board: {got}/{count} lines read; PHY answered MDIO on {sum(r["answered"] for r in rows)}, '
+          f'in-band status seen on {sum(r["inband_seen"] for r in rows)}, in-band link up on '
+          f'{sum(r["ib_link"] for r in rows)}. RESULT below counts lines read; it is not a PHY verdict.')
     return 0 if got == count else 1
 
 
