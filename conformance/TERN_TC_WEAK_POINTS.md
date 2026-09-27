@@ -58,6 +58,14 @@ refutes the hypothesis. A pass is weak support only, because window 24 already
 passed. The owner-approved run of window 64 without the hub tests the other
 candidate (the hub's transaction translator adding IN-polling gaps).
 
+**Update, 03:40Z the same day.** F = 512 bytes (CP2102N datasheet Rev. 1.5,
+section 1), so W_max = 26. Two pre-registered runs followed
+(`TERN_TC_LAYER_RECEIPTS.md`, rerun step 3). Window 26 (494 B) passed,
+403200/403200, and window 30 (570 B) slipped after 150,017 jobs. The threshold
+therefore lies between 494 and 570 bytes, and the hypothesis survived a test
+that could have refuted it. The window-30 slip came about 10 times later than
+the pre-registration expected, so the stall model is incomplete.
+
 ## 4. A receipt proves the key, not the FPGA
 
 The tag is SipHash-2-4 under a 16-byte key that the host also holds. A program

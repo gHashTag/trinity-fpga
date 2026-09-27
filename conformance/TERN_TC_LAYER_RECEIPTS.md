@@ -505,3 +505,62 @@ moves up by at most one 64-byte packet. That still separates 26 from 64, but
 it could let window 30 pass, so a clean window-30 run is read as "weakened",
 not "refuted", unless it is repeated. Logs: `board_runs/tern_tc_all_w26.log`,
 `board_runs/tern_tc_all_w30.log`.
+
+### Rerun step 3, results, 2026-09-27 03:38Z and 03:39Z
+
+Both runs happened once each, in the pre-registered order: same port, hub and
+baud, no power cycle, `--setkey` answered 0x03 both times. Logs
+`board_runs/tern_tc_all_w26.log` and `board_runs/tern_tc_all_w30.log`, each with
+0 hits for the key's hex.
+
+**Window 26 (494 B in flight), 03:37:56Z to 03:39:24Z: PASS, as predicted.**
+
+    jobs sent               : 403200 of 403200 planned (window 26)
+    receipts verified (tag) : 403200/403200 under node 0x5452494e
+    rejected                : none
+    rows bit-exact          : 33792/33792  (activations: ternary)
+    elapsed                 : 85.29 s (4727 answers/s)
+    longest host pause      : 25.8 ms (after 346656 answers)
+
+**Window 30 (570 B in flight), 03:39:31Z to 03:40:06Z: FAIL, as predicted.**
+
+    jobs sent               : 150017 of 403200 planned (window 30)
+    receipts verified (tag) : 149986/403200 under node 0x5452494e
+    rejected                : {'tag': 1, 'short': 1, 'missing': 253213}
+    rows bit-exact          : 12822/33792  (activations: ternary)
+    elapsed                 : 31.62 s (4743 answers/s)
+    longest host pause      : 13.8 ms (after 128976 answers)
+      ! nonce 0x000349e2: right y, tag does not verify
+      ! after 150017 sent, 30 outstanding: short or unframed read (19 bytes) 4e 49 52 54 f1 42 f2 7c 04 a1 b9 74 a5 03 01 e4 49 03 00; 171 more bytes waiting
+
+The window-30 run is not cited for its rows. It was not retried, because the
+failure came after the first job.
+
+- **The two predictions that decide the hypothesis held.** A pass at 494 bytes
+  in flight and a slip at 570 bytes put the loss threshold between 494 and 570
+  bytes. That range contains the CP2102N's 512-byte receive buffer. The slip
+  at 570 bytes also rules out the "512 plus one 64-byte endpoint packet"
+  reading of the buffer (576 B), which could not have overflowed at 570.
+- **One side prediction missed.** The pre-registration said the window-30 slip
+  would come "most likely within the first ~20,000 jobs", about as readily as
+  at window 64 (6,744 to 19,049 jobs). It came after 150,017 jobs, 31.6 s into
+  the run. Overflow at window 30 therefore takes a rarer event than at
+  window 64. The model "the same ~5.7 ms gap for every W >= 27" is too simple.
+  Why is not measured.
+- **The bytes.** The failed read starts at the node id of an answer: `4e 49 52 54`
+  (node id 0x5452494e, little-endian), 8 tag bytes, then `a5 03 01` and nonce
+  `0x000349e4`. The answer before it in order is `0x000349e3`, whose first 7
+  bytes are missing from the stream. The read before that was credited to
+  `0x000349e2`, with the right y and a failed tag. If there is one hole and the
+  node answers in order, then 26 bytes were sent from the start of e2's answer
+  to e3's node id, and 19 arrived: a hole of 7 bytes. The holes so far are 16,
+  4, 59 and 7 bytes.
+- **Process pauses are not the trigger.** Window 26 survived a 25.8 ms pause
+  of this process, and window 24 survived 22.4 ms. Only the bytes in flight
+  separate pass from slip.
+
+Operating point: window 24 (456 B) stays the default. Window 26 is the largest
+window with a clean `--all`, and it buys no speed (4,727 against 4,716
+answers/s). The hub is not excluded as the source of the stalls that let the
+bridge buffer fill. Window 64 without the hub, owner-approved, is still
+waiting for the adapter to be plugged in directly.
