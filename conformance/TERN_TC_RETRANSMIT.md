@@ -92,7 +92,7 @@ spec's sha differs from the one in its params, so that is the spec it ran on,
 but its log does not show it. The runner now prints the spec, protocol, harness and RTL
 hashes as its first line.
 
-## The board run: not run yet
+## The board run: run once, FAIL (see Results)
 
 It needs the owner's «да». There is one attempt. A second is allowed only if the
 first fails before its first job (port busy, the node not answering setkey), and
@@ -137,4 +137,60 @@ tri fpga-run gen_tokens_8_rt --limit 3900 -- python3 -u tern_tc_generate_rt_ax72
 
 ## Results
 
-None yet.
+### `board_runs/gen_tokens_8_rt.log`: FAIL
+
+- **Run.** 2026-09-27, start 15:37:21Z, end 15:58:03Z, exit 1. USB behind the
+  Genesys hub (`0x110000`); IOKit clients on the CP2102N: FwUpdateManagerd 90,
+  BrowserOS neo 1 (new since the last run; `lsof` showed no one holding the tty
+  before the start). The owner's yes: «все три», to variant 1 of the 15:34Z loop
+  report. `fpga-run` has no field for it, so the record states it here.
+- **Last line.** `RESULT: FAIL - t6 L0/qkv: rejected {'exhausted': 1, 'missing': 5998}. No token from this run is cited.`
+- **Receipts.** `receipts verified (tag) : 5754002/5760000`. The numbers differ,
+  so by the claim rule above this run is not verified, and no token from it is
+  cited.
+
+| | value |
+|---|---|
+| calls | 145 of 192 |
+| jobs | 5,760,000 of 7,682,304 |
+| rows bit-exact | 101,706 / 101,824 |
+| retransmitted jobs | 48 (ceiling 256) |
+| resyncs | 3 (ceiling 32) |
+| lost / unverified / foreign / late | 72 / 0 / 0 / 0 |
+| bytes skipped while scanning | 11 |
+| longest host pause | 4020.9 ms |
+
+**What happened.**
+
+- Calls 1 to 144 have no transport event at all: the first event line in the
+  log is at call 145.
+- At call 145 a short read collected 11 bytes with 24 answers in flight. The
+  runner resynced and asked the 24 jobs again under nonces from `0x20000000`.
+- The next two resyncs collected 0 bytes each. Job 16873 reached the lost
+  ceiling of 3, and the run stopped there, as the spec says it must.
+- This is a stop, not a hole. After the first short read nothing arrived, and
+  the protocol's resync (24 zero bytes, then the same jobs asked again on the
+  same open port) did not bring anything back.
+
+**What the Mac logged.** `log show` from 15:57:00Z to 15:58:10Z has no USB
+disconnect or reset. The only CP2102N line is `IOUSBHostPipe::abortGated ...
+endpoint 0x82: aborting 1 requests` at 15:58:03.820Z, the moment the runner
+closed the port.
+
+**The node afterwards: `board_runs/node_probe_after_gen_rt_fail.log`.** This is
+a diagnostic, not a second attempt at this claim. It is the skill's short
+layer-0 health check: L0/wk, 3840 jobs, window 24.
+
+- It ran at 16:02:30Z on a freshly opened port and gave
+  `receipts verified (tag) : 3840/3840`, with 64/64 rows bit-exact.
+- Setkey answered `0x03`, so the node still held the key. The FPGA was not
+  reconfigured between the two runs.
+
+**Reading.** The stop cleared somewhere between the failed run closing the port
+and the probe opening it. These logs cannot say which side stalled: node TX, the
+CP2102N, the hub or the host driver. They also do not show whether the 4 s host
+pause came before the stop or out of the resync waits.
+
+A hypothesis, not tested: reopening the port inside the run would clear such a
+stop. Testing it changes the runner. That needs its own pre-registration, a
+co-sim and the owner's «да» for a new run. This run stays FAIL.
