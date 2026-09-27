@@ -772,6 +772,14 @@ answers ARP or ping on a board. The nearest are:
   falling edge, where it carries RX_DV xor RX_ER (RTL line 166). An RX_ER inside
   a frame therefore ends the frame early, and the FCS check drops it into `fe`.
   This was read from the RTL. The RX_ER bench below checks it in simulation.
+- alexforencich/verilog-ethernet `rtl/axis_gmii_rx.v` (master, file last
+  changed in fa05d4ff3c, 2023-08-24; read by 22:10:50Z `date -u`, not run). It
+  starts a frame only on an SFD byte that has no RX_ER. So, like E3, it ignores
+  an RX_ER earlier in the preamble. An RX_ER inside the frame marks the frame bad
+  and moves to `STATE_WAIT_LAST` until RX_DV drops, so one errored frame counts
+  once. E3 has no such state. It keeps only the falling-edge sample (RX_DV xor
+  RX_ER), so it cannot tell the end of the frame from an error, and its tail can
+  start a second frame. This is the `er_then_false_sfd` case below.
 - The common advice for 10/100 RGMII is to sample on the rising edge. E3
   samples on the falling one. Its reason is that the KSZ9031 changes the
   nibble near the rising edge (RTL lines 11-21). The `ed` counter compares the
@@ -854,6 +862,22 @@ Expected:
   bench's gate runs were compared.
 
 A difference is a finding and is recorded as it is. One run only.
+
+Result (checked), one run from 22:04:00Z to 22:35:28Z `date -u` under
+`nice -n 19`, `--jobs 5`: **15 of 15 checks came out as written.** All five
+cases passed on RTL and on the netlist with the counters in the table above.
+In each case the gate log equalled the RTL log in all 9 to 13 compared lines,
+including the times of the `INJ` edges and `TXF` frames. The netlist
+(`/tmp/e3rxer/gate.v`, sha256 46626f90…) is byte-equal to the one the pinned
+bench's 16 of 16 gate runs used (`cmp` against `/tmp/e3sim/gate.v`), so yosys
+gave the same netlist twice. The expectations were written at 22:02:51Z, before
+the run. They were committed in 91b07fd86 at 22:08:40Z (git, TZ=UTC). By then
+the RTL half had finished, at 22:05 to 22:06Z, but no gate run had. The first
+gate run finished at 22:33:02Z. The text was not changed after 22:02:51Z. Gate
+runs took about 28 to 30 min each here (`ps` elapsed times and the logs'
+mtimes), against 7 to 13 min in the 18:40Z run. The two load averages read
+during the run were 55 and 124. Log `/tmp/e3rxer_gate_run.log`,
+not kept in the repo.
 
 **Where the files point.** This section and the one before it were drafted as
 `conformance/E3_DRAFT_SECTION.md` and merged here. The comment in
