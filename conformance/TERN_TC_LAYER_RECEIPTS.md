@@ -90,3 +90,82 @@ A forward pass (embeddings, norms, attention, softmax and head do not run on the
 board); any token rate or power figure; public verifiability (SipHash is a
 shared-key MAC: it authenticates the node to the key holder and does not stop an
 operator forging their own receipts).
+
+## Board run, 2026-09-27 UTC
+
+**Result: FAIL.** The main run lost UART framing after 19,049 jobs. Steps 4 and 5
+were not run: a failed step is recorded and the run stops there. The
+284,160-receipt figure stays withdrawn.
+
+- Machine: MacBook Pro, Apple M1 Pro, macOS 26.5.2 (25F84), Python 3.14.6,
+  pyserial 3.5.
+- Port: `/dev/cu.usbserial-1130`, the board's CP2102N (USB `10C4:EA60`) behind a
+  USB 2.0 hub (`1A40:0101`), 1,144,744 baud. The Digilent FT232H (`0403:6014`,
+  one interface, `usbserial-210512180081`) is the JTAG cable and does not answer
+  as a UART. openocd was not run.
+- Node: `0x5452494e` (node0), no key at the start (status 0x04).
+- Harness: `2b9830c5837aa47ad142a90a7279c2d8a8d401fe`.
+- `model.bin`: 16,953,800 bytes, sha256
+  `3102abdf35057924e077a86db4fdac726e4fe1f6574df47f39a638ba99a3ce9c`.
+- Logs: `board_runs/*.log`, each checked for the key's hex (0 hits).
+
+**1. Self-test.** `python3 tern_tc_layer_ax7203.py --self-test`, 01:41:10Z.
+Expected PASS on 17 checks, 7 of them negative controls. Got 17/17 `ok` and
+`self-test: PASS`, 2.23 s.
+
+**2. Discover.** `discover_port.py` (20bf4c418, branch `trinet-fleet-truth`, run
+from a temporary copy): at 01:57:33Z and 01:59:38Z `miss
+/dev/cu.usbserial-210512180081`, because the UART cable was not yet enumerated;
+at 02:01:31Z `HIT  /dev/cu.usbserial-1130 @ 1144744: status=0x04 (no key)`.
+Then `python3 trinet_discover.py --ports /dev/cu.usbserial-1130`, 02:01:50Z.
+Expected node0 `0x5452494E` at 1,144,744 baud. Got:
+
+    /dev/cu.usbserial-1130  NODE  id 0x5452494e (node0), 1144744 baud, keyed (v2), no key yet, 64/64 clean
+
+**3. All 42 matrices, ternary activations.** 02:10:13Z to 02:10:20Z.
+
+    python3 tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-1130 --baud 1144744 \
+        --keys ../trinet-keys.txt --model ~/igla-coder-gpu/c_infer/model.bin
+
+Expected 403,200 jobs, `receipts verified (tag) : 403200/403200`, `rows
+bit-exact : 33792/33792`, PASS. Got:
+
+    setkey: key installed on node 0x5452494e; ack tag verifies
+      [ok ] L0/wq        640/640    rows bit-exact
+      [ok ] L0/wk        128/128    rows bit-exact
+      [ok ] L0/wv        128/128    rows bit-exact
+      [ok ] L0/wo        640/640    rows bit-exact
+      [FAIL] L0/gate      362/1728   rows bit-exact
+      [FAIL] L0/up          0/1728   rows bit-exact
+      [FAIL] L0/down        0/640    rows bit-exact
+      [... 35 lines elided: L1 to L5, 0 rows in every matrix ...]
+    jobs sent               : 403200
+    receipts verified (tag) : 18984/403200 under node 0x5452494e
+    rejected                : {'node': 1, 'short': 1, 'missing': 384215}
+    rows bit-exact          : 1898/33792  (activations: ternary)
+    elapsed                 : 4.07 s (99030 jobs/s)
+      ! nonce 0x00014a28: node 0x4e00014e != 0x5452494e
+      ! after 19049 sent: short or unframed read (19 bytes)
+    RESULT: FAIL - do not cite these matrices as verified.
+
+- The response to job 18,984 (nonce `0x00014a28`) carried node-id bytes
+  `4e 01 00 4e` instead of `4e 49 52 54`, and the next 19-byte read did not start
+  with 0xA5. The harness stops at the first unframed read by design, so 384,215
+  jobs have no answer.
+- The 18,984 jobs answered before it each had a matching tag and the right y.
+  The run as a whole is FAIL and is not cited.
+- The summary's `jobs sent` and `jobs/s` count the 403,200 planned jobs, not the
+  19,049 written. Derived: 18,985 answers in 4.07 s, about 4,660 jobs/s, close to
+  the 4,560 jobs/s of the earlier run. Reporting only; the harness was not
+  changed.
+- No retry: the failure came after the first job.
+
+**4. `trinet_matvec_demo.py`.** Not run.
+
+**5. `--act int8`, layer 5 w_down.** Not run.
+
+Open, none of it tested: why the framing slipped. Candidates: the CP2102N's
+baud divider at 1,144,744 against the node's (earlier board runs went through a
+CP2102N seen as `usbserial-130` on another Mac); the USB 2.0 hub (the CP2102N
+did not enumerate on the first hub port tried); 64 jobs in flight
+(`--window`) against the node's receive buffer.
