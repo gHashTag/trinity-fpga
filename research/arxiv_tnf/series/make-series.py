@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Trinity S3AI paper series from the single source manuscript.
 
-The series is four papers cut from one 7,924-line source, in five renderings:
+The series is four papers cut from one 8,061-line source, in five renderings:
 
   A  paper-a-methodology  How a comparison fails      (the transferable result)
   B  paper-b-format       Ternary Network Floats      (the format result)
@@ -52,46 +52,46 @@ SOURCE = HERE.parent / "tnf_paper.tex"
 
 RANGES = {
     "a": [
-        (1225, 1289),   # The comparison at matched physical width
-        (1372, 1428),   # Two width defects, and why they generalise
-        (5721, 6082),   # How a comparison fails while every measurement is correct
-        (6082, 6195),   # Adjacent work this paper is measured against
-        (6195, 6272),   # What the formal statements are, and what they are
-        (6272, 6735),   # Three results added in this revision
-        (7500, 7632),   # Limitations
-        (7632, 7660),   # Reproducibility, Disclosure
+        (1235, 1299),   # The comparison at matched physical width
+        (1382, 1438),   # Two width defects, and why they generalise
+        (5848, 6209),   # How a comparison fails while every measurement is correct
+        (6209, 6322),   # Adjacent work this paper is measured against
+        (6322, 6399),   # What the formal statements are, and what they are
+        (6399, 6862),   # Three results added in this revision
+        (7627, 7759),   # Limitations
+        (7759, 7787),   # Reproducibility, Disclosure
     ],
     "b": [
-        (442, 476),     # The format
-        (476, 576),     # Why a ladder, and why this one
-        (576, 994),     # The law is general, and it measures tapering
-        (994, 1074),    # Accuracy
-        (1074, 1225),   # The 16-bit field
-        (1289, 1372),   # Hardware
-        (1468, 1631),   # What the law says about improving the ladder
-        (1631, 1902),   # Why ternary, and exactly how much
-        (3460, 3749),   # Two formats close a ternary node
-        (4215, 4671),   # Fineness costs registers, not adders
+        (452, 486),     # The format
+        (486, 586),     # Why a ladder, and why this one
+        (586, 1004),    # The law is general, and it measures tapering
+        (1004, 1084),   # Accuracy
+        (1084, 1235),   # The 16-bit field
+        (1299, 1382),   # Hardware
+        (1478, 1641),   # What the law says about improving the ladder
+        (1641, 2029),   # Why ternary, and exactly how much
+        (3587, 3876),   # Two formats close a ternary node
+        (4342, 4798),   # Fineness costs registers, not adders
     ],
 }
 
 # Paper C is the record: the whole body, cut nowhere.
-RANGES["c"] = [(176, 7660)]
+RANGES["c"] = [(186, 7787)]
 
 # Paper D is A without its revision notes. It keeps the two measurements that
 # are the contribution, the six failure modes that are the subject, the worked
 # example, the epistemics, the related work and the limitations -- and drops
-# 6272-6735 (3,984 words), which is addressed to a reader of the previous
+# 6399-6862 (3,984 words), which is addressed to a reader of the previous
 # version and means nothing to a reader meeting the work here. That cut is also
 # what brings the ISQED rendering of it inside ten pages.
 RANGES["d"] = [
-    (5721, 6082),   # How a comparison fails while every measurement is correct
-    (1225, 1289),   # The comparison at matched physical width  (worked example)
-    (1372, 1428),   # Two width defects, and why they generalise
-    (6195, 6272),   # What the formal statements are, and what they are not
-    (6082, 6195),   # Adjacent work this paper is measured against
-    (7500, 7632),   # Limitations
-    (7632, 7660),   # Reproducibility, Disclosure
+    (5848, 6209),   # How a comparison fails while every measurement is correct
+    (1235, 1299),   # The comparison at matched physical width  (worked example)
+    (1382, 1438),   # Two width defects, and why they generalise
+    (6322, 6399),   # What the formal statements are, and what they are not
+    (6209, 6322),   # Adjacent work this paper is measured against
+    (7627, 7759),   # Limitations
+    (7759, 7787),   # Reproducibility, Disclosure
 ]
 
 # --- renderings, not cuts ----------------------------------------------------
@@ -144,7 +144,7 @@ PDF = {p: WRAPPERS[p][0].replace(".tex", ".pdf") for p in PAPERS}
 
 # The record version keeps the manuscript's own abstract, which is where the
 # budget convention is declared and labelled. A and B state their own.
-ABSTRACT_RANGE = (82, 174)
+ABSTRACT_RANGE = (82, 184)
 
 TITLES = {
     "a": "How a Comparison Fails",
@@ -192,6 +192,9 @@ POINTERS = {
     "cor:zeropath":              ("c", "the zero-path corollary"),
     "thm:barrelrange":           ("c", "the barrel-range theorem"),
     "thm:boundary":              ("c", "the boundary theorem"),
+    "cor:slackartefact":         ("c", "the slack-artefact corollary"),
+    "sec:blockbound":            ("c", "the block-axis section"),
+    "tab:blockbound":            ("c", "the block-axis table"),
     "thm:geoscale":              ("c", "the geometric-scale theorem"),
     "thm:radixopt":              ("c", "the optimal-radix theorem"),
     "thm:taperdelay":            ("c", "the taper-delay theorem"),
@@ -349,7 +352,7 @@ def strip_figures(text):
     """Drop the ornament and keep the data.
 
     78 of the source's 87 figures are canon plates: full-width three-panel
-    engravings, and not one of them is \\ref'd anywhere in 7,924 lines. The
+    engravings, and not one of them is \\ref'd anywhere in 8,061 lines. The
     other nine are generated plots of measurements, and four of those ARE
     referenced. So the rule is not "delete figures", it is "delete the ones
     whose image comes out of canon/" -- which keeps the distinction the source
@@ -682,6 +685,19 @@ def main():
             problems.append("c: paper-c-abstract.tex on disk differs from generated")
     else:
         abstract_path.write_text(abstract, encoding="utf-8")
+
+    # The series bibliography is the record version's, lifted unchanged. It was
+    # a hand copy of the manuscript's, and a hand copy is a second place to
+    # forget an entry.
+    b0 = next(i for i, l in enumerate(src) if l.startswith("\\begin{thebibliography}"))
+    b1 = next(i for i, l in enumerate(src) if l.startswith("\\end{thebibliography}"))
+    bib = "\n".join(src[b0:b1 + 1]) + "\n\n"
+    bib_path = HERE / "bibliography.tex"
+    if check:
+        if not bib_path.exists() or bib_path.read_text(encoding="utf-8") != bib:
+            problems.append("bibliography.tex on disk differs from generated")
+    else:
+        bib_path.write_text(bib, encoding="utf-8")
 
     # The section deriving the two headline measurements is shared with paper A,
     # which is set one-column -- and so is the series rendering of D, which

@@ -59,6 +59,14 @@ and nothing lies between the shift and $\varphi$. The family $r^d=r+1$ reaches
 any granularity at \emph{one addition} and $d$ registers: fineness costs
 registers, not adders.
 
+On a physically ternary store a 27-level element in one three-trit cell, with a
+power-of-two scale per $32$ weights, gives lower perplexity than NVFP4, MX+ and
+MXFP4 on SmolLM2-135M in $101$ trits per $32$ weights against $106$, $106$ and
+$102$, in a pre-registered run (Section~\ref{sec:t27block}). In bits it costs
+$161$ against NVFP4's $144$ and sits on the line between two binary formats, so
+it is the trit slack measured, not a better element: it pays only on a native
+ternary cell costing under $1.43$ bit cells.
+
 On an \texttt{xc7a200t} a ternary neuron costs $28.0$ LUT per weight at fan-in
 $8$ and $33.1$--$33.2$ at fan-in $16$--$32$, \textbf{with no DSP at any fan-in}.
 That result and the zero-DSP property are what this paper claims. Two negative

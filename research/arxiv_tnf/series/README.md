@@ -5,8 +5,8 @@ Four papers cut from one manuscript, `../tnf_paper.tex`, in five renderings.
 | | file | pages | what it claims |
 |---|---|---|---|
 | **A** | `paper-a-methodology.tex` | 33 | **How a comparison fails.** Six ways an arithmetic-hardware result reports success while having failed. The format is the worked example, not the subject. |
-| **B** | `paper-b-format.tex` | 47 | **Ternary Network Floats.** The multiplier is removed rather than cheapened; the algebra is closed and machine-checked; the enumeration singling out φ is exhaustive at degree two. |
-| **C** | `paper-c-record.tex` | 149 | **The record version.** The manuscript entire, cut nowhere. A and B are honest only if what they defer to is obtainable. |
+| **B** | `paper-b-format.tex` | 49 | **Ternary Network Floats.** The multiplier is removed rather than cheapened; the algebra is closed and machine-checked; the enumeration singling out φ is exhaustive at degree two. |
+| **C** | `paper-c-record.tex` | 151 | **The record version.** The manuscript entire, cut nowhere. A and B are honest only if what they defer to is obtainable. |
 | **D** | `paper-d-series.tex` | 27 | **How a comparison fails, while every measurement is correct.** A without its revision notes: the two measurements, the six failure modes, the worked example. |
 | | `paper-d-isqed.tex` | 10 | **The same paper for ISQED 2027.** The same cut under the three constraints that venue imposes. |
 
@@ -85,7 +85,7 @@ drift and the drift would be invisible until two papers disagreed in print.
 - `\seriesemergencystretch` — and a redefined `\fussy`, below.
 
 `placeins` was in the original preamble and is deliberately absent:
-`\FloatBarrier` is used zero times in 7,924 lines, so it was a dependency the
+`\FloatBarrier` is used zero times in 8,061 lines, so it was a dependency the
 build could fail on and never use.
 
 **The ISQED rendering does not load it.** That is not an oversight and not a
@@ -132,7 +132,7 @@ the build rather than by care:
 
 | the rule | the mechanism |
 |---|---|
-| minimum 4 and **maximum 10** pages, IEEE template, ≥10pt | `STRIP_FIGURES` drops the 78 canon plates (not one is `\ref`'d anywhere in 7,924 lines); the shared bibliography is pruned to what D actually cites, **31 of 94** entries; `fit_two_columns` makes tables written for a 6.5-inch line survive a 3.5-inch measure (`\footnotesize` plus `\adjustbox{max width=\columnwidth}`) |
+| minimum 4 and **maximum 10** pages, IEEE template, ≥10pt | `STRIP_FIGURES` drops the 78 canon plates (not one is `\ref`'d anywhere in 7,924 lines); the shared bibliography is pruned to what D actually cites, **31 of 94** entries at submission (97 since 2026-09-27, none of the three new ones cited by D); `fit_two_columns` makes tables written for a 6.5-inch line survive a 3.5-inch measure (`\footnotesize` plus `\adjustbox{max width=\columnwidth}`) |
 | **double-blind** — *"Manuscripts identifying author names and/or affiliations will be rejected without review"* | `IDENTIFYING` is grepped over the body, the wrapper, the bibliography **and the rendered PDF**; a hit is an error, not a warning |
 | it stands alone | `STANDALONE` routes every departing reference to `\extended` — *"the extended version of this work"* — which is true, checkable after acceptance, and says nothing about who wrote it |
 
@@ -207,6 +207,43 @@ unrelated float.
 
 Papers A and D already shipped the corrected pair — the correction was to the
 record version, which is the one that had never derived them.
+
+## A result that is the corollary, measured (2026-09-27)
+
+Section `sec:t27block` ("A 27-level element on a trit substrate, measured") is
+new in the manuscript, so it is in **B** and **C**, and one paragraph each in
+the record abstract and in B's own abstract. It reports the pre-registered
+trit-storage run of `specs/numeric/ternary_storage_search_v2.t27` (sha256
+prefix `88fcf517`, committed at `49a84ade5`, verdict at `d31d8523c`).
+
+| element | ppl, SmolLM2-135M | trits/32 | bits/32 |
+|---|---:|---:|---:|
+| T27 | 16.2892 | 101 | 161 dense |
+| NVFP4 | 17.4697 | 106 | 144 |
+| MX+ | 17.9780 | 106 | 141 |
+| MXFP4 | 21.9353 | 102 | 136 |
+
+**It is written as a measurement of an existing corollary, not as a new
+advantage**, and the section says why in its own text:
+
+- In bits T27 costs 161 against NVFP4's 144, and it lies 0.0037 below the
+  NVFP4–E2M2 chord: level with binary formats that already exist. That is
+  `cor:slackartefact` in perplexity. The corollary is stated for an exponent
+  field; its proof only counts trits against the bits that hold them, so it
+  carries over.
+- On silicon it pays only if one native trit cell costs less than
+  144/101 = 1.43 bit cells. The ternary compute-in-memory work it cites stores
+  a trit in two.
+- It is not TNF. T27 is a codebook with no exponent field, and TNF4_7 gives
+  36.76 on the same run.
+
+**Not in A, D or the ISQED rendering.** Their bodies changed only in the
+`% ---- tnf_paper.tex lines A-B` header comments, because the line ranges
+moved. Paper 66 is not revised.
+
+`bibliography.tex` is now **generated** from the manuscript's
+`thebibliography` block. It used to be a hand copy, and a hand copy is one more
+place to forget an entry. `--check` fails if it drifts.
 
 ## Where these go
 

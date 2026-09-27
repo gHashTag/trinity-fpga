@@ -59,6 +59,16 @@ codebook beating a deployed one by $0.9\%$, and the scale is not: a $\varphi$
 grid at four bits yielded lower perplexity than MXFP4 in the two evaluated models,
 at $0.125$ fewer bits per weight.
 
+On a physically ternary store the block comparison changes sign. A 27-level
+element in one three-trit cell, with a power-of-two scale per $32$ weights,
+gives lower perplexity than NVFP4, MX+ and MXFP4 on SmolLM2-135M ($16.29$
+against $17.47$, $17.98$ and $21.94$) in $101$ trits per $32$ weights against
+$106$, $106$ and $102$, in a pre-registered run (Section~\ref{sec:t27block}).
+Counted in bits it costs $161$ against NVFP4's $144$ and sits on the line
+between two binary formats: it is the trit slack of
+Corollary~\ref{cor:slackartefact}, measured, and it pays only on a native
+ternary cell costing under $1.43$ bit cells.
+
 Applicability is stated as a threshold and then tested against it. The scalar is
 $D=\operatorname{mean}(\lvert\log_2|x|\rvert)$; the threshold is a property of the
 rung, not of the family --- $D \gtrsim 9.5$ at sixteen physical cells and

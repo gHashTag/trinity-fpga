@@ -1,4 +1,4 @@
-% ---- tnf_paper.tex lines 176-7659: What this paper argues ----
+% ---- tnf_paper.tex lines 186-7786: What this paper argues ----
 \section{What this paper argues}
 \label{sec:roadmap}
 
@@ -1651,6 +1651,123 @@ right on any fabric, and the encoding choice is right on one.
 \end{corollary}
 \triptych{canon-tnf-59-stateslotledger.png}{Ternary is more economical in state-slots, but binary packing restores the cost and yields equal mantissa widths in the named tested cases.}{fig:canon-b4-59stateslotledger}
 
+
+
+\subsection{A 27-level element on a trit substrate, measured}
+\label{sec:t27block}
+
+The corollary above says where the encoding choice pays: on a fabric whose
+storage cell is physically ternary. Section~\ref{sec:blockbound} measured
+shared-scale blocks on binary storage, and there the formats of this paper
+lose. What neither settles is what a \emph{block} format
+gains when a position is a trit, the one setting in which
+Corollary~\ref{cor:slackartefact} says the slack survives. This subsection
+answers that with one pre-registered measurement. The answer is the slack of
+that corollary, measured on a language model; it is not a new advantage, and
+the bit-axis reading below says why.
+
+\paragraph{The element.} A three-trit cell holds $27$ codes. The element here,
+called T27, spends all of them: zero and $13$ symmetric magnitudes, with one
+power-of-two scale per block of $32$ weights stored in $5$ trits. The magnitudes
+are the NF4 construction~\cite{qlora} carried to $27$ levels: the $k$-th is
+$\Phi^{-1}(p_k)/\Phi^{-1}(p_{13})$ with $p$ spaced evenly on
+$[\tfrac12,\tfrac{53}{54}]$, rounded to $1/1024$, which gives
+$\{0,46,92,139,187,237,289,346,407,475,554,651,782,1024\}/1024$. T27 is a
+codebook, not a TNF rung: it has no exponent field, and it is not TNF4\_7, which
+gives $36.76$ on the same run.
+
+\paragraph{What was fixed before the run.} The specification
+\texttt{specs/\allowbreak numeric/\allowbreak ternary\_\allowbreak storage\_\allowbreak search\_\allowbreak v2.t27} (sha256 prefix
+\texttt{88fcf517}) was committed at \texttt{49a84ade5} before any arm ran. It
+compiles under the t27 compiler, its test blocks pass, and it generates the
+runner's parameters, so the runner cannot hold a number the specification does
+not. It fixes the formats, the storage count and a verdict ladder.
+\begin{itemize}
+\item Storage: on a trit substrate each field takes the fewest trits that hold
+  its codes. Per $32$ weights this gives T27 $101$, MXFP4 $102$, MX+ $106$,
+  NVFP4 $106$ and the five-bit binary element E2M2 $134$.
+\item Ladder: for each comparator $C$, $r = 1000\cdot\mathrm{ppl(T27)}/\mathrm{ppl}(C)$.
+  $r\le 990$ reads ``T27 better'', $r\le 1010$ a tie, anything above ``$C$
+  better''. NVFP4~\cite{nvfp4} is the primary comparator; MX+~\cite{mxplus} and
+  MXFP4 are read on the same ladder.
+\item Selection: three 27-level candidates, one chosen on the validation split
+  (the normal-quantile one, $16.6880$). The test split was read once, after the
+  choice.
+\item Rulers: the unquantised model, MXFP4 and TNF4\_7 had to reproduce a first
+  attempt's numbers on the same machine within $0.001$. They reproduced to
+  $0.0000$. The first attempt had stopped at its own ruler stage, because
+  TNF4\_7 differed from another machine's value by $0.0398$ against a tolerance
+  of $0.01$; no arm of it ran.
+\end{itemize}
+
+\begin{table}[t]\centering
+\caption{SmolLM2-135M, wikitext-2 test, $40$ windows of $2048$ tokens, weights
+only, one run per arm. The trit column is the pre-registered axis; the bit
+column is shown for comparison and is read below. NVFP4 adds $32$ bits per
+tensor. $r$ is the ladder value against T27, in per mille.}
+\label{tab:t27block}
+\begin{tabular}{lrrrrr}
+\toprule
+element & ppl & $\times$ \texttt{fp32} & trits/32 & bits/32 & $r$ \\
+\midrule
+unquantised                  & $14.4869$ & $1.000$ & ---   & ---        & ---     \\
+E2M2 (5-bit binary)          & $15.8083$ & $1.091$ & $134$ & $168$      & ---     \\
+\textbf{T27}                 & $\mathbf{16.2892}$ & $1.124$ & $\mathbf{101}$ & $161$ dense & ---     \\
+NVFP4                        & $17.4697$ & $1.206$ & $106$ & $144$      & $932.4$ \\
+MX+                          & $17.9780$ & $1.241$ & $106$ & $141$      & $906.1$ \\
+MXFP4 (E2M1)                 & $21.9353$ & $1.514$ & $102$ & $136$      & $742.6$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{What was measured.} Every verdict on the ladder is ``T27 better''
+(Table~\ref{tab:t27block}): $932.4$ against NVFP4, $906.1$ against MX+ and
+$742.6$ against MXFP4 on test, and $926.0$, $907.9$ and $737.5$ on the
+validation split. T27 does it in $101$ trits per $32$ weights against $106$,
+$106$ and $102$, and closes $40\%$ of NVFP4's excess perplexity over the
+unquantised model ($1.80$ against $2.98$) \textbf{[measured --- software]}. The
+three predictions written into the specification held, one of them that E2M2
+would do at least as well as T27, and so did the author's guess recorded beside
+them as a guess. The mechanism is the one the specification
+gave in advance. E2M1 fills $16$ of the $27$ codes a three-trit cell holds, and
+T27 fills all of them, which is $\log_2(27/16)=0.75$ bit more code per
+element; that outweighs NVFP4's finer scale, one E4M3 value per $16$ weights
+where T27 has one power of two per $32$.
+
+\paragraph{The same numbers in bits.} This reading is post hoc and is labelled
+so. Packed densely on binary memory, T27 costs $\lceil 101\log_2 3\rceil=161$ bits per $32$
+weights, against $144$ for NVFP4, and E2M2 at $168$ bits beats it. The straight line between
+NVFP4 and E2M2 predicts $16.2929$ at $161$ bits; T27 measures $16.2892$, $0.0037$ below the
+chord. If the binary frontier is convex between those two points, which is the usual shape and
+was not measured here, it lies on or below that chord, so on binary memory T27 beats it by at
+most $0.0037$: level with formats that already exist. That is Corollary~\ref{cor:slackartefact}
+observed in perplexity. The corollary is stated for an exponent field and T27 has none, but its
+proof counts only trits against the bits that hold them, and that count is the same here: the
+advantage is real on the position axis and disappears on the bit axis (Theorem~\ref{thm:nofree}).
+
+\paragraph{What it would take in silicon.} Per $32$ weights T27 needs $101$ trit
+cells where NVFP4 needs $144$ bit cells. T27 is the smaller store only if one
+trit cell costs less than $144/101=1.43$ bit cells, which is $0.90$ of the
+$\log_2 3=1.585$ bits of information the cell carries; against MX+ the bound is
+$1.40$. The ternary compute-in-memory literature stores a trit in two binary
+cells and argues that native three-state cells are harder to read
+reliably~\cite{retern}. At two cells per trit T27 needs $202$ bit cells, and
+NVFP4 is the smaller store. The result therefore names a condition on the cell,
+not a win: a native ternary cell costing under $1.43$ bit cells.
+
+\paragraph{What it does not say.} It covers one model, one corpus and weights
+only; activations and the KV cache were not touched. It has no uncertainty
+interval: the ladder is a point comparison on $40$ windows, a per-window paired
+bootstrap was not pre-registered, and none is claimed. The margins are large
+against a $990$ bar, but that is judgement, not a test. NVFP4 and MX+ are
+re-implementations, of NVIDIA's published two-level weight recipe and of the
+MX+ paper's description, not of the authors' code; MX+ uses the OCP scale rule
+$\lfloor\log_2 a_{\max}\rfloor-2$. The MXFP4 row uses the first attempt's
+ceiling E8M0 scale on this machine. It is not to be read across into
+Table~\ref{tab:blockbound}, which reports $22.4998$ for MXFP4 from another
+script on another machine; that difference is not resolved here. The record
+is \texttt{research/\allowbreak block/\allowbreak TERNARY\_\allowbreak STORAGE\_\allowbreak V2\_\allowbreak VERDICT\_\allowbreak 2026-09-27.md}, at
+commit \texttt{d31d8523c}.
 
 
 \section{The regime field is a universal code}
@@ -3560,7 +3677,7 @@ log-spacing.
 
 Everything above concerns per-channel scaling. The other deployed axis shares
 one scale across a short block, and there our formats lose. It is worth stating
-how thoroughly. What follows is a ranking under one distortion measure, not a ceiling on perplexity: Lloyd--Max minimises squared error, and squared error does not order perplexity across codebook families on this table, so the Lloyd--Max perplexity is one more row rather than a bound.
+how thoroughly. What follows is a ranking under one distortion measure, not a ceiling on perplexity: Lloyd--Max minimises squared error, and squared error does not order perplexity across codebook families on this table, so the Lloyd--Max perplexity is one more row rather than a bound. Section~\ref{sec:t27block} measures the one setting in which a 27-level ternary element comes out ahead of NVFP4, a physically ternary store, and says why that is the trit slack rather than a better element.
 
 Lloyd--Max on the within-block distribution gives the eight-level codebook minimising squared error. The distribution is $18{,}850{,}950$ values: every linear weight tensor of SmolLM2-135M except the output head, cut into blocks of $32$ along the contraction axis ($3{,}317{,}760$ blocks in full), each block divided by its own maximum, then a strided subsample of at most about $80{,}000$ values per tensor --- a sample of values, not of whole blocks (\texttt{research/\allowbreak block/\allowbreak block\_\allowbreak bound.py}). The shared scale is E8M0 as the MX specification mandates, assigned as $s=2^{\lceil\log_2(a_{\max}/\mathrm{top})\rceil}$ with $\mathrm{top}$ the codebook's largest magnitude ($6.0$ for E2M1), so that no element saturates. The specification's own alignment, $s=2^{\lfloor\log_2 a_{\max}\rfloor-2}$, permits saturation and gives $23.5380$ for MXFP4 on the same run; the convention is stated because every perplexity below moves with it (\texttt{research/\allowbreak block/\allowbreak MXFP4\_\allowbreak SCALE\_\allowbreak CONVENTION\_\allowbreak 2026-08-11.md}). It is
 neither multiply-free nor a ladder; it is the best any eight magnitudes can do.
