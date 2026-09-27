@@ -711,6 +711,7 @@ all six logs and exits 2.
 
 ```
 tri fpga-run e3_preping -- ping -c 2 192.168.1.222
+tri fpga-run e3_hostnet -- tri fpga-hostnet 192.168.1.222
 tri fpga-usb
 tri fpga-ioclients
 tri fpga-flash e3_flash artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit --owner-yes "QUOTE" --expect 4fd7923d
@@ -726,6 +727,15 @@ tri fpga-keycheck
 
 - **`e3_preping` must show 0 received.** If anything answers at .222, stop
   before the flash. The judge would say CONFLICT.
+- **`e3_hostnet` must end with `ok` (exit 0).** Otherwise stop before the flash.
+  Added 2026-09-27 after the pre-registration, before any E3 log existed; the
+  judge does not read this log, and its bytes did not change. The reason: H3
+  means "the link is up and the board recognised none of the host's requests".
+  The same counters appear when the Mac's packets for .222 never reach the LAN.
+  That happens if they go out through a gateway or a VPN tunnel. At 20:14:11Z
+  (`date -u`) this Mac had a default route through `utun8` next to the Wi-Fi
+  one. `tri fpga-hostnet` reads the kernel's route, the interface's subnet and
+  the ARP table, and sends nothing.
 - **The two UART reads.** Each takes about 5 s. The counters count from
   configuration and never reset, so the ping's effect is the difference between
   the reads.
