@@ -90,6 +90,11 @@ After a power cycle the node, and its key, are gone until someone reflashes it.
 **Test:** rebuild the node from source with the restored openXC7 flow and compare
 its SHA-256 with the CI artifact. Loading it is the owner's call.
 
+**Status 2026-09-27:** the CI artifact was fetched and loaded. Its sha256 is
+`0fafd225e2…ddb4`, and it passed the window-24 control again. The local rebuild
+has a different payload, as expected from the two yosys versions. Details are in
+`NODE_TOOLCHAIN_RESTORE.md`, "Reload after MXDOT4".
+
 ## 6. The clock is not calibrated
 
 CFGMCLK is the configuration oscillator, specified loosely and drifting with

@@ -131,3 +131,32 @@ and picked the CI artifact over the local build.
 - **Anything else is a FAIL** and is recorded as it stands.
 - **One attempt.** A second run is allowed only if the first fails before its
   first job (port busy, the node does not answer). Both logs are then kept.
+
+### Result, 08:51 UTC (measured)
+
+**PASS.**
+- **Load.** `board_runs/node0_ci_flash.log`:
+  - sha256 `0fafd225e2…ddb4`;
+  - IDCODE 0x13636093;
+  - "loaded file ... in 778s";
+  - exit 0, 08:30:30 to 08:49:26 UTC. The span includes the wait at the sudo
+    password prompt.
+- **Control.** `board_runs/tern_tc_all_w24_reload.log`, one attempt, 08:49:40 to
+  08:51:10 UTC.
+  - `setkey: key installed on node 0x5452494e; ack tag verifies`.
+  - `receipts verified (tag) : 403200/403200 under node 0x5452494e`, `rows
+    bit-exact : 33792/33792`, exit 0.
+  - Elapsed 86.17 s (4,679 answers/s), against 85.49 s on the first
+    window-24 run.
+  - The longest host pause was 127.9 ms, against 22.4 ms then. Nothing was
+    lost, so it is noted, not explained.
+- **Weak point 5 (`TERN_TC_WEAK_POINTS.md`).** The bitstream on the board is now
+  pinned by its full sha256 and by this load log.
+  - The rebuild comparison that point asks for gives different results: the
+    CI payload (from the sync word) is `ee75d97b…3f39f03`, and the local
+    build's is `99d90a6a…01eef5`.
+  - That fits the two different netlists described in "What this does not
+    show" above. The local build still has not run on silicon.
+- **Cost.** MXDOT4 is off the board. The node, and its key, last until the next
+  power cycle or load.
+
