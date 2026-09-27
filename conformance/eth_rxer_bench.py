@@ -13,7 +13,11 @@ RX_ER bench, has the stamp). A case that disagrees is a finding about the RTL or
 reading. It is not a reason to change the expectation.
 
     python3 conformance/eth_rxer_bench.py            # all cases, exit 1 if any disagrees
+    python3 conformance/eth_rxer_bench.py --gate     # the same on RTL and on yosys's netlist, and
+                                                     # each gate log equal to its RTL log
 """
+import argparse
+import concurrent.futures
 import os
 import re
 import subprocess
@@ -61,23 +65,33 @@ CASES = [
 ]
 
 INJ_EDGE = re.compile(r'^INJ t=(\d+) rxctl=(\d) rtl_falling_sample=(\d)$', re.M)
+COMPARED = ('INJ', 'RXE', 'TXF', 'TB', 'UART|')   # the lines a gate log must share with its RTL log
 
 
-def run_case(name, frames, plus):
+def run_case(name, frames, plus, design=None):
+    """design None: the pinned RTL; else the gate netlist, compiled as the runner's own gate run."""
     os.makedirs(WORK, exist_ok=True)
-    stim, exe = f'{WORK}/{name}.hex', f'{WORK}/{name}.vvp'
+    tag = f'gate_{name}' if design else name
+    stim, exe = f'{WORK}/{name}.hex', f'{WORK}/{tag}.vvp'
     with open(stim, 'w') as fh:
         fh.write('\n'.join(r.stim_words([r.F(f) for f in frames])) + '\n')
-    cmd = ['iverilog', '-g2012', '-o', exe, '-s', r.TBTOP, '-s', 'eth_rxer_inject',
-           r.TB, r.MODEL, r.RTL, r.MOCK, r.CELLS, INJ]
+    cmd = ['iverilog', '-g2012', '-o', exe, '-s', r.TBTOP, '-s', 'eth_rxer_inject']
+    if design:
+        cmd += ['-DGATE', r.TB, r.MODEL, design, r.MOCK, f'{WORK}/cells_sim_no_ramb36e1.v', r.RAMB_MOCK, INJ]
+    else:
+        cmd += [r.TB, r.MODEL, r.RTL, r.MOCK, r.CELLS, INJ]
     p = subprocess.run(cmd, cwd=r.REPO, capture_output=True, text=True)
     if p.returncode != 0:
         return None, 'iverilog failed:\n' + p.stderr[-2000:]
     args = ['vvp', '-n', exe, f'+STIM={stim}'] + [f'+{k}={v}' for k, v in plus.items()]
     p = subprocess.run(args, cwd=r.REPO, capture_output=True, text=True)
-    with open(f'{WORK}/{name}.txt', 'w') as fh:
+    with open(f'{WORK}/{tag}.txt', 'w') as fh:
         fh.write(p.stdout)
     return p.stdout, None
+
+
+def compared_lines(out):
+    return [l for l in out.splitlines() if l.startswith(COMPARED)]
 
 
 def check(frames, answered, cnt, edges, out):
@@ -115,17 +129,44 @@ def check(frames, answered, cnt, edges, out):
 
 
 def main():
+    ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
+    ap.add_argument('--gate', action='store_true', help='also run every case on the yosys netlist')
+    ap.add_argument('--jobs', type=int, default=5)
+    a = ap.parse_args()
     os.chdir(r.REPO)
+    os.makedirs(WORK, exist_ok=True)
+    design = None
+    if a.gate:
+        r.WORK = WORK                  # the runner's netlist helpers write under its WORK
+        design = r.gate_netlist()
+        r.cells_without_ramb36()
     fails = 0
-    for name, what, frames, plus, answered, cnt, edges in CASES:
-        out, err = run_case(name, frames, plus)
-        bad, summ = ([err], '') if err else check(frames, answered, cnt, edges, out)
-        fails += bool(bad)
-        print(f"{'PASS' if not bad else 'FAIL'} {name}: {what}")
-        print(f'     {summ}')
-        for b in bad:
-            print(f'     - {b}')
-    print(f'{len(CASES) - fails}/{len(CASES)} cases as pre-registered; logs in {WORK}/')
+    with concurrent.futures.ThreadPoolExecutor(max_workers=a.jobs) as ex:
+        futs = {(c[0], d): ex.submit(run_case, c[0], c[2], c[3], d)
+                for c in CASES for d in ([None, design] if design else [None])}
+        for name, what, frames, plus, answered, cnt, edges in CASES:
+            print(f'{name}: {what}')
+            outs = {}
+            for d in ([None, design] if design else [None]):
+                out, err = futs[(name, d)].result()
+                bad, summ = ([err], '') if err else check(frames, answered, cnt, edges, out)
+                outs[d] = out
+                fails += bool(bad)
+                print(f"  {'PASS' if not bad else 'FAIL'} {'gate' if d else 'rtl '}  {summ}")
+                for b in bad:
+                    print(f'     - {b}')
+            if design and not (outs[None] and outs[design]):
+                fails += 1
+                print('  FAIL gate log = rtl log: a run has no output to compare')
+            elif design:
+                a_l, b_l = compared_lines(outs[None]), compared_lines(outs[design])
+                diff = [(x, y) for x, y in zip(a_l, b_l) if x != y]
+                same = not diff and len(a_l) == len(b_l)
+                fails += not same
+                print(f"  {'PASS' if same else 'FAIL'} gate log = rtl log: {len(a_l)} and {len(b_l)} compared lines"
+                      + ('' if same else f", first difference: {diff[0] if diff else 'length'}"))
+    n = len(CASES) * (3 if design else 1)
+    print(f'{n - fails}/{n} checks as pre-registered; logs in {WORK}/')
     return 1 if fails else 0
 
 

@@ -840,6 +840,21 @@ The judge does not use `fe` for any verdict (`judge_board`; "`ed`, `fe` and
 `ce` are printed as information only" above), so this finding changes no
 verdict. It changes only how an `fe` difference in the report is read.
 
+**RX_ER bench on the gate netlist (expectations written 22:02:51Z `date -u`,
+before the run).** This removes the first limit above. `eth_rxer_bench.py
+--gate` builds the netlist with the runner's own `gate_netlist()` (the same
+`synth_xilinx` line and scaled parameters, RAMB36E1 from the mock). It runs each
+of the five cases on RTL and on that netlist. The injector still reads
+`dut.rxctl_n`, which the netlist keeps as a flip-flop's Q (`wire rxctl_n`).
+Expected:
+
+- all 10 runs come out as the RTL table above says;
+- in each case, the gate log equals the RTL log line by line, times included,
+  in every `INJ`, `RXE`, `TXF`, `TB` and `UART|` line. This is how the pinned
+  bench's gate runs were compared.
+
+A difference is a finding and is recorded as it is. One run only.
+
 **Where the files point.** This section and the one before it were drafted as
 `conformance/E3_DRAFT_SECTION.md` and merged here. The comment in
 `specs/fpga/constraints/eth_arp_icmp_ax7203.xdc` still names the draft. That
