@@ -1,4 +1,4 @@
-% ---- tnf_paper.tex lines 186-7804: What this paper argues ----
+% ---- tnf_paper.tex lines 189-7839: What this paper argues ----
 \section{What this paper argues}
 \label{sec:roadmap}
 
@@ -1062,15 +1062,15 @@ claim.
 
 The value deficit is not an encoding accident. A ternary exponent does not tile
 a binary field: four trits need seven bits and use $81$ of $128$ codes, so $47$
-exponent rows of $4{,}096$ words --- $192{,}512$ of the $2^{19}$ words, more than a
-third --- are unreachable: no rounding and no arithmetic produces them. With the
-zero and special rows, $200{,}704$ words carry no finite non-zero value, against
+exponent rows of $4{,}096$ codes --- $192{,}512$ of the $2^{19}$ codes, more than a
+third --- are not TNF words: no rounding and no arithmetic produces them. With the
+zero and special rows, $200{,}704$ codes carry no finite non-zero value, against
 two for posit19. No packing repairs this; it is what a ternary exponent costs in
 a binary container.
 
 \paragraph{A correction, and an instance of this paper's own failure mode.}
 An earlier revision of Table~\ref{tab:matchedwidth} counted those rows. The
-reference decoder maps an exponent field above the special row to an ordinary
+reference decoder mapped an exponent field above the special row to an ordinary
 power of two, while the encoder never writes one, so enumerating all $2^{19}$
 codes reported $516{,}096$ values and $127$ binades for TNF16 ($960$ and $31$
 for TNF8, $56$ and $14.6$ for TNF4), and the prose quoted $8{,}190$ unreachable
@@ -1078,8 +1078,37 @@ words --- the difference of two value counts, not a count of words. The number
 checker passed $8{,}192$ against the quoted $8{,}190$ because its relative
 tolerance overrode an exact one. It is the failure Section~\ref{sec:selfcheck}
 is about: every enumeration was correct, and the comparison built on it counted
-words the format never produces. Counting only the words the format produces widens
-every gap in the table; the conclusion stands and is stronger.
+codes that are not words of the format. Counting only the words the format
+produces widens every gap in the table; the conclusion stands and is stronger.
+The reference decoder now refuses a code that is not a TNF word.
+
+\paragraph{The same defect, a second time: training stability.} The low-bit
+training rigs built each format's grid by decoding every code, so the TNF4 grid
+held $57$ values, up to $3{,}072$, where the format has $29$ (zero included), up
+to $12$. The two grids differ only in the $14$ magnitudes from $32$ to $3{,}072$.
+On the larger grid TNF4 had trained all $40$ runs of eight recipes on MNIST,
+Fashion-MNIST and KMNIST, against $16$ for fp6 e3m2 and $12$ for e2m3; that is
+where ``the rungs where nothing else trains'' came from. Rerun on the grid the
+format has, on the five MNIST recipes, TNF4 trains $8$ of $25$ runs: $4$ of $5$
+at three epochs with and without the LSQ gradient factor, and $0$ of $5$ at ten
+epochs, at thirty, and with percentile scale initialisation. The runs that fail
+at ten and thirty epochs first reach $94.85$ to $97.10\%$ between epochs two and
+six and then collapse; with percentile initialisation no run exceeds $32.8\%$ in
+any epoch. In all $17$ failing runs some layer's activation scale shrinks by a
+factor larger than the grid's largest value, $12$, so that layer saturates; in
+none of the $8$ that train does it (\texttt{measurements/\allowbreak mechanism\_\allowbreak w994.json}).
+The fp6
+grids do not involve the TNF decoder; on the same five recipes they train $12$
+of $25$ (e3m2) and $5$ of $25$ (e2m3). The ablations locate the cause. With the
+true grid and the old grid's gradient factor ($Q_p = 3{,}072$), TNF4 trains $5$
+of $5$ at three epochs and $0$ of $5$ at ten; with the old grid and the true
+grid's factor ($Q_p = 12$), it trains $5$ of $5$ at ten. Without the gradient
+factor it trains $0$ of $5$ at ten. On MNIST, then, what decides is the headroom
+the non-words add above the format's largest value, not the LSQ gradient scale.
+The Fashion-MNIST and KMNIST runs, $15$ of the $40$, have not been rerun and no
+claim is made about them. The claim is withdrawn
+(\texttt{measurements/\allowbreak stability\_\allowbreak w994\_\allowbreak *.json},
+\texttt{measurements/\allowbreak lsq\_\allowbreak ablation\_\allowbreak w994\_\allowbreak *.json}).
 
 \paragraph{What the negative result does not touch.} None of the above is a
 cost figure, and the case for this format was never precision per bit. The
@@ -1087,8 +1116,7 @@ decoder cost, the multiplier removal and the zero-DSP result are measured on
 standalone rigs that contain no exponent field comparison at all, and they are
 unaffected. A format may lose every column of
 Table~\ref{tab:matchedwidth} and still be the right choice where decode cost
-dominates or where nothing else trains --- which is precisely the claim this
-paper should be read as making.
+dominates --- which is precisely the claim this paper should be read as making.
 
 \section{Hardware}\label{sec:hardware}
 
@@ -4473,7 +4501,7 @@ implemented different formats --- TNF16 one mantissa bit short, TNF32 with twelv
 trits and eleven mantissa bits where the specification gives six and
 twenty-five, TNF64 likewise --- and none had a reference, which is how the
 divergence survived to be quoted. Written from the specification and checked
-against it they agree on every code swept, and they cost eight to eleven places
+against it they agree on every word swept, and they cost eight to eleven places
 each. $^{\ast}$: the frequency in that row is stated in no record file in the
 repository at this revision --- fifteen of the twenty-one rows carry the mark, and
 no place-and-route log for any row of this table is in the tree --- so those cells,
@@ -4483,8 +4511,12 @@ is the asymmetry to weigh. What is left at the top is the alphabet, which agrees
 codes. The storage column is the packed word of the module that was placed, so the
 16-bit rung reads 17 bits and $2^{17}$ codes: that module predates the
 reconciliation to $M = 11$, which would make the packed word 19 bits and the
-exhaustive sweep $524{,}288$ codes. That rung has not been re-placed, and no
-number in this table should be read as the reconciled 16-bit format.}
+exhaustive sweep $524{,}288$ codes, $331{,}776$ of them TNF words. That rung has
+not been re-placed, and no number in this table should be read as the reconciled
+16-bit format. A code whose exponent field lies above the special row is not a
+TNF word, and the reference decoder refuses it, so the exhaustive TNF rows count
+words: $82{,}944$ of the $131{,}072$ codes at 17 bits and $864$ of the $1{,}024$ at
+10. The sampled rows do not record how many of their codes were words.}
 \label{tab:fullthroughput}
 \small\setlength{\tabcolsep}{4pt}
 \begin{tabular}{rlrrrrrl}
@@ -4502,9 +4534,9 @@ number in this table should be read as the reconciled 16-bit format.}
 9 & minifloat & 8 bits & 558 & $67.06^{\ast}$ & 0.1202 & $5.49$ & not swept \\
 10 & \textbf{BNF16} (ours) & 17 bits & 571 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
 11 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-12 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 131{,}072 \\
+12 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 82{,}944 words \\
 13 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
-14 & \textbf{TNF8} (ours) & 10 bits & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 1{,}024, 0 wrong \\
+14 & \textbf{TNF8} (ours) & 10 bits & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 864 words, 0 wrong \\
 15 & \textbf{GF+8} (ours) & 8 bits & 628 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
 16 & posit8 & 8 bits & 540 & $44.33^{\ast}$ & 0.0821 & $4.02$ & not swept \\
 17 & takum16 & 16 bits & 789 & $58.96^{\ast}$ & 0.0747 & $5.75$ & not swept \\

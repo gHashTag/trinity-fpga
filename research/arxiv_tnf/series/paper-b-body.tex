@@ -1,4 +1,4 @@
-% ---- tnf_paper.tex lines 452-485: The format ----
+% ---- tnf_paper.tex lines 455-488: The format ----
 \section{The format}\label{sec:format}
 
 \begin{equation}
@@ -34,7 +34,7 @@ comparison format has spent its mantissa on range.
 \end{figure}
 
 
-% ---- tnf_paper.tex lines 486-585: Why a ladder, and why this one ----
+% ---- tnf_paper.tex lines 489-588: Why a ladder, and why this one ----
 \section{Why a ladder, and why this one}\label{sec:ruler}
 
 \triptych{canon-tnf-18-ruler.png}{The ruler, the closed form of the rounding error, and what is not claimed.}{fig:canon-ruler}
@@ -132,7 +132,7 @@ thing you measure them against.
 
 
 
-% ---- tnf_paper.tex lines 586-1003: The law is general, and it measures tapering ----
+% ---- tnf_paper.tex lines 589-1006: The law is general, and it measures tapering ----
 \section{The law is general, and it measures tapering}\label{sec:law}
 
 Section~\ref{sec:ruler} derived the error of a fixed-field format. Nothing in that
@@ -536,7 +536,7 @@ in the gap; the answer corrects a suggestion we made before building them.
 
 
 
-% ---- tnf_paper.tex lines 1004-1083: Accuracy ----
+% ---- tnf_paper.tex lines 1007-1086: Accuracy ----
 \section{Accuracy}\label{sec:accuracy}
 
 \triptych{canon-tnf-11-accuracy.png}{The accuracy measurement of this section, read by magnitude bin: a tie where the comparison format has not yet spent its mantissa, and a widening advantage where it runs out of exponent.}{fig:canon-accuracy}
@@ -614,7 +614,7 @@ structure: the fixed field's decode and adder (see Limitations) and the
 exactness of the construction.
 
 
-% ---- tnf_paper.tex lines 1084-1234: The 16-bit field ----
+% ---- tnf_paper.tex lines 1087-1237: The 16-bit field ----
 \section{The 16-bit field}\label{sec:field}
 
 \triptych{canon-tnf-20-field16.png}{The 16-bit field: overflow counts and the decades each ladder spans.}{fig:canon-field16}
@@ -759,7 +759,7 @@ competitor at all.
 
 
 
-% ---- tnf_paper.tex lines 1317-1399: Hardware ----
+% ---- tnf_paper.tex lines 1348-1430: Hardware ----
 \section{Hardware}\label{sec:hardware}
 
 Synthesis with Yosys~0.65~\cite{yosys}, place and route with
@@ -844,7 +844,7 @@ carry test, a saturating exponent add and a bit select.
 \end{figure}
 
 
-% ---- tnf_paper.tex lines 1496-1658: What the law says about improving the ladder ----
+% ---- tnf_paper.tex lines 1527-1689: What the law says about improving the ladder ----
 \section{What the law says about improving the ladder}\label{sec:design}
 
 \triptych{canon-tnf-22-design.png}{Packing efficiency, the log base two of three floor, and the unspent positions.}{fig:canon-design}
@@ -1001,7 +1001,7 @@ no hardware has been placed at those reconciled widths.
 
 
 
-% ---- tnf_paper.tex lines 1659-2046: Why ternary, and exactly how much ----
+% ---- tnf_paper.tex lines 1690-2077: Why ternary, and exactly how much ----
 \section{Why ternary, and exactly how much}\label{sec:whyternary}
 
 \triptych{canon-tnf-13-whyternary.png}{The ternary case of this section, bounded in both directions: radix economy as a state-slot argument, what a binary fabric takes back from the encoding, and the separation of the radix choice from the encoding.}{fig:canon-whyternary}
@@ -1383,7 +1383,7 @@ commit \texttt{d31d8523c}.
 
 
 
-% ---- tnf_paper.tex lines 3605-3893: Two formats close a ternary node ----
+% ---- tnf_paper.tex lines 3636-3924: Two formats close a ternary node ----
 \section{Two formats close a ternary node}\label{sec:pair}
 
 \triptych{canon-tnf-26-pair.png}{Three sites, the forced alphabet, and what depth costs.}{fig:canon-pair}
@@ -1662,7 +1662,7 @@ network rather than about the arithmetic, so we asked the network.
 \end{figure}
 
 
-% ---- tnf_paper.tex lines 4360-4815: Fineness costs registers, not adders ----
+% ---- tnf_paper.tex lines 4391-4846: Fineness costs registers, not adders ----
 \section{Fineness costs registers, not adders}\label{sec:oneadder}
 
 \triptych{canon-tnf-28-oneadder.png}{Fineness costs registers, not adders.}{fig:canon-oneadder}

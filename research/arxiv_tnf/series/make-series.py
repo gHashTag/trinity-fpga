@@ -54,46 +54,46 @@ SOURCE = HERE.parent / "tnf_paper.tex"
 
 RANGES = {
     "a": [
-        (1235, 1317),   # The comparison at matched physical width
-        (1400, 1456),   # Two width defects, and why they generalise
-        (5866, 6227),   # How a comparison fails while every measurement is correct
-        (6227, 6340),   # Adjacent work this paper is measured against
-        (6340, 6417),   # What the formal statements are, and what they are
-        (6417, 6880),   # Three results added in this revision
-        (7645, 7777),   # Limitations
-        (7777, 7805),   # Reproducibility, Disclosure
+        (1238, 1348),   # The comparison at matched physical width
+        (1431, 1487),   # Two width defects, and why they generalise
+        (5901, 6262),   # How a comparison fails while every measurement is correct
+        (6262, 6375),   # Adjacent work this paper is measured against
+        (6375, 6452),   # What the formal statements are, and what they are
+        (6452, 6915),   # Three results added in this revision
+        (7680, 7812),   # Limitations
+        (7812, 7840),   # Reproducibility, Disclosure
     ],
     "b": [
-        (452, 486),     # The format
-        (486, 586),     # Why a ladder, and why this one
-        (586, 1004),    # The law is general, and it measures tapering
-        (1004, 1084),   # Accuracy
-        (1084, 1235),   # The 16-bit field
-        (1317, 1400),   # Hardware
-        (1496, 1659),   # What the law says about improving the ladder
-        (1659, 2047),   # Why ternary, and exactly how much
-        (3605, 3894),   # Two formats close a ternary node
-        (4360, 4816),   # Fineness costs registers, not adders
+        (455, 489),     # The format
+        (489, 589),     # Why a ladder, and why this one
+        (589, 1007),    # The law is general, and it measures tapering
+        (1007, 1087),   # Accuracy
+        (1087, 1238),   # The 16-bit field
+        (1348, 1431),   # Hardware
+        (1527, 1690),   # What the law says about improving the ladder
+        (1690, 2078),   # Why ternary, and exactly how much
+        (3636, 3925),   # Two formats close a ternary node
+        (4391, 4847),   # Fineness costs registers, not adders
     ],
 }
 
 # Paper C is the record: the whole body, cut nowhere.
-RANGES["c"] = [(186, 7805)]
+RANGES["c"] = [(189, 7840)]
 
 # Paper D is A without its revision notes. It keeps the two measurements that
 # are the contribution, the six failure modes that are the subject, the worked
 # example, the epistemics, the related work and the limitations -- and drops
-# 6417-6880 (3,984 words), which is addressed to a reader of the previous
+# 6452-6915 (3,984 words), which is addressed to a reader of the previous
 # version and means nothing to a reader meeting the work here. That cut is also
 # what brings the ISQED rendering of it inside ten pages.
 RANGES["d"] = [
-    (5866, 6227),   # How a comparison fails while every measurement is correct
-    (1235, 1317),   # The comparison at matched physical width  (worked example)
-    (1400, 1456),   # Two width defects, and why they generalise
-    (6340, 6417),   # What the formal statements are, and what they are not
-    (6227, 6340),   # Adjacent work this paper is measured against
-    (7645, 7777),   # Limitations
-    (7777, 7805),   # Reproducibility, Disclosure
+    (5901, 6262),   # How a comparison fails while every measurement is correct
+    (1238, 1348),   # The comparison at matched physical width  (worked example)
+    (1431, 1487),   # Two width defects, and why they generalise
+    (6375, 6452),   # What the formal statements are, and what they are not
+    (6262, 6375),   # Adjacent work this paper is measured against
+    (7680, 7812),   # Limitations
+    (7812, 7840),   # Reproducibility, Disclosure
 ]
 
 # --- renderings, not cuts ----------------------------------------------------
@@ -160,7 +160,7 @@ PDF = {p: WRAPPERS[p][0].replace(".tex", ".pdf") for p in PAPERS}
 
 # The record version keeps the manuscript's own abstract, which is where the
 # budget convention is declared and labelled. A and B state their own.
-ABSTRACT_RANGE = (82, 184)
+ABSTRACT_RANGE = (82, 187)
 
 TITLES = {
     "a": "How a Comparison Fails",

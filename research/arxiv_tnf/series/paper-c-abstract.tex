@@ -91,11 +91,14 @@ the committed reference implementations, posit holds more representable values
 than TNF and a finer step at unity at every width the ladder occupies --- $12\times$
 finer at 19 bits, $4\times$ at 10, $2\times$ at 6 --- and posit with $es{=}2$ weakly
 dominates on both coordinates at all three. A ternary exponent does not tile a
-binary field: four trits use $81$ of $128$ codes, leaving $192{,}512$ of the $2^{19}$
-words unreachable. The no-survivors corollary is accordingly withdrawn to a
-matched-\emph{name} claim (Section~\ref{sec:matchedwidth}). The case for this
-format was never precision per bit; it is multiplier removal, decode cost and the
-rungs where nothing else trains.
+binary field: four trits use $81$ of $128$ exponent codes, leaving $192{,}512$ of
+the $2^{19}$ codes outside the format. The no-survivors corollary is accordingly
+withdrawn to a matched-\emph{name} claim (Section~\ref{sec:matchedwidth}). The
+case for this format was never precision per bit; it is multiplier removal and
+decode cost. The claim that TNF4 trains where nothing else does is withdrawn: its
+grid had been built from codes that are not TNF words, and on the grid the format
+has TNF4 trains $8$ of $25$ MNIST runs, against $12$ for fp6 e3m2 and $5$ for
+e2m3.
 
 Section~\ref{sec:selfcheck} sets out the ways a format comparison fails while
 each of its measurements is correct, since every quantitative claim above depends
