@@ -346,6 +346,63 @@ tri fpga-keycheck
 - **The last two runs** return the board to the node and repeat the W24
   control, as after the first E2.
 
+### E2 with the one-bit fix on the board, 2026-09-27 16:03Z to 16:16Z (measured)
+
+The owner said «все три» to variant 3 of the 15:34Z loop report and typed the
+sudo password for each flash. One attempt per step, no reruns. The cable's far
+end is the router.
+
+| step | log | result |
+|---|---|---|
+| flash `e2z`, payload `be28e221…0161e637` | `board_runs/e2z_flash.log` | loaded in 778 s, 16:03:00Z to 16:16:07Z, exit 0 |
+| read 40 report lines at 1144744 baud | `board_runs/e2z_phy_status.log` | 40 of 40 lines, 16:16:07Z to 16:16:27Z, exit 0 |
+| flash the node back, CI payload `ee75d97b…3f39f03` | `board_runs/node0_restore_after_e2z.log` | loaded in 778 s, 16:16:27Z to 16:29:26Z, exit 0 |
+| `--setkey`, then `--all --window 24` | `board_runs/tern_tc_all_w24_after_e2z.log` | `receipts verified (tag) : 403200/403200 under node 0x5452494e`, rows 33792/33792, 85.20 s, exit 0 |
+
+All four logs have 0 hits for the key and are under 10 KB. The node is back and
+passed the same control as after the first E2.
+
+The reader's own summary line:
+
+```
+board: 40/40 lines read; PHY answered MDIO on 40, in-band status seen on 40, in-band link up on 36.
+```
+
+**Against the prediction.**
+
+- **Hypothesis 1 (inverted output enable): confirmed.** Every line has
+  `pm=00000002` (one PHY, at address 1) and `id=00221622`, the KSZ9031 ID the
+  prediction named. `rt` is `00` on every line.
+- **Hypothesis 2 (pins): refuted.** No line reads `FFFFFFFF`.
+
+So the one missing config bit, `LIOI3_X0Y235.OLOGIC_Y0.ZINV_T1`, was the whole
+of the silent-MDIO failure. The routing, the pins and the RTL were unchanged.
+The frames of the patched-engine build `e2p` are byte-identical to `e2z`, so
+this result also covers them.
+
+**Outside the prediction.** The link bits were not part of either hypothesis.
+
+| field | n=2 to n=5 | n=6 to n=41 | reading |
+|---|---|---|---|
+| `g9`, `a4` | `0300>0000`, `01E1>0181` | same | both advertisement writes landed. These are the read-backs the simulation expects: 100M only, as E2 is designed |
+| `sr` (BMSR) | `7949` | `796D` | link and auto-negotiation-complete bits set from n=6 |
+| `ib` | `30` | `3B` | MDIO answer and in-band status; low nibble `B` is link up, 100, full duplex, as in the simulation's link scenario |
+| `rc` (RXC) | 24.92 to 24.94 MHz | 24.91 to 24.93 MHz | 25 MHz, the 100M rate |
+| `fr` | 0 | 0 at n=6 and 7, then rising to 27 (`001B`) at n=41 | the RX side counts frames from the LAN |
+
+The link came up about 2 s into the read (lines are about 0.49 s apart). The
+first E2 read saw RXC jump to 125 MHz, and the ranked reading above said that was
+the PHY acting on its own because no write landed. With the writes landing, RXC
+stays at 25 MHz, which fits that reading.
+
+**What this does not show.** It shows MDIO, the PHY's link at 100 full duplex
+and a frame counter going up. It says nothing about frame contents, the TX path
+(E2 drives no TX data), or the node over Ethernet. Those are E3 and later.
+
+**The lasting fix** is still in the engine, not the FASM: the local branch
+`fix/zinv-t1-pad-pip` (`f3a8c73c`, not pushed), or router2. Until then,
+`tri fpga-tristate` runs on every FASM before a flash.
+
 ## Security notes for E4
 
 - Anyone on the LAN can send requests. They can use up capacity, but without

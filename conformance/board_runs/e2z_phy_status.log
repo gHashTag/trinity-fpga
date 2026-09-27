@@ -1,0 +1,93 @@
+# start 2026-09-27T16:16:07Z
+# usb HUB ['0x110000']
+# usb clients 91 {'BrowserOS neo': 1, 'FwUpdateManagerd': 90}
+# cmd python3 -u eth_phy_status_ax7203.py --port /dev/cu.usbserial-110 --lines 40
+# limit 120 s
+reading 40 report lines from /dev/cu.usbserial-110 at 1144744 (E2 bitstream must be on the board)
+  E2 n=0002 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=7949/7949 pc=0300 ib=30 rc=05F09D fr=0000
+    n=2 retries=0 phys@[1] id=00221622 link=down speed=None fd=False in-band link=False frames=0 rxc~24.93 MHz
+  E2 n=0003 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=7949/7949 pc=0300 ib=30 rc=05F135 fr=0000
+    n=3 retries=0 phys@[1] id=00221622 link=down speed=None fd=False in-band link=False frames=0 rxc~24.94 MHz
+  E2 n=0004 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=7949/7949 pc=0300 ib=30 rc=05F0CA fr=0000
+    n=4 retries=0 phys@[1] id=00221622 link=down speed=None fd=False in-band link=False frames=0 rxc~24.93 MHz
+  E2 n=0005 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=7949/7949 pc=0300 ib=30 rc=05F014 fr=0000
+    n=5 retries=0 phys@[1] id=00221622 link=down speed=None fd=False in-band link=False frames=0 rxc~24.92 MHz
+  E2 n=0006 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0AF fr=0000
+    n=6 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=0 rxc~24.93 MHz
+  E2 n=0007 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFF3 fr=0000
+    n=7 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=0 rxc~24.92 MHz
+  E2 n=0008 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFEF fr=0001
+    n=8 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=1 rxc~24.92 MHz
+  E2 n=0009 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFB6 fr=0001
+    n=9 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=1 rxc~24.91 MHz
+  E2 n=000A rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFB2 fr=0001
+    n=10 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=1 rxc~24.91 MHz
+  E2 n=000B rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EF9F fr=0002
+    n=11 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=2 rxc~24.91 MHz
+  E2 n=000C rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFB0 fr=0002
+    n=12 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=2 rxc~24.91 MHz
+  E2 n=000D rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EF84 fr=0002
+    n=13 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=2 rxc~24.91 MHz
+  E2 n=000E rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFDD fr=0004
+    n=14 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=4 rxc~24.92 MHz
+  E2 n=000F rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0F4 fr=0004
+    n=15 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=4 rxc~24.93 MHz
+  E2 n=0010 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0B8 fr=0004
+    n=16 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=4 rxc~24.93 MHz
+  E2 n=0011 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F008 fr=0004
+    n=17 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=4 rxc~24.92 MHz
+  E2 n=0012 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F068 fr=0005
+    n=18 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.93 MHz
+  E2 n=0013 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0C0 fr=0005
+    n=19 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.93 MHz
+  E2 n=0014 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFC3 fr=0005
+    n=20 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=0015 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F017 fr=0005
+    n=21 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=0016 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F05B fr=0005
+    n=22 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=0017 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F021 fr=0005
+    n=23 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=0018 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F042 fr=0005
+    n=24 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=0019 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F030 fr=0005
+    n=25 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=001A rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFE4 fr=0005
+    n=26 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=001B rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFE4 fr=0005
+    n=27 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=5 rxc~24.92 MHz
+  E2 n=001C rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFDE fr=0019
+    n=28 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=25 rxc~24.92 MHz
+  E2 n=001D rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0E7 fr=0019
+    n=29 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=25 rxc~24.93 MHz
+  E2 n=001E rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFE1 fr=0019
+    n=30 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=25 rxc~24.92 MHz
+  E2 n=001F rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFDE fr=0019
+    n=31 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=25 rxc~24.92 MHz
+  E2 n=0020 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0A9 fr=0019
+    n=32 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=25 rxc~24.93 MHz
+  E2 n=0021 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0F6 fr=0019
+    n=33 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=25 rxc~24.93 MHz
+  E2 n=0022 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F0A9 fr=001A
+    n=34 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=26 rxc~24.93 MHz
+  E2 n=0023 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFF6 fr=001A
+    n=35 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=26 rxc~24.92 MHz
+  E2 n=0024 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F036 fr=001A
+    n=36 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=26 rxc~24.92 MHz
+  E2 n=0025 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F06D fr=001A
+    n=37 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=26 rxc~24.93 MHz
+  E2 n=0026 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F048 fr=001A
+    n=38 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=26 rxc~24.92 MHz
+  E2 n=0027 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F001 fr=001A
+    n=39 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=26 rxc~24.92 MHz
+  E2 n=0028 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05F04E fr=001A
+    n=40 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=26 rxc~24.92 MHz
+  E2 n=0029 rt=00 pm=00000002 id=00221622 g9=0300>0000 a4=01E1>0181 cr=1140 sr=796D/796D pc=0328 ib=3B rc=05EFBD fr=001B
+    n=41 retries=0 phys@[1] id=00221622 link=up speed=100 fd=True in-band link=True 100 frames=27 rxc~24.91 MHz
+board: 40/40 lines read; PHY answered MDIO on 40, in-band status seen on 40, in-band link up on 36. RESULT below counts lines read; it is not a PHY verdict.
+RESULT PASS
+real 19.70
+user 0.05
+sys 0.01
+# exit=0
+# end 2026-09-27T16:16:27Z
