@@ -708,6 +708,10 @@ all six logs and exits 2.
 - The port is whatever `tri fpga-usb` names at the time. The
   `/dev/cu.usbserial-110` below is the 09:32Z one.
 - `tri fpga-run` runs in `conformance/`.
+- `tri fpga-steps E3` reads this block and `board_runs/` and prints which
+  steps have logs and what comes next. It prints "none" once any step has
+  failed. It runs nothing and judges nothing. Added 20:41:21Z (`date -u`),
+  before any E3 log.
 
 ```
 tri fpga-run e3_preping -- ping -c 2 192.168.1.222

@@ -1,0 +1,12 @@
+# start 2026-09-27T20:36:49Z
+# load 8.4 6.7 6.7 on 8 cpus
+# cmd tri fpga-hostnet 192.168.1.222
+# rehearsal (no board)
+route   192.168.1.222: interface en0, no gateway (direct)
+host    en0 192.168.1.101/24
+arp     no entry
+note    default routes also through utun8; the line above is what the kernel picks now
+hostnet 192.168.1.222: ok; nothing was sent
+# exit=0
+# load 8.4 6.7 6.7 on 8 cpus
+# end 2026-09-27T20:36:49Z
