@@ -218,7 +218,7 @@ and the 640-job check, `receipts verified (tag) : 640/640`, `rows bit-exact : 64
   RATE" and "implied CFGMCLK" lines are only meaningful where the adapter's rate
   grid is finer than the sweep step, which is not so for a CP2102N near 1 Mbaud.
 
-**Update, 04:05Z: the older per-chip figures have the same defect.**
+**Update, 04:02Z: the older per-chip figures have the same defect.**
 The section "Entered 2026-08-03" of `docs/TRI_NET_REPORT_2026-08-02.md`, and
 the block with `node0_cfgmclk_mhz 70.46` in
 `specs/trinet/ternary_hw_verification.t27`, record three boards swept in 0.5 %

@@ -9,7 +9,7 @@ Tags: **checked** = run on this Mac today. **recorded** = from repo history,
 an upstream tracker, or the operator's notes; not re-run. **derived** =
 arithmetic from the numbers cited. **unchecked** = none of these.
 
-## What was checked, 04:10 UTC (checked)
+## What was checked, 04:04 UTC (checked)
 
 - The Mac is 192.168.1.101 on **Wi-Fi** (`en0`). The router is 192.168.1.1.
 - The ARP table resolves the router, this Mac and one other host (.103). So
@@ -94,7 +94,7 @@ owner's yes.
 | E4 | UDP bridge: K TRI-NET frames per datagram into the unchanged node core. **OP_SETKEY is refused on UDP**; the key is set over UART only. | co-sim with `formal/tern_tc_layer_rtl_tb.v`-style streams; build | pre-registered 640-job check, then `--all` |
 | E5 | Harness transport `--udp HOST:PORT` in `tern_tc_layer_ax7203.py`, with no change to the checks | self-test with a software cell over loopback UDP | with E4 |
 
-### E1 build, 04:20 UTC (checked; not flashed)
+### E1 build, 04:09 UTC (checked; not flashed)
 
 The command was `tri fpga-build --top dual_clk_heartbeat_ax7203 --src
 fpga/vivado/dual_clk_heartbeat_ax7203.v --xdc
@@ -126,11 +126,11 @@ still unproven: that needs the flash in E1, and so the owner's yes.
 
 - **LiteEth / LiteX.** It has a UDP/IP stack and Etherbone, and a board file
   for this exact board, but its default toolchain there is Vivado. Its RGMII
-  PHY uses IDDR, so under the open flow it hits the open IDDR issue above
-  unless the capture is replaced.
+  PHY uses IDDR (checked: `liteeth/phy/s7rgmii.py`), so under the open flow
+  it hits the open IDDR issue above unless the capture is replaced.
 - **alexforencich/verilog-ethernet.** MIT license, not archived, last pushed
   2025-02-27 (checked). It has an ARP/IP/UDP stack and a 7-series RGMII PHY,
-  also IDDR-based.
+  also IDDR-based (checked: `rtl/iddr.v`).
 
 Either stack's UDP layer can sit on a fabric-capture RGMII receiver. Writing
 a minimal ARP/UDP responder is also small, since there are only two frame
