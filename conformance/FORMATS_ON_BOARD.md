@@ -16,7 +16,9 @@ behave on this board. Short answer:
   any of them is in a repository on this Mac, and only one of their bitstreams
   is: GF8 ADD.
 - **TNF and BNF have never been on a board.** Their LUT and Fmax figures are
-  post-route numbers.
+  post-route numbers. (Written before section 8. Since 06:08 UTC, one TNF16
+  definition has a board run: section 8. BNF still has none, and neither do
+  the other three TNF16 definitions.)
 
 Tags: **measured** = a board log in `conformance/board_runs/`, run today.
 **recorded** = quoted in an issue comment or a repo file, not re-run.
@@ -272,3 +274,37 @@ The owner types the sudo password for the load.
   - The t27 file's header still says "9-bit precision" beside M = 11.
 - **Cost.** The load replaces the GF8 design. The TRI-NET node stays off until
   it is reloaded and re-keyed.
+
+### Result, 06:08 UTC (measured)
+
+**PASS.** `board_runs/tnf16_board_ax7203.log` ends with `TNF16 RESULT:
+1035886/1035886 bit-exact (fails=0, lost=0)`, which is the spec's `PASS_LINE`,
+and `# exit=0`.
+
+- **Load.** `board_runs/tnf16_flash.log`:
+  - bit sha256 `1820b114…370b`, the pre-registered file;
+  - IDCODE 0x13636093;
+  - "loaded file ... in 778s";
+  - exit 0, 05:52:47 to 06:06:06 UTC.
+- **Run.** One attempt, 06:06:20 to 06:08:33 UTC.
+  - The log names the spec sha `703b35c0…6889` and the vector sha
+    `2b1ea80b…2c38`, both the pre-registered ones.
+  - Every one of the 8 groups (pinned, edge, uniform, near; add and mul) is
+    complete.
+  - No `!` line.
+- **Link.** 10,358,860 bytes went to the board and 5,179,430 came back, with
+  window 24, the UART behind the hub, and nothing lost.
+  - The requests took 102.4 s. The wire floor is 90.6 s, so the run went at
+    88 % of the wire rate: 10,118 answers per second.
+  - The host spent 30 s building the expected words before the first request.
+- **What this adds.** Before this run, TNF was on a board nowhere (section 4).
+  Now one format has a raw log: `tnf_ref.py` `TNFFormat(4, 11)`, v2-spec, add
+  and mul, round-to-nearest-even with this spec's underflow rule. It matches
+  the Python reference word for word on this board, in the RTL committed at
+  `aa4511d6d`.
+- **What it does not add.** It does not show TNF beats any other format, and
+  838 LUTX is not a TNF cost (see above). It says nothing about the other three
+  TNF16 definitions. It does not measure the clock: any CFGMCLK the UART
+  tolerates would pass.
+- **Cost.** The TRI-NET node is off the board. No receipt run (section 1) is
+  possible until it is reloaded and re-keyed.
