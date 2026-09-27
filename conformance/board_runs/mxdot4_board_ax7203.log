@@ -1,0 +1,26 @@
+# start 2026-09-27T07:58:47Z
+# usb HUB ['0x1130000']
+# cmd python3 mxdot4_board_ax7203.py --port /dev/cu.usbserial-1130
+# limit 1800 s
+# spec trinet/mxdot4_on_board_ax7203 sha256 e63d4a31b27078b239d57ce284f2fdc0b2cae0d7bceba76c94b784f4a5d7483d
+# port /dev/cu.usbserial-1130 baud 1144744 (wire 1142857) window 6
+# 251616 requests, element values from conformance/mxfp_ref.py and research/block/block_tnf.py in 14.9 s
+# vectors sha256 107843f1633d59b4a5e11323fd27ebfd9fb8a5388e78ba3ad42eb1cd5695cb2d (251616 requests)
+  [ok  ] edge     mxfp4     256/256
+  [ok  ] edge     tnf4      256/256
+  [ok  ] pinned   mxfp4      16/16
+  [ok  ] pinned   tnf4       16/16
+  [ok  ] scales   mxfp4   65536/65536
+  [ok  ] scales   tnf4    65536/65536
+  [ok  ] top      mxfp4   10000/10000
+  [ok  ] top      tnf4    10000/10000
+  [ok  ] uniform  mxfp4   50000/50000
+  [ok  ] uniform  tnf4    50000/50000
+sent 251616, answered 251616, window 6
+elapsed 178.0 s (1413 answers/s)
+MXDOT4 RESULT: 251616/251616 bit-exact (fails=0, lost=0)
+real 195.02
+user 22.66
+sys 5.25
+# exit=0
+# end 2026-09-27T08:02:02Z

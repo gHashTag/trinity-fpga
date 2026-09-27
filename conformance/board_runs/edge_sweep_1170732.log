@@ -1,0 +1,37 @@
+# start 2026-09-27T03:49:52Z
+# usb HUB ['0x1130000']
+# cmd python3 trinet_baud_sweep.py --port /dev/cu.usbserial-1130 --centre 1170732 --span 0.0015 --steps 7
+sweeping 1168975..1172488 baud in 7 steps of 585, 64 jobs per step, 19-byte responses
+
+board identity (from the frames that came through clean): 0x5452494e
+
+     baud   clean   clean%  rx_bad  tx_bad  empty  short
+  1168975      64 100.000%       0       0      0      0
+  1169560      64 100.000%       0       0      0      0
+  1170145      64 100.000%       0       0      0      0
+  1170730      64 100.000%       0       0      0      0
+  1171315       0   0.000%       1       0     63      0
+  1171900       0   0.000%       0       0     64      0
+  1172485       0   0.000%       1       0     63      0
+
+clean window   : 1168975 .. 1170730 baud  (4 consecutive steps, 256 jobs, no failures)
+USE THIS RATE  : 1169852 baud  (+/- 0.08% tolerated)
+implied CFGMCLK: 70.19 +/- 0.02 MHz  (centre x BAUD_DIV 60; the error is the sweep step, re-run with more --steps to sharpen it)
+
+WARNING: the window touches the edge of the sweep, so the centre is
+a lower bound on accuracy. Re-run with a wider --span.
+
+Divisors this CFGMCLK would support, with the exact host rate to use:
+  BAUD_DIV= 434 ->    161.7 kbaud   quantisation 0.23%  comfortable
+  BAUD_DIV= 300 ->    234.0 kbaud   quantisation 0.33%  comfortable
+  BAUD_DIV= 200 ->    351.0 kbaud   quantisation 0.50%  comfortable
+  BAUD_DIV= 120 ->    584.9 kbaud   quantisation 0.83%  comfortable
+  BAUD_DIV=  90 ->    779.9 kbaud   quantisation 1.11%  tight
+  BAUD_DIV=  60 ->   1169.9 kbaud   quantisation 1.67%  tight
+  BAUD_DIV=  45 ->   1559.8 kbaud   quantisation 2.22%  likely unstable
+  BAUD_DIV=  30 ->   2339.7 kbaud   quantisation 3.33%  likely unstable
+real 12.11
+user 0.10
+sys 0.04
+# exit=0
+# end 2026-09-27T03:50:04Z

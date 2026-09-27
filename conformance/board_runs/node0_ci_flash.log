@@ -1,0 +1,15 @@
+# start 2026-09-27T08:30:30Z
+# bit artifacts/bitstreams/trinet_node0_ci30762491794.bit sha256 0fafd225e2d18f73f6b605a85d0fb592f5a684dd17a7313aad76249ac89eddb4
+Open On-Chip Debugger 0.12.0
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+xc7_program
+Info : clock speed 100 kHz
+Info : JTAG tap: xc7.tap tap/device found: 0x13636093 (mfg: 0x049 (Xilinx), part: 0x3636, ver: 0x1)
+Warn : gdb services need one or more targets defined
+loaded file artifacts/bitstreams/trinet_node0_ci30762491794.bit to pld device 0 in 778s 749389us
+
+shutdown command invoked
+# exit=0
+# end 2026-09-27T08:49:26Z

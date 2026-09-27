@@ -1,0 +1,60 @@
+# start 2026-09-27T03:44:36Z
+# usb HUB ['0x1130000']
+# cmd python3 trinet_baud_sweep.py --port /dev/cu.usbserial-1130 --centre 1144744 --span 0.08
+sweeping 1053164..1236323 baud in 33 steps of 5723, 64 jobs per step, 19-byte responses
+
+board identity (from the frames that came through clean): 0x5452494e
+
+     baud   clean   clean%  rx_bad  tx_bad  empty  short
+  1053164       0   0.000%       0       0     64      0
+  1058887       0   0.000%       0       0     64      0
+  1064610       0   0.000%       0       0     64      0
+  1070333      64 100.000%       0       0      0      0
+  1076056      64 100.000%       0       0      0      0
+  1081779      64 100.000%       0       0      0      0
+  1087502      64 100.000%       0       0      0      0
+  1093225      64 100.000%       0       0      0      0
+  1098948      64 100.000%       0       0      0      0
+  1104671      64 100.000%       0       0      0      0
+  1110394      64 100.000%       0       0      0      0
+  1116117      64 100.000%       0       0      0      0
+  1121840      64 100.000%       0       0      0      0
+  1127563      64 100.000%       0       0      0      0
+  1133286      64 100.000%       0       0      0      0
+  1139009      64 100.000%       0       0      0      0
+  1144732      64 100.000%       0       0      0      0
+  1150455      64 100.000%       0       0      0      0
+  1156178      64 100.000%       0       0      0      0
+  1161901      64 100.000%       0       0      0      0
+  1167624      64 100.000%       0       0      0      0
+  1173347       0   0.000%       0       0     64      0
+  1179070       0   0.000%       1       0     63      0
+  1184793       0   0.000%       1       0     63      0
+  1190516       0   0.000%       0       0     64      0
+  1196239       0   0.000%       0       0     64      0
+  1201962       0   0.000%       0       0     64      0
+  1207685       0   0.000%       1       0     63      0
+  1213408       0   0.000%       0       0     64      0
+  1219131       0   0.000%       1       0     63      0
+  1224854       0   0.000%       0       0     64      0
+  1230577       0   0.000%       0       0     64      0
+  1236300       0   0.000%       1       0     63      0
+
+clean window   : 1070333 .. 1167624 baud  (18 consecutive steps, 1152 jobs, no failures)
+USE THIS RATE  : 1118978 baud  (+/- 4.35% tolerated)
+implied CFGMCLK: 67.14 +/- 0.17 MHz  (centre x BAUD_DIV 60; the error is the sweep step, re-run with more --steps to sharpen it)
+
+Divisors this CFGMCLK would support, with the exact host rate to use:
+  BAUD_DIV= 434 ->    154.7 kbaud   quantisation 0.23%  comfortable
+  BAUD_DIV= 300 ->    223.8 kbaud   quantisation 0.33%  comfortable
+  BAUD_DIV= 200 ->    335.7 kbaud   quantisation 0.50%  comfortable
+  BAUD_DIV= 120 ->    559.5 kbaud   quantisation 0.83%  comfortable
+  BAUD_DIV=  90 ->    746.0 kbaud   quantisation 1.11%  tight
+  BAUD_DIV=  60 ->   1119.0 kbaud   quantisation 1.67%  tight
+  BAUD_DIV=  45 ->   1492.0 kbaud   quantisation 2.22%  likely unstable
+  BAUD_DIV=  30 ->   2238.0 kbaud   quantisation 3.33%  likely unstable
+real 56.77
+user 0.30
+sys 0.18
+# exit=0
+# end 2026-09-27T03:45:32Z

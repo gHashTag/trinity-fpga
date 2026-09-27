@@ -1,0 +1,20 @@
+# start 2026-09-27T02:22:27Z
+model.bin: 1 matrices, 320 rows, 276480 ternary weights (61.8% nonzero)
+jobs: 51840 (32-trit chunks x 1 x-vectors x 6 digit planes)
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+  [FAIL] L5/down       61/320    rows bit-exact
+------------------------------------------------------------------
+jobs sent               : 51840
+receipts verified (tag) : 9886/51840 under node 0x5452494e
+rejected                : {'fabricated': 1, 'short': 1, 'missing': 41954}
+rows bit-exact          : 61/320  (activations: int8)
+elapsed                 : 2.08 s (24872 jobs/s)
+  ! nonce 0x5401269e was never issued
+  ! after 9951 sent: short or unframed read (19 bytes)
+------------------------------------------------------------------
+RESULT: FAIL - do not cite these matrices as verified.
+real 2.30
+user 0.57
+sys 0.14
+# exit=1
+# end 2026-09-27T02:22:29Z

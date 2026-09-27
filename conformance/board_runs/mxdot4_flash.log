@@ -1,0 +1,15 @@
+# start 2026-09-27T07:42:22Z
+# bit artifacts/bitstreams/mxdot4_board_ax7203.bit sha256 dec2ada9b96a0294f11037f085dcc46e9b0e9a7f640a53a11659ec1ff0f7d01a
+Open On-Chip Debugger 0.12.0
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+xc7_program
+Info : clock speed 100 kHz
+Info : JTAG tap: xc7.tap tap/device found: 0x13636093 (mfg: 0x049 (Xilinx), part: 0x3636, ver: 0x1)
+Warn : gdb services need one or more targets defined
+loaded file artifacts/bitstreams/mxdot4_board_ax7203.bit to pld device 0 in 778s 791837us
+
+shutdown command invoked
+# exit=0
+# end 2026-09-27T07:58:35Z

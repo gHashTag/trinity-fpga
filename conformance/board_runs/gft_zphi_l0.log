@@ -1,0 +1,35 @@
+# start 2026-09-27T03:32:44Z
+# usb HUB ['0x1130000']
+# cmd python3 gft_zphi_ax7203.py --setkey --port /dev/cu.usbserial-1130 --baud 1144744 --keys ../trinet-keys.txt --model /Users/playra/igla-coder-gpu/c_infer/model.bin
+model.bin: 7 matrices (layers [0]), 2816 Z[phi] outputs, GFTernary weights t*phi
+jobs: 403200 (32-trit chunks x 2 parts x 6 digit planes x 1 x-vectors)
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+  [ok ] L0/wq:1      320/320    rows bit-exact
+  [ok ] L0/wq:phi    320/320    rows bit-exact
+  [ok ] L0/wk:1       64/64     rows bit-exact
+  [ok ] L0/wk:phi     64/64     rows bit-exact
+  [ok ] L0/wv:1       64/64     rows bit-exact
+  [ok ] L0/wv:phi     64/64     rows bit-exact
+  [ok ] L0/wo:1      320/320    rows bit-exact
+  [ok ] L0/wo:phi    320/320    rows bit-exact
+  [ok ] L0/gate:1    864/864    rows bit-exact
+  [ok ] L0/gate:phi    864/864    rows bit-exact
+  [ok ] L0/up:1      864/864    rows bit-exact
+  [ok ] L0/up:phi    864/864    rows bit-exact
+  [ok ] L0/down:1    320/320    rows bit-exact
+  [ok ] L0/down:phi    320/320    rows bit-exact
+------------------------------------------------------------------
+jobs sent               : 403200 of 403200 planned (window 24)
+receipts verified (tag) : 403200/403200 under node 0x5452494e
+rejected                : none
+rows bit-exact          : 5632/5632  (activations: Z[phi], int8 components)
+elapsed                 : 85.35 s (4724 answers/s)
+longest host pause      : 13.4 ms (after 160860 answers)
+------------------------------------------------------------------
+RESULT: every Z[phi] output above assembled from answers of the AX7203,
+        bit-exact against the Z[phi] oracle, every receipt verified under the key.
+real 86.01
+user 19.51
+sys 5.15
+# exit=0
+# end 2026-09-27T03:34:10Z

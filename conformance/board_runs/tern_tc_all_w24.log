@@ -1,0 +1,61 @@
+# start 2026-09-27T02:43:53Z
+model.bin: 42 matrices, 16896 rows, 6451200 ternary weights (61.1% nonzero)
+jobs: 403200 (32-trit chunks x 2 x-vectors)
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+  [ok ] L0/wq        640/640    rows bit-exact
+  [ok ] L0/wk        128/128    rows bit-exact
+  [ok ] L0/wv        128/128    rows bit-exact
+  [ok ] L0/wo        640/640    rows bit-exact
+  [ok ] L0/gate     1728/1728   rows bit-exact
+  [ok ] L0/up       1728/1728   rows bit-exact
+  [ok ] L0/down      640/640    rows bit-exact
+  [ok ] L1/wq        640/640    rows bit-exact
+  [ok ] L1/wk        128/128    rows bit-exact
+  [ok ] L1/wv        128/128    rows bit-exact
+  [ok ] L1/wo        640/640    rows bit-exact
+  [ok ] L1/gate     1728/1728   rows bit-exact
+  [ok ] L1/up       1728/1728   rows bit-exact
+  [ok ] L1/down      640/640    rows bit-exact
+  [ok ] L2/wq        640/640    rows bit-exact
+  [ok ] L2/wk        128/128    rows bit-exact
+  [ok ] L2/wv        128/128    rows bit-exact
+  [ok ] L2/wo        640/640    rows bit-exact
+  [ok ] L2/gate     1728/1728   rows bit-exact
+  [ok ] L2/up       1728/1728   rows bit-exact
+  [ok ] L2/down      640/640    rows bit-exact
+  [ok ] L3/wq        640/640    rows bit-exact
+  [ok ] L3/wk        128/128    rows bit-exact
+  [ok ] L3/wv        128/128    rows bit-exact
+  [ok ] L3/wo        640/640    rows bit-exact
+  [ok ] L3/gate     1728/1728   rows bit-exact
+  [ok ] L3/up       1728/1728   rows bit-exact
+  [ok ] L3/down      640/640    rows bit-exact
+  [ok ] L4/wq        640/640    rows bit-exact
+  [ok ] L4/wk        128/128    rows bit-exact
+  [ok ] L4/wv        128/128    rows bit-exact
+  [ok ] L4/wo        640/640    rows bit-exact
+  [ok ] L4/gate     1728/1728   rows bit-exact
+  [ok ] L4/up       1728/1728   rows bit-exact
+  [ok ] L4/down      640/640    rows bit-exact
+  [ok ] L5/wq        640/640    rows bit-exact
+  [ok ] L5/wk        128/128    rows bit-exact
+  [ok ] L5/wv        128/128    rows bit-exact
+  [ok ] L5/wo        640/640    rows bit-exact
+  [ok ] L5/gate     1728/1728   rows bit-exact
+  [ok ] L5/up       1728/1728   rows bit-exact
+  [ok ] L5/down      640/640    rows bit-exact
+------------------------------------------------------------------
+jobs sent               : 403200 of 403200 planned (window 24)
+receipts verified (tag) : 403200/403200 under node 0x5452494e
+rejected                : none
+rows bit-exact          : 33792/33792  (activations: ternary)
+elapsed                 : 85.49 s (4716 answers/s)
+longest host pause      : 22.4 ms (after 142395 answers)
+------------------------------------------------------------------
+RESULT: every row above computed on the AX7203 bit-exact against the
+        int8-weight oracle, and every receipt verified under the key.
+real 88.21
+user 21.62
+sys 5.39
+# exit=0
+# end 2026-09-27T02:45:21Z
