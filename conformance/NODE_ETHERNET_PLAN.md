@@ -579,6 +579,27 @@ RAMB36**, no CARRY4, no DSP.
   hold are the RGMII receiver figures as I recall them. None was checked
   against the datasheet. `rxd_late_8ns` and `rxc_late_15ns` show the receive
   side has about 20 ns either way; the transmit side has no such sweep.
+
+  **Followed up at 19:49Z, against sources rather than memory, but still not
+  against the datasheet.**
+
+  - **The driver.** Linux `drivers/net/phy/micrel.c`, last changed in
+    `95c4d54ed022` on 2026-09-19, read through `gh api`. Its comment says the
+    KSZ9031 has an internal RX delay of 1.2 ns and a TX delay of 0 ns. Both
+    match what the model assumed.
+  - **The RGMII v2.0 table.** Receiver setup and hold (TsetupR, TholdR) are
+    1.0 ns minimum, as found by web search in TI SNLA243 and the HP document.
+    That matches the model's 1 ns.
+  - **So nothing in the PHY adds TX hold time.** With a 0 ns TX delay, the hold
+    after the TXC falling edge is only what the LUT chain gives, as designed.
+  - **A fallback if H2 appears, derived from the driver's constants.** The
+    driver's pad-skew registers step in 60 ps (MMD 2 registers 4, 6 and 8), and
+    their neutral values are 0x7 for data and 0xF for clocks. Writing
+    GTX_CLK = 0x00 moves the PHY's sample point 0.90 ns earlier. Writing
+    TXD0-3 and TX_CTL = 0xF delays the data by 0.48 ns. Together that is about
+    1.4 ns more hold, from MDIO writes alone: no new TX logic. It is not built
+    and not simulated. It would be a new pre-registered step, not a change to
+    E3.
 - **The TX edge timing on the board.** The bench puts TXD 3 ns after the TXC
   falling edge. The real figure is the routed LUT chain minus the routed TXC
   path, and no tool in this flow reports it. If it is under the PHY's hold time,
