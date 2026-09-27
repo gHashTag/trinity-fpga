@@ -105,7 +105,9 @@ lost framing the same way after 9,951 jobs. Step 5 rerun with `--window 8`
 passed: 51,840/51,840 receipts, 320/320 rows. The full run was then repeated once
 at the default window of 24 on harness `b1e95f6f` ("Rerun step 1" at the end) and
 passed: `receipts verified (tag) : 403200/403200`, `rows bit-exact :
-33792/33792`. The window-64 control (step 2 of that plan) has not been run.
+33792/33792`. The window-64 control on the same harness ("Rerun step 2") then
+slipped after 6,744 jobs, so the pass at 24 comes from the window, not from the
+harness change.
 
 - Machine: MacBook Pro, Apple M1 Pro, macOS 26.5.2 (25F84), Python 3.14.6,
   pyserial 3.5.
@@ -260,7 +262,8 @@ Open: why the framing slipped. It slipped twice at window 64, after 19,049 jobs
 and after 9,951 jobs. Between those two runs, all 3,200 jobs of step 4 (also at
 window 64) came back framed. At window 8, 51,840 jobs came back framed, and at
 window 24 the full `--all` run did as well (403,200 jobs, "Rerun step 1" at the
-end). Candidates: the CP2102N's
+end). At window 64 on the same harness it slipped a third time, after 6,744 jobs
+("Rerun step 2"). Candidates: the CP2102N's
 baud divider at 1,144,744 against the node's (earlier board runs went through a
 CP2102N seen as `usbserial-130` on another Mac); the USB 2.0 hub (the CP2102N
 did not enumerate on the first hub port tried); 64 jobs in flight
@@ -390,5 +393,66 @@ bit-exact : 33792/33792`, PASS, about 90 s. Got:
   run: `b1e95f6f` adds timing and hex output around the same write and read
   calls. Step 5a was clean at window 8 on the old harness, so the harness change
   is not needed to explain a clean run, but step 2 (the same command with
-  `--window 64` on `b1e95f6f`) is the control that separates the two. It has not
-  been run. Step 3 of the plan (no hub) is not needed, because step 1 passed.
+  `--window 64` on `b1e95f6f`) is the control that separates the two. It was
+  run next (step 2 below). Step 3 of the plan (no hub) is not needed, because
+  step 1 passed.
+
+### Rerun step 2: `--all` at window 64 (control), 2026-09-27 02:53Z
+
+Run once at the owner's request, 02:53:30Z to 02:53:34Z, eight minutes after
+step 1. Same Mac, port, hub, baud and `model.bin`, no power cycle. The harness
+was the same `b1e95f6f`, unmodified (checkout `1e2677a1`). Nothing was changed
+except `--window 64`. Log: `board_runs/tern_tc_all_w64.log`, 0 hits for the
+key's hex.
+
+    python3 tern_tc_layer_ax7203.py --all --setkey --window 64 --port /dev/cu.usbserial-1130 \
+        --baud 1144744 --keys ../trinet-keys.txt --model ~/igla-coder-gpu/c_infer/model.bin
+
+Expected, if the window does not matter: the same PASS as step 1. Got:
+
+    setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+      [ok ] L0/wq        640/640    rows bit-exact
+      [FAIL] L0/wk         27/128    rows bit-exact
+      [FAIL] L0/wv          0/128    rows bit-exact
+      [... 39 lines elided: L0/wo to L5/down, 0 rows in every matrix ...]
+    jobs sent               : 6744 of 403200 planned (window 64)
+    receipts verified (tag) : 6679/403200 under node 0x5452494e
+    rejected                : {'tag': 1, 'short': 1, 'missing': 396520}
+    rows bit-exact          : 667/33792  (activations: ternary)
+    elapsed                 : 1.47 s (4538 answers/s)
+    longest host pause      : 4.2 ms (after 4987 answers)
+      ! nonce 0x00011a17: right y, tag does not verify
+      ! after 6744 sent, 64 outstanding: short or unframed read (19 bytes) 01 1b 1a 01 00 4e 49 52 54 e6 4e 86 79 fe e1 9a 8c a5 02; 37 more bytes waiting
+    RESULT: FAIL - do not cite these matrices as verified.
+
+- FAIL, and the run is not cited. No retry: the failure came after the first
+  job.
+- **The control separates the causes.** With the same harness, setup and
+  session, window 24 carried 403,200 jobs clean and window 64 slipped after
+  6,744. The pass in step 1 therefore comes from the window, not from the
+  harness change. At window 64 this is the third slip in three long runs (after
+  19,049, 9,951 and 6,744 jobs). Only step 4's 3,200 jobs came through whole.
+- **The bytes.** The failed read is the answer to job 6,683 (nonce
+  `0x00011a1b`), starting from its third byte: status `01`, nonce `1b 1a 01 00`,
+  node id `4e 49 52 54`, 8 tag bytes, then `a5 02`, the first two bytes of the
+  next answer. The read before it was credited to job 6,679 (nonce
+  `0x00011a17`). Its y was right, but its tag did not verify, and the harness
+  refused the receipt. No answers to jobs 6,680 to 6,682 appeared. Suppose
+  there is one hole and the node answered in order. Then the hole starts inside
+  job 6,679's tag, and the two ends fix its length at 59 bytes, three answers
+  plus two bytes, wherever inside the tag it starts. The harness prints no hex
+  for a tag failure, so where it starts is not known.
+- **The host did not pause before the hole.** The longest pause in this run was
+  4.2 ms, at answer 4,987, about 1,700 answers before the hole. That is about
+  481 bytes of line time at 1,144,744 baud (10 bits per byte), less than half of
+  a full window-64 queue of 1,216 bytes (derived). Step 1 survived a 22.4 ms
+  pause at window 24. By the criterion under "Rerun that tells the causes
+  apart", a hole with no pause before it points at the link (adapter, driver,
+  hub, cable), not at a queue filled while the host was away. The window still
+  matters: 64 answers in flight slip, and 24 do not. How the window acts on the
+  link is not measured.
+- The three holes so far have no common length: 16 bytes, 4 bytes and 59
+  bytes. The first two may each be longer by whole answers.
+- Operating point for now: window 24, the harness default. The causes that
+  remain are testable without new RTL. One is window 64 without the hub. The
+  other is the adapter's and the driver's buffer sizes. Neither has been run.
