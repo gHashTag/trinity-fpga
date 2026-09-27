@@ -1,0 +1,62 @@
+# start 2026-09-27T02:53:30Z
+model.bin: 42 matrices, 16896 rows, 6451200 ternary weights (61.1% nonzero)
+jobs: 403200 (32-trit chunks x 2 x-vectors)
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+  [ok ] L0/wq        640/640    rows bit-exact
+  [FAIL] L0/wk         27/128    rows bit-exact
+  [FAIL] L0/wv          0/128    rows bit-exact
+  [FAIL] L0/wo          0/640    rows bit-exact
+  [FAIL] L0/gate        0/1728   rows bit-exact
+  [FAIL] L0/up          0/1728   rows bit-exact
+  [FAIL] L0/down        0/640    rows bit-exact
+  [FAIL] L1/wq          0/640    rows bit-exact
+  [FAIL] L1/wk          0/128    rows bit-exact
+  [FAIL] L1/wv          0/128    rows bit-exact
+  [FAIL] L1/wo          0/640    rows bit-exact
+  [FAIL] L1/gate        0/1728   rows bit-exact
+  [FAIL] L1/up          0/1728   rows bit-exact
+  [FAIL] L1/down        0/640    rows bit-exact
+  [FAIL] L2/wq          0/640    rows bit-exact
+  [FAIL] L2/wk          0/128    rows bit-exact
+  [FAIL] L2/wv          0/128    rows bit-exact
+  [FAIL] L2/wo          0/640    rows bit-exact
+  [FAIL] L2/gate        0/1728   rows bit-exact
+  [FAIL] L2/up          0/1728   rows bit-exact
+  [FAIL] L2/down        0/640    rows bit-exact
+  [FAIL] L3/wq          0/640    rows bit-exact
+  [FAIL] L3/wk          0/128    rows bit-exact
+  [FAIL] L3/wv          0/128    rows bit-exact
+  [FAIL] L3/wo          0/640    rows bit-exact
+  [FAIL] L3/gate        0/1728   rows bit-exact
+  [FAIL] L3/up          0/1728   rows bit-exact
+  [FAIL] L3/down        0/640    rows bit-exact
+  [FAIL] L4/wq          0/640    rows bit-exact
+  [FAIL] L4/wk          0/128    rows bit-exact
+  [FAIL] L4/wv          0/128    rows bit-exact
+  [FAIL] L4/wo          0/640    rows bit-exact
+  [FAIL] L4/gate        0/1728   rows bit-exact
+  [FAIL] L4/up          0/1728   rows bit-exact
+  [FAIL] L4/down        0/640    rows bit-exact
+  [FAIL] L5/wq          0/640    rows bit-exact
+  [FAIL] L5/wk          0/128    rows bit-exact
+  [FAIL] L5/wv          0/128    rows bit-exact
+  [FAIL] L5/wo          0/640    rows bit-exact
+  [FAIL] L5/gate        0/1728   rows bit-exact
+  [FAIL] L5/up          0/1728   rows bit-exact
+  [FAIL] L5/down        0/640    rows bit-exact
+------------------------------------------------------------------
+jobs sent               : 6744 of 403200 planned (window 64)
+receipts verified (tag) : 6679/403200 under node 0x5452494e
+rejected                : {'tag': 1, 'short': 1, 'missing': 396520}
+rows bit-exact          : 667/33792  (activations: ternary)
+elapsed                 : 1.47 s (4538 answers/s)
+longest host pause      : 4.2 ms (after 4987 answers)
+  ! nonce 0x00011a17: right y, tag does not verify
+  ! after 6744 sent, 64 outstanding: short or unframed read (19 bytes) 01 1b 1a 01 00 4e 49 52 54 e6 4e 86 79 fe e1 9a 8c a5 02; 37 more bytes waiting
+------------------------------------------------------------------
+RESULT: FAIL - do not cite these matrices as verified.
+real 4.17
+user 2.76
+sys 0.17
+# exit=1
+# end 2026-09-27T02:53:34Z

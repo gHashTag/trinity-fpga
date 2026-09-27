@@ -1,0 +1,138 @@
+{
+  "top": "tnf16_board_ax7203",
+  "part": "xc7a200tfbg484-2",
+  "node": 0,
+  "params": {},
+  "rev": null,
+  "placer_seed": [
+    "heap",
+    1
+  ],
+  "freq": "50.0",
+  "yosys_script": "read_verilog /tmp/tnf16-build3/src/tnf16_board_params.v /tmp/tnf16-build3/src/tnf16_core.v /tmp/tnf16-build3/src/tnf16_board_ax7203.v; synth_xilinx -flatten -abc9 -nocarry -nodsp -nosrl -arch xc7 -top tnf16_board_ax7203; setundef -zero -params; write_json /tmp/tnf16-build3/node.json",
+  "chipdb": "/Users/playra/openxc7-src/chipdb/xc7a200tfbg484-2.bin",
+  "db_root": "/Users/playra/.cache/openxc7/prjxray-db-ab1fc60/artix7",
+  "required_features_fasm": false,
+  "inputs": {
+    "tnf16_board_params.v": "ea2886bea5b7db75dec2832444062220bcc10dc7ac2f4abe24962a23fac1fd34",
+    "tnf16_core.v": "2e248e41c69c36bcb1cdc84e99c4a74f257e94c415219e142bf2d701ced3cdbb",
+    "tnf16_board_ax7203.v": "eeafe077d9b965ff8dd43b403aee52641c19c2b6e34ea5c11413da43476a0f1e",
+    "gf16_clean_ax7203.xdc": "7256eb2516f4ae90d83d1527dd88b9866df70e5dc554775d714ec17667e7d378"
+  },
+  "tools": {
+    "yosys": "Yosys 0.67+post (git sha1 b8e7da6f40ae8f552c116bf6c359b07c6533e159, Release, AppleClang clang++ 21.0.0.21000099)",
+    "nextpnr-xilinx": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 0.9.2-107-g7037c948)",
+    "python3": "3.14.6",
+    "prjxray": "c9f02d8 Thu Jun 5 17:15:54 2025 +0200",
+    "nextpnr-xilinx-src": "7037c948 Tue Aug 18 10:39:17 2026 +0700"
+  },
+  "steps": [
+    {
+      "step": "yosys",
+      "cmd": [
+        "yosys",
+        "-q",
+        "-l",
+        "/tmp/tnf16-build3/yosys.full.log",
+        "-p",
+        "read_verilog /tmp/tnf16-build3/src/tnf16_board_params.v /tmp/tnf16-build3/src/tnf16_core.v /tmp/tnf16-build3/src/tnf16_board_ax7203.v; synth_xilinx -flatten -abc9 -nocarry -nodsp -nosrl -arch xc7 -top tnf16_board_ax7203; setundef -zero -params; write_json /tmp/tnf16-build3/node.json"
+      ],
+      "rc": 0,
+      "log": "/tmp/tnf16-build3/yosys.log",
+      "wall_s": 7.66,
+      "max_rss_mb": 192.2,
+      "peak_footprint_mb": 118.2
+    },
+    {
+      "step": "nextpnr",
+      "cmd": [
+        "nextpnr-xilinx",
+        "--chipdb",
+        "/Users/playra/openxc7-src/chipdb/xc7a200tfbg484-2.bin",
+        "--xdc",
+        "/tmp/tnf16-build3/src/gf16_clean_ax7203.xdc",
+        "--json",
+        "/tmp/tnf16-build3/node.json",
+        "--write",
+        "/tmp/tnf16-build3/node_routed.json",
+        "--fasm",
+        "/tmp/tnf16-build3/node.fasm",
+        "--freq",
+        "50.0",
+        "--seed",
+        "1",
+        "--placer",
+        "heap",
+        "--router",
+        "router1",
+        "--timing-allow-fail"
+      ],
+      "rc": 0,
+      "log": "/tmp/tnf16-build3/nextpnr.log",
+      "wall_s": 24.22,
+      "max_rss_mb": 590.4,
+      "peak_footprint_mb": 268.9,
+      "fmax_mhz": {
+        "mclk": 126.87
+      },
+      "placer": "heap",
+      "seed": 1
+    },
+    {
+      "step": "fasm2frames",
+      "cmd": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/playra/openxc7-src/prjxray/utils/fasm2frames.py",
+        "--db-root",
+        "/Users/playra/.cache/openxc7/prjxray-db-ab1fc60/artix7",
+        "--part",
+        "xc7a200tfbg484-2",
+        "/tmp/tnf16-build3/node.fasm",
+        "/tmp/tnf16-build3/node.frames"
+      ],
+      "rc": 0,
+      "log": "/tmp/tnf16-build3/fasm2frames.log",
+      "wall_s": 31.92,
+      "max_rss_mb": 251.9,
+      "peak_footprint_mb": 261.8
+    },
+    {
+      "step": "frames2bit",
+      "cmd": [
+        "xc7frames2bit",
+        "--part_file",
+        "/Users/playra/.cache/openxc7/prjxray-db-ab1fc60/artix7/xc7a200tfbg484-2/part.yaml",
+        "--part_name",
+        "xc7a200tfbg484-2",
+        "--frm_file",
+        "/tmp/tnf16-build3/node.frames",
+        "--output_file",
+        "/tmp/tnf16-build3/tnf16_board_ax7203.bit"
+      ],
+      "rc": 0,
+      "log": "/tmp/tnf16-build3/frames2bit.log",
+      "wall_s": 0.4,
+      "max_rss_mb": 45.1,
+      "peak_footprint_mb": 40.7
+    }
+  ],
+  "outputs": {
+    "node.json": {
+      "bytes": 10569443,
+      "sha256": "752a31daa1e1922f4e460985b2f0c1ecc177431dca501bbfb0c83e055e844c41"
+    },
+    "node.fasm": {
+      "bytes": 681043,
+      "sha256": "b1abc37c282fb17c69371a6ab54eccebacbe4983e3c4f3c2c3a2d578c4f76900"
+    },
+    "node.frames": {
+      "bytes": 22698060,
+      "sha256": "8bc133a2eaf3742cdfa1e54d9c06833fce7cbce05261a36ae7a0f87c5d86aa55"
+    },
+    "tnf16_board_ax7203.bit": {
+      "bytes": 9730773,
+      "sha256": "1820b114589a0108fbf20f89eeead4852f6af9f3463f1fc9ee03bf758656370b",
+      "payload_sha256": "6d4e0dd3397e3b024184277782f8ee382db1a0c69107bd272a1868207d7ffd47"
+    }
+  }
+}

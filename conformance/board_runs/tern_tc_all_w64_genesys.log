@@ -1,0 +1,65 @@
+# start 2026-09-27T09:34:34Z
+# usb HUB ['0x110000']
+# cmd python3 tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-110 --baud 1144744 --keys ../trinet-keys.txt --model /Users/playra/igla-coder-gpu/c_infer/model.bin --window 64
+# limit 1800 s
+model.bin: 42 matrices, 16896 rows, 6451200 ternary weights (61.1% nonzero)
+jobs: 403200 (32-trit chunks x 2 x-vectors)
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+  [ok ] L0/wq        640/640    rows bit-exact
+  [ok ] L0/wk        128/128    rows bit-exact
+  [ok ] L0/wv        128/128    rows bit-exact
+  [ok ] L0/wo        640/640    rows bit-exact
+  [ok ] L0/gate     1728/1728   rows bit-exact
+  [ok ] L0/up       1728/1728   rows bit-exact
+  [ok ] L0/down      640/640    rows bit-exact
+  [ok ] L1/wq        640/640    rows bit-exact
+  [ok ] L1/wk        128/128    rows bit-exact
+  [ok ] L1/wv        128/128    rows bit-exact
+  [ok ] L1/wo        640/640    rows bit-exact
+  [ok ] L1/gate     1728/1728   rows bit-exact
+  [ok ] L1/up       1728/1728   rows bit-exact
+  [ok ] L1/down      640/640    rows bit-exact
+  [ok ] L2/wq        640/640    rows bit-exact
+  [ok ] L2/wk        128/128    rows bit-exact
+  [ok ] L2/wv        128/128    rows bit-exact
+  [ok ] L2/wo        640/640    rows bit-exact
+  [ok ] L2/gate     1728/1728   rows bit-exact
+  [ok ] L2/up       1728/1728   rows bit-exact
+  [FAIL] L2/down      170/640    rows bit-exact
+  [FAIL] L3/wq          0/640    rows bit-exact
+  [FAIL] L3/wk          0/128    rows bit-exact
+  [FAIL] L3/wv          0/128    rows bit-exact
+  [FAIL] L3/wo          0/640    rows bit-exact
+  [FAIL] L3/gate        0/1728   rows bit-exact
+  [FAIL] L3/up          0/1728   rows bit-exact
+  [FAIL] L3/down        0/640    rows bit-exact
+  [FAIL] L4/wq          0/640    rows bit-exact
+  [FAIL] L4/wk          0/128    rows bit-exact
+  [FAIL] L4/wv          0/128    rows bit-exact
+  [FAIL] L4/wo          0/640    rows bit-exact
+  [FAIL] L4/gate        0/1728   rows bit-exact
+  [FAIL] L4/up          0/1728   rows bit-exact
+  [FAIL] L4/down        0/640    rows bit-exact
+  [FAIL] L5/wq          0/640    rows bit-exact
+  [FAIL] L5/wk          0/128    rows bit-exact
+  [FAIL] L5/wv          0/128    rows bit-exact
+  [FAIL] L5/wo          0/640    rows bit-exact
+  [FAIL] L5/gate        0/1728   rows bit-exact
+  [FAIL] L5/up          0/1728   rows bit-exact
+  [FAIL] L5/down        0/640    rows bit-exact
+------------------------------------------------------------------
+jobs sent               : 189001 of 403200 planned (window 64)
+receipts verified (tag) : 188936/403200 under node 0x5452494e
+rejected                : {'fabricated': 1, 'short': 1, 'missing': 214264}
+rows bit-exact          : 16426/33792  (activations: ternary)
+elapsed                 : 39.79 s (4748 answers/s)
+longest host pause      : 8.3 ms (after 141395 answers)
+  ! nonce 0x01fda508 was never issued: a5 fc 01 08 a5 fd 01 0b e2 03 00 4e 49 52 54 2f ac 15 dc
+  ! after 189001 sent, 64 outstanding: short or unframed read (19 bytes) 24 7b 50 98 a5 03 01 0c e2 03 00 4e 49 52 54 94 3c c3 5e; 94 more bytes waiting
+------------------------------------------------------------------
+RESULT: FAIL - do not cite these matrices as verified.
+real 42.45
+user 10.88
+sys 2.48
+# exit=1
+# end 2026-09-27T09:35:17Z

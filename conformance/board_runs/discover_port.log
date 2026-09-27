@@ -1,0 +1,7 @@
+miss /dev/cu.usbserial-210512180081
+no board answered - flash a node bitstream first (pld load), then rerun
+start 2026-09-27T01:59:38Z
+miss /dev/cu.usbserial-210512180081
+no board answered - flash a node bitstream first (pld load), then rerun
+start 2026-09-27T02:01:31Z
+HIT  /dev/cu.usbserial-1130 @ 1144744: status=0x04 (no key) raw=a50004000000004e4952540aa8a26087cc71e5

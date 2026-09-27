@@ -1,0 +1,10 @@
+# start 2026-09-27T04:40:22Z
+# usb HUB ['0x1130000']
+# cmd python3 gf8_add_conformance_ax7203.py --port /dev/cu.usbserial-1130 --baud 154839 --exhaustive
+# limit 1800 s
+HW RESULT: 65536/65536 bit-exact (fails=0)
+real 254.47
+user 8.27
+sys 3.42
+# exit=0
+# end 2026-09-27T04:44:37Z
