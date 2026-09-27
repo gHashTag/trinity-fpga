@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the Trinity S3AI paper series from the single source manuscript.
 
-The series is four papers cut from one 8,061-line source, in five renderings:
+The series is four papers cut from one source manuscript, in five renderings:
 
   A  paper-a-methodology  How a comparison fails      (the transferable result)
   B  paper-b-format       Ternary Network Floats      (the format result)
@@ -368,7 +368,7 @@ def strip_figures(text):
     """Drop the ornament and keep the data.
 
     78 of the source's 87 figures are canon plates: full-width three-panel
-    engravings, and not one of them is \\ref'd anywhere in 8,061 lines. The
+    engravings, and not one of them is \\ref'd anywhere in the source. The
     other nine are generated plots of measurements, and four of those ARE
     referenced. So the rule is not "delete figures", it is "delete the ones
     whose image comes out of canon/" -- which keeps the distinction the source
