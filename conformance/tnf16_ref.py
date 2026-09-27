@@ -14,6 +14,13 @@ Off-path conformance oracle (like gf_ref.py / tekum_ref.py). TNF16:
 The 7-bit exp_offset is the DECODED exponent field; on ternary hardware it is a
 4-trit balanced-ternary number (offset = Σ tᵢ·3ⁱ, tᵢ∈{0,1,2}) added natively.
 Arithmetic: decode -> exact in Fractions -> re-encode with round-to-nearest-even.
+
+GRID NOTICE (2026-09-27): a 7-bit field also holds 81..127, which no four-trit
+exponent produces and encode() never writes. Those 48,128 of the 131,072 codes
+are not TNF16 words, and decode() raises ValueError on them; is_word() filters
+an enumeration of raw codes. Until this date decode() read them as ordinary
+powers of two. The long form, with the counts for every rung, is the GRID
+NOTICE in tnf_ref.py.
 """
 
 from fractions import Fraction
@@ -80,10 +87,18 @@ def is_special(raw: int) -> bool:
     return ((raw >> EXP_SHIFT) & 0x7F) == OFFSET_MAX
 
 
+def is_word(raw: int) -> bool:
+    """True when the exponent field holds a four-trit offset (0 .. OFFSET_MAX)."""
+    return ((raw >> EXP_SHIFT) & 0x7F) <= OFFSET_MAX
+
+
 def decode(raw: int):
     sign = (raw >> SIGN_SHIFT) & 1
     offset = (raw >> EXP_SHIFT) & 0x7F
     mant = raw & (MANT - 1)
+    if offset > OFFSET_MAX:
+        raise ValueError(f"not a TNF16 word: exponent offset {offset} > "
+                         f"{OFFSET_MAX} (raw {raw:#x})")
     if offset == OFFSET_MAX:
         return math.nan if mant else (-math.inf if sign else math.inf)
     if offset == 0:
@@ -126,6 +141,31 @@ def _selftest():
     # 6-bit-exponent (~18-decade) range, where GF16 saturates to Inf.
     v = 2.0 ** 35
     print(f"  2^35 round-trip = {float(decode(encode(v))):.4e} (TNF16 holds it; GF16 clips to Inf)")
+    _grid_check()
+
+
+def _grid_check():
+    """Only four-trit offsets are words: count them and check decode refuses the rest.
+
+    Words: 2 * 81 * 512 = 82,944 of 2^17 codes; finite non-zero words:
+    2 * 79 * 512 = 80,896; the other 48,128 codes must be refused.
+    """
+    words = finite = refused = 0
+    for raw in range(1 << (SIGN_SHIFT + 1)):
+        if not is_word(raw):
+            try:
+                decode(raw)
+            except ValueError:
+                refused += 1
+                continue
+            raise AssertionError(f"decode accepted non-word {raw:#x}")
+        words += 1
+        v = decode(raw)
+        if isinstance(v, Fraction) and v != 0:
+            finite += 1
+    assert (words, finite, refused) == (82944, 80896, 48128), (words, finite, refused)
+    print(f"  grid: {words} words ({finite} finite non-zero), "
+          f"{refused} non-word codes refused")
 
 
 if __name__ == "__main__":

@@ -71,9 +71,13 @@ for tag, ref in CASES:
     got = sweep(tag)
     if not got:
         print(f"  {tag}: no sweep captured -- skipped"); continue
-    bad = 0
+    bad = refused = 0
     for raw, v in sorted(got.items()):
+        # A reference that raises ValueError refuses the code: tnf16_ref does so
+        # for an exponent field above the special row, which is not a TNF16 word.
+        # Those codes are counted, not compared, so the total stays visible.
         try: want = ref(raw)
+        except ValueError: refused += 1; continue
         except Exception: continue
         checked += 1
         if not close(v, want):
@@ -81,7 +85,8 @@ for tag, ref in CASES:
             if bad <= 3:
                 fails.append(f"{tag}: code {raw} decoded {v!r}, reference says {want!r}")
     counts[tag] = bad
-    print(f"  {tag:12} {len(got):6} codes, {bad} mismatch(es)")
+    note = f", {refused} refused by the reference (not words)" if refused else ""
+    print(f"  {tag:12} {len(got):6} codes, {bad} mismatch(es){note}")
 
 print(f"\ncodes compared: {checked}")
 # An instrument that compared nothing has not found agreement; it has found
