@@ -751,7 +751,7 @@ tri fpga-keycheck
   "runtest 2000" -c "shutdown"`. `tri fpga-flash` adds the payload check, the
   UART lock and the log.
 
-**Prior art (searched 2026-09-27, two web searches plus gh).** No public
+**Prior art (searched 2026-09-27, three web searches plus gh).** No public
 report was found of an Artix-7 RGMII design built with the open flow that
 answers ARP or ping on a board. The nearest are:
 
@@ -760,6 +760,16 @@ answers ARP or ping on a board. The nearest are:
   RGMII. The PR is open and unmerged, and it does not claim a board run.
 - openXC7/nextpnr#22: IDDR does not capture on this board. It is open, with 25
   comments, last updated 2026-09-22. E3 works around it with fabric capture.
+- enjoy-digital/liteeth#232 (opened 2026-09-26, no replies when read): several
+  LiteEth RGMII receivers, the 7-series one included, ignore the falling-edge
+  RX_CTL sample, so RX_ER never reaches the MAC. E3 samples RX_CTL only on the
+  falling edge, where it carries RX_DV xor RX_ER (RTL line 166). An RX_ER inside
+  a frame therefore ends the frame early, and the FCS check drops it into `fe`.
+  This was read from the RTL. The RX_ER bench below checks it in simulation.
+- The common advice for 10/100 RGMII is to sample on the rising edge. E3
+  samples on the falling one. Its reason is that the KSZ9031 changes the
+  nibble near the rising edge (RTL lines 11-21). The `ed` counter compares the
+  two samples on the board, so the board decides which reason held.
 
 So an H1 would be worth a comment on openXC7/nextpnr#22 with the logs: fabric
 capture at 100M answered a ping. Two things limit the wording:
@@ -767,6 +777,58 @@ capture at 100M answered a ping. Two things limit the wording:
 - **Not "first".** A search that finds nothing does not show that nothing
   exists.
 - **Nothing is claimed before the verdict.**
+
+**RX_ER bench (simulation; expectations written 21:29:27Z `date -u`, before
+the first run).** The pinned bench has no RX_ER, because the KSZ9031 frame
+model drives none. `conformance/eth_rxer_bench.py` compiles the pinned TB,
+model, RTL and mock unchanged. It adds `formal/eth_rxer_inject.v` as a second
+top module, which forces RX_CTL around one falling RXC edge. Each forced edge
+prints the RTL's own falling-edge sample, so a case in which the RTL never saw
+the error cannot pass. The five cases and what the RTL reading predicts:
+
+- `control`: a ping, then an ARP request, with nothing injected. Both are
+  answered, and the counters are rx 2, fe 0.
+- `er_in_ip_header`: RX_ER on the ping's data nibble 60. The frame ends there
+  at 30 bytes, which counts in `fe`. The tail starts with nibble C and is
+  skipped. Only the ARP request is answered, and the counters are rx 2, fe 1.
+- `er_in_preamble`: RX_ER on preamble nibble 5. R_PRE clears its "seen a 5"
+  flag, the next 5s set it again, and the SFD starts the frame. Both requests
+  are answered as if nothing happened. IEEE 802.3 clause 22.2.2.5 marks such a
+  frame as errored, so a MAC would drop it.
+- `er_then_false_sfd`: RX_ER on nibble 67 of a frame whose payload has `55 D5`
+  just after it. The frame ends at 34 bytes, counted in `fe`. The tail then
+  reads 5 5 5 D, which is an SFD, so it starts a second frame of 84 bytes that
+  also fails its FCS. One errored frame counts rx 2 and fe 2. The ARP request
+  after it is answered.
+- `false_carrier`: four nibbles of false carrier (RX_DV 0, RX_ER 1, RXD E)
+  between the frames. R_PRE sees E and skips until the falling sample drops.
+  No counter moves, and both requests are answered.
+
+Result, RTL only (checked), finished 21:34Z. **5 of 5 cases came out as
+written.** Every case had model_errors 0 and replies byte-equal to the runner's
+reference. Every forced edge was sampled by the RTL as forced (`INJ ...
+rtl_falling_sample`), and the edge times differ by the nibble offsets times
+40 ns. Counters on the last UART line:
+
+| case | TX | rx | fe | eq | er |
+|---|---|---|---|---|---|
+| control | 2 | 2 | 0 | 1 | 1 |
+| er_in_ip_header | 1 | 2 | 1 | 0 | 0 |
+| er_in_preamble | 2 | 2 | 0 | 1 | 1 |
+| er_then_false_sfd | 1 | 3 | 2 | 0 | 0 |
+| false_carrier | 2 | 2 | 0 | 1 | 1 |
+
+The first invocation did not compile, and no case ran: iverilog refuses a
+`force` from an automatic task. The fix was in the injector only, and the
+expectations above were left unchanged. The logs are in `/tmp/e3rxer/`, not
+kept in the repo, as with `/tmp/e3sim`. Three limits apply:
+
+- The gate netlist was not run here.
+- The model's own RX timing is unchanged, so this says nothing about the board's
+  edges.
+- On the board, `fe` counts errored frames and false SFDs together. One RX_ER
+  can add 2 to `rx` and `fe`, so `fe` is an upper bound on the errored frames,
+  not a count of them.
 
 **Where the files point.** This section and the one before it were drafted as
 `conformance/E3_DRAFT_SECTION.md` and merged here. The comment in
