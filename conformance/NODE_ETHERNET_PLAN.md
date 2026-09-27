@@ -111,6 +111,74 @@ specs/fpga/constraints/dual_clk_heartbeat_ax7203.xdc --no-node-params`.
 So the open flow builds the 200 MHz input. Whether the oscillator runs is
 still unproven: that needs the flash in E1, and so the owner's yes.
 
+### E2 build and simulation (checked; not flashed)
+
+Files: `fpga/vivado/eth_phy_status_ax7203.v` (what it does is in its header),
+`specs/fpga/constraints/eth_phy_status_ax7203.xdc`, the testbench
+`formal/eth_phy_status_tb.v` with a KSZ9031 MDIO and RGMII model
+`formal/ksz9031_status_model.v`, and the checker
+`conformance/eth_phy_status_ax7203.py`. With no arguments the checker runs all
+three gates below and prints `RESULT PASS` or `RESULT FAIL`. `--port` reads a
+real board's lines; it has not been run, because nothing is flashed.
+
+**Build.** `tri fpga-build --top eth_phy_status_ax7203` with `--nosrl`, all
+four steps rc=0.
+
+- 848 LUT, 939 FF, and no CARRY4, DSP or BRAM.
+- Post-route Fmax was 133.26 MHz on mclk, against the 68.7 MHz worst case,
+  and 174.61 MHz on RXC, against 125 MHz. After placement the figures were
+  126.37 and 201.01 MHz. As with E1, nextpnr checked against its default
+  50 MHz, so the margin comes from Fmax, not from a constraint.
+- Payload sha256
+  `0b6d7820fbf96b2e7d4113b63e1eff638e5cbcd55769fd6f3ab6c787c5ceeac1`.
+
+**Static timing of the full parameters,** at both ends of the measured
+CFGMCLK range:
+
+| | 65.6 MHz | 68.7 MHz | datasheet |
+|---|---:|---:|---|
+| PHY reset pulse | 15.98 ms | 15.26 ms | >= 10 ms |
+| wait before MDIO | 31.97 ms | 30.53 ms | >= 100 us |
+| MDC | 2.050 MHz | 2.147 MHz | <= 2.5 MHz |
+| poll period | 512 ms | 488 ms | |
+| reset after no link | 15.3 s | 14.7 s | |
+
+The 24-bit RXC counter holds 125 MHz over the window at both clocks.
+
+**Simulation.** Icarus, scaled timers (reset 2^6, wait 2^7, poll 2^17, window
+2^12, no-link reset after 4 polls). The same judge runs on every scenario. It
+checks the TB counters (model errors, X on MDIO, bus contention, a non-zero
+TX pin, UART framing), the line sequence, the PHY answer map and PHYID, both
+read-backs (g9 0300>0000, a4 01E1>0181), and the retry count. It also checks
+the RXC count, within +-2 of the model's clock.
+
+| scenario | RTL | gate level |
+|---|---|---|
+| link: model links at 100 FD after auto-negotiation | PASS, 66 MDIO frames, last line `100FD`, in-band `B`, 468 frames, RXC 24.99 MHz | PASS, byte-identical to RTL |
+| no link: model never links | PASS, 108 MDIO frames, `rt` 0 then 1 from line 5, RXC 125.00 MHz, 0 frames | PASS, byte-identical to RTL |
+
+Both gate runs print the same UART lines as RTL, byte for byte (`cmp`), and
+`RESULT PASS` (10:55Z; 626 s and 908 s of simulation). Bus contention is
+counted in the RTL runs only: the netlist has no `mdio_oe` net to probe.
+
+The gate-level netlist is `synth_xilinx -flatten -abc9 -nocarry -nodsp -nosrl`,
+the flags the build uses, simulated against Yosys's `cells_sim.v`. It is
+synthesised with the **scaled** parameters, so it checks the synthesis of this
+logic, not the exact bitstream above. That bitstream differs only in counter
+widths.
+
+**What the simulation cannot show.** The PHY model and the RTL come from one
+reading of the KSZ9031 register map (9, 4, 0, 1, 0x1F). A misreading shared by
+both would pass. That in-band status appears on RXD at all rests on the
+operator's notes of 2026-08-09, quoted above; the model assumes it. Pin
+timing, the real reset behaviour of the PHY, and the cable are not modelled.
+The board read (`--port`) is the first test of any of these.
+
+**Before any flash.** The XDC header says to open VCCO_16 first. The Ethernet
+pins and, in `ax7203.xdc`, the user LEDs share bank 16 with different
+IOSTANDARDs, so one of the two files is wrong. The flash command is printed by
+`tri fpga-build`, not run. It needs the owner's yes.
+
 ## Security notes for E4
 
 - Anyone on the LAN can send requests. They can use up capacity, but without
