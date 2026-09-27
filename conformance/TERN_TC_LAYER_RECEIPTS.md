@@ -30,7 +30,9 @@ that chunk's dot product. Per row: every chunk accepted, and the chunk sum equal
 to the row dot computed from the model's int8 weights directly (not from the
 packed wire bytes). `--self-test` shows each check failing on a cell built to
 break it: wrong key, a validly signed wrong answer, a flipped tag bit, an
-unissued nonce, another node id, a dropped response, an unkeyed node.
+unissued nonce, another node id, a dropped response, an unkeyed node, and 16
+bytes lost from the middle of the answer stream (the 2026-09-27 board failure,
+below).
 
 ## Booked as new hardware, needs none
 
@@ -77,9 +79,11 @@ Reproduce:
 
     cd ~/trinity-fpga/conformance
     python3 tern_tc_layer_ax7203.py --self-test
-    python3 tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-130 \
+    python3 tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-1130 \
         --baud 1144744 --keys ../trinet-keys.txt --model ~/igla-coder-gpu/c_infer/model.bin
 
+The port name depends on the Mac and the hub: `usbserial-130` on the Air,
+`usbserial-1130` on the M1 Pro on 2026-09-27. `trinet_discover.py` finds it.
 `--setkey` installs node0's key and checks the ack tag. After a power cycle it
 is required; if the board already holds a key the ack is 0x03, and the receipts
 then show whether it is the right one. Needs `pyserial`.
@@ -218,3 +222,68 @@ baud divider at 1,144,744 against the node's (earlier board runs went through a
 CP2102N seen as `usbserial-130` on another Mac); the USB 2.0 hub (the CP2102N
 did not enumerate on the first hub port tried); 64 jobs in flight
 (`--window`) against the node's receive buffer.
+
+### What the bytes say (analysis after the run, no new board data)
+
+The frame layout is `A5 y status nonce[4] node_id[4] tag[8]`, little-endian; the
+node id goes out as `4e 49 52 54`.
+
+- **Step 3.** Job 18,984's answer arrived as `A5 y s 28 4a 01 00 4e` and then
+  `01 00 4e`. Those three bytes are the tail of the *next* answer's nonce
+  (`29 4a 01 00`) and the first byte of its node id. The answer stream lost 16
+  contiguous bytes: the last 11 of one answer and the first 5 of the next.
+  Before it, 18,984 answers (360,696 bytes) arrived intact.
+- **Step 5.** Job 9,886's answer arrived as `A5 y s 9e 26 01` and then `54`, the
+  last node-id byte. The stream lost 4 contiguous bytes (`00 4e 49 52`). Before
+  it, 9,886 answers (187,834 bytes) arrived intact.
+
+Either hole may also be longer by a whole number of 19-byte answers; the logs
+kept no hex to tell. Both are holes with intact bytes on both sides, at
+different offsets, after about 10,000 and 19,000 clean answers. Step 4's 3,200
+jobs, run between them with 64 in flight too, came back whole.
+
+- **Not the node.** `trinet_node_core.v` has no receive buffer to overflow: it
+  parses requests byte by byte, and a lost request byte would give a misparsed
+  request but still a whole 19-byte answer. Its transmitter sends each answer
+  from one 19-byte buffer; a new result during a send restarts at `A5`, which
+  would have put `a5` straight after the cut, not `01 00 4e` or `54`. It cannot
+  happen at this pacing anyway: a 24-byte request takes longer on the wire than
+  a 19-byte answer.
+- **Unlikely to be the baud divider.** A rate mismatch corrupts bits inside
+  bytes, scattered over the run. Both runs had hundreds of thousands of clean
+  bytes and then a hole with intact bytes on both sides.
+- **Consistent with a receive queue overflow.** With `--window 64`, up to 64
+  answers (1,216 bytes) can be in flight towards the host. If the host stops
+  reading for long enough, they queue in the USB adapter and the driver, and a
+  queue that fills drops bytes. Not measured: the adapter's and the driver's
+  buffer sizes, and whether the host paused.
+- **Not ruled out: the hub or the cable.** A lost USB transfer would also make
+  a contiguous hole.
+
+### What changed in the harness
+
+- `--window` defaults to 24: at most 456 bytes of answers can queue.
+- The summary reports `jobs sent` as the number written (steps 3 and 5 printed
+  the jobs planned) and `answers/s` from answers received, and it prints the
+  longest time the host spent between two reads.
+- A failed read now logs its bytes in hex, how many jobs were outstanding and
+  how many bytes were still waiting in the port.
+- The self-test replays the step 3 failure: a reference cell whose answer
+  stream loses 16 bytes at the same offset. The harness credits the 5 answers before it,
+  classifies the damaged one as a node-id mismatch, stops at the unframed read
+  and reports only the jobs actually written.
+
+The stop-on-first-unframed-read rule is unchanged: every credited receipt still
+passes every check, and nothing is re-sent.
+
+### Rerun that tells the causes apart
+
+1. `--all --setkey` with the default window (24).
+2. As a control on the same setup: the same command with `--window 64`.
+3. If step 1 fails: plug the CP2102N in without the hub and repeat step 1.
+
+The holes came after about 10,000 and 19,000 answers, so one pass or one fail
+per window is weak evidence on its own. The stronger signal is `longest host pause` next to
+the hex of the failed read: a pause of milliseconds right before a hole at
+window 64 points at the queue; a hole with no pause before it points at the
+link.

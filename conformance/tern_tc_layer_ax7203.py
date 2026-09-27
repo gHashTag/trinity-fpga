@@ -255,6 +255,9 @@ class SerialLink:
     def read(self, n):
         return self.ser.read(n)
 
+    def waiting(self):
+        return self.ser.in_waiting
+
 
 class ReplayLink:
     """Responses recorded by the RTL testbench: one hex byte per line."""
@@ -327,6 +330,32 @@ class RefCell:
         return out
 
 
+class SlipLink:
+    """Loses `count` bytes of the answer stream from byte offset `at`.
+
+    The 2026-09-27 board run lost 16 bytes: the last 11 of one answer (node id
+    bytes 2-4 and the tag) and the first 5 of the next, so the harness saw
+    node id bytes `4e 01 00 4e` and then an unframed read.
+    """
+
+    def __init__(self, inner, at, count):
+        self.inner, self.at, self.count, self.pos = inner, at, count, 0
+
+    def write(self, b):
+        self.inner.write(b)
+
+    def read(self, n):
+        out = bytearray()
+        while len(out) < n:
+            b = self.inner.read(1)
+            if not b:
+                break
+            if not self.at <= self.pos < self.at + self.count:
+                out += b
+            self.pos += 1
+        return bytes(out)
+
+
 # ---------------------------------------------------------------------------
 # The run
 # ---------------------------------------------------------------------------
@@ -355,7 +384,14 @@ def install_key(link, key, log=print):
     return r["node_id"]
 
 
-def run(link, jobs, rows_ref, key, window=64, log=print):
+DEFAULT_WINDOW = 24
+# Jobs in flight. With W in flight, up to W answers (19*W bytes) can be queued
+# between the node's UART and this process while the host is busy elsewhere.
+# The 2026-09-27 board run used 64 (1,216 bytes) and lost 16 bytes of the answer
+# stream after 18,984 jobs; 24 keeps the queue at 456 bytes. The rerun tests it.
+
+
+def run(link, jobs, rows_ref, key, window=DEFAULT_WINDOW, log=print):
     """Send jobs pipelined, classify every response, then rebuild rows."""
     n = len(jobs)
     got = [None] * n
@@ -365,6 +401,10 @@ def run(link, jobs, rows_ref, key, window=64, log=print):
     node_pin = None
     sent = outstanding = 0
     first_bad = []
+    # Longest time the host spent between two reads (checking, then writing):
+    # while it is away, answers queue up in the receive path.
+    max_pause, pause_at = 0.0, 0
+    t_back = time.monotonic()
 
     def bad(kind, msg):
         counts[kind] += 1
@@ -378,15 +418,23 @@ def run(link, jobs, rows_ref, key, window=64, log=print):
             link.write(request(OP_MAC32, FIRST_JOB_NONCE + sent, w, x))
             sent += 1
             outstanding += 1
+        t_read = time.monotonic()
+        pause = t_read - t_back
+        if pause > max_pause:
+            max_pause, pause_at = pause, answered
         raw = link.read(RESP_LEN)
+        t_back = time.monotonic()
         if len(raw) < RESP_LEN or raw[0] != MAGIC_RESP:
-            bad("short", f"after {sent} sent: short or unframed read ({len(raw)} bytes)")
+            waiting = getattr(link, "waiting", lambda: None)()
+            bad("short", f"after {sent} sent, {outstanding} outstanding: short or "
+                         f"unframed read ({len(raw)} bytes) {raw.hex(' ')}"
+                         + (f"; {waiting} more bytes waiting" if waiting is not None else ""))
             break                        # stop: a lost frame makes the rest a guess
         outstanding -= 1
         r = parse(raw)
         i = r["nonce"] - FIRST_JOB_NONCE
         if not 0 <= i < sent:
-            bad("fabricated", f"nonce {r['nonce']:#010x} was never issued")
+            bad("fabricated", f"nonce {r['nonce']:#010x} was never issued: {raw.hex(' ')}")
             continue
         if seen[i]:
             bad("duplicate", f"nonce {r['nonce']:#010x} answered twice")
@@ -400,7 +448,7 @@ def run(link, jobs, rows_ref, key, window=64, log=print):
             node_pin = r["node_id"]
         if r["node_id"] != node_pin:
             bad("node", f"nonce {r['nonce']:#010x}: node {r['node_id']:#010x} "
-                        f"!= {node_pin:#010x}")
+                        f"!= {node_pin:#010x}: {raw.hex(' ')}")
             continue
         w, x, _row, _weight = jobs[i]
         nb = r["nonce"].to_bytes(4, "little")
@@ -431,6 +479,8 @@ def run(link, jobs, rows_ref, key, window=64, log=print):
                 if complete.get(rid) and acc.get(rid) == ref[3])
     counts["missing"] = n - answered
     return dict(counts=counts, exact=exact, rows=len(rows_ref), jobs=len(jobs),
+                sent=sent, answered=answered, window=window,
+                max_pause=max_pause, pause_at=pause_at,
                 node=node_pin, first_bad=first_bad,
                 per_matrix=_per_matrix(rows_ref, acc, complete))
 
@@ -450,14 +500,18 @@ def report(res, elapsed, act, log=print):
     for name, (ok, tot) in res["per_matrix"].items():
         log(f"  [{'ok ' if ok == tot else 'FAIL'}] {name:9s} {ok:6d}/{tot:<6d} rows bit-exact")
     log("-" * 66)
-    log(f"jobs sent               : {res['jobs']}")
+    log(f"jobs sent               : {res['sent']} of {res['jobs']} planned "
+        f"(window {res['window']})")
     log(f"receipts verified (tag) : {c['accepted']}/{res['jobs']}"
         + (f" under node {res['node']:#010x}" if res["node"] is not None else ""))
     rejected = {k: v for k, v in c.items() if k != "accepted" and v}
     log(f"rejected                : {rejected if rejected else 'none'}")
     log(f"rows bit-exact          : {res['exact']}/{res['rows']}  (activations: {act})")
     if elapsed:
-        log(f"elapsed                 : {elapsed:.2f} s ({res['jobs'] / elapsed:.0f} jobs/s)")
+        log(f"elapsed                 : {elapsed:.2f} s ({res['answered'] / elapsed:.0f} "
+            f"answers/s)")
+        log(f"longest host pause      : {1000 * res['max_pause']:.1f} ms "
+            f"(after {res['pause_at']} answers)")
     for m in res["first_bad"]:
         log(f"  ! {m}")
     log("-" * 66)
@@ -523,6 +577,16 @@ def self_test(scratch):
         passed = res["counts"]["accepted"] == len(jobs) and res["exact"] == res["rows"]
         check(not passed and res["counts"][kind] > 0,
               f"rejects {what} (counted as '{kind}')")
+    slip = SlipLink(RefCell(key=TEST_KEY), at=5 * RESP_LEN + 8, count=16)
+    res = run(slip, jobs, ref, TEST_KEY, window=8, log=lambda *_: None)
+    lines = []
+    report(res, None, "ternary", log=lines.append)
+    check(res["counts"]["accepted"] == 5 and res["counts"]["node"] == 1
+          and res["counts"]["short"] == 1 and res["exact"] < res["rows"]
+          and 5 < res["sent"] < len(jobs)
+          and f"jobs sent               : {res['sent']} of {len(jobs)} planned" in "\n".join(lines),
+          f"16 bytes lost mid-stream (as on the board, 2026-09-27): 5 credited, then stop; "
+          f"'jobs sent' reports the {res['sent']} written, not the {len(jobs)} planned")
     cell = RefCell(key=None)
     res = run(cell, jobs, ref, TEST_KEY, log=lambda *_: None)
     check(res["counts"]["status"] == len(jobs) and res["exact"] == 0,
@@ -570,7 +634,9 @@ def main():
     a.add_argument("--act", choices=("ternary", "int8"), default="ternary")
     a.add_argument("--n_x", type=int, default=2, help="activation vectors per width")
     a.add_argument("--seed", type=int, default=0x7213)
-    a.add_argument("--window", type=int, default=64, help="jobs in flight")
+    a.add_argument("--window", type=int, default=DEFAULT_WINDOW,
+                   help="jobs in flight (answers that can queue while the host is "
+                        f"busy: 19 bytes each; default {DEFAULT_WINDOW})")
     a.add_argument("--setkey", action="store_true",
                    help="install the key first (op 0x02) and verify the ack")
     a.add_argument("--emit-requests", metavar="HEX",
