@@ -322,6 +322,11 @@ passes every check, and nothing is re-sent.
 2. As a control on the same setup: the same command with `--window 64`.
 3. If step 1 fails: plug the CP2102N in without the hub and repeat step 1.
 
+Step 5a above is the first point on this: the same matrix at window 8, same
+hub, came back whole over 51,840 jobs, 5.2 times the length after which it
+slipped at 64. It cost about 9% of throughput (4,344 against about 4,750
+answers/s); 24 should cost less, which step 1 will show.
+
 The holes came after about 10,000 and 19,000 answers, so one pass or one fail
 per window is weak evidence on its own. The stronger signal is `longest host pause` next to
 the hex of the failed read: a pause of milliseconds right before a hole at
