@@ -1,0 +1,61 @@
+# start 2026-09-27T18:05:16Z
+# cmd watch-clients gen_tokens_8_reopen every 30 s, max 5400 s
+# watching gen_tokens_8_reopen.log; samples start when it exists and stop at its '# end'
+2026-09-27T18:06:16Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:06:46Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:07:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:07:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:08:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:08:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:09:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:09:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:10:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:10:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:11:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:11:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:12:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:12:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:13:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:13:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:14:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:14:47Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:15:17Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:15:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:16:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:16:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:17:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:17:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:18:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:18:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:19:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:19:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:20:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:20:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:21:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:21:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:22:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:22:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:23:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:23:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:24:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:24:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:25:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:25:48Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:26:18Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:26:49Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:27:19Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:27:49Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:28:19Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:28:49Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:29:19Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:29:49Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:30:19Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:30:49Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:31:19Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:31:49Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:32:19Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:32:49Z 146 {'FwUpdateManagerd': 146}
+2026-09-27T18:33:19Z 146 {'FwUpdateManagerd': 146}
+# samples 55, first 146, last 146, min 146, max 146; run ended
+# exit=0
+# end 2026-09-27T18:33:19Z

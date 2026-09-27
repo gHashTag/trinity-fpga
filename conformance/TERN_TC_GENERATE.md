@@ -139,3 +139,15 @@ Both are now pre-registered, and neither has run on the board:
 `UART_LOSS_HUBFREE.md` (the loss rate with no hub in the path) and
 `TERN_TC_RETRANSMIT.md` (the same generation with lost answers asked for again).
 This record and its FAIL do not change.
+
+## Later runs
+
+The sentence above that neither has run was true when it was written. Since then:
+
+- `TERN_TC_RETRANSMIT.md` ran at 15:37Z on 2026-09-27: **FAIL**, a stop in
+  call 145 of 192.
+- `TERN_TC_REOPEN.md` ran at 18:05Z: **PASS**, 7682304/7682304 receipts
+  verified, with 0 losses and 0 reopens.
+- `UART_LOSS_HUBFREE.md` has not run.
+
+This record's FAIL stands.

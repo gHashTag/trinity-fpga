@@ -194,3 +194,7 @@ pause came before the stop or out of the resync waits.
 A hypothesis, not tested: reopening the port inside the run would clear such a
 stop. Testing it changes the runner. That needs its own pre-registration, a
 co-sim and the owner's «да» for a new run. This run stays FAIL.
+
+**Later.** The hypothesis was pre-registered as `TERN_TC_REOPEN.md` and ran
+once, at 18:05Z. It passed with no stop, so no reopen happened and the
+hypothesis is still untested. This run stays FAIL.

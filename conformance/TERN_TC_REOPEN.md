@@ -196,9 +196,52 @@ the board run tests.
 
 ## Board run
 
-Not run. It needs no flash: the node is loaded and keyed, and the W24 control
-passed at 16:31Z on 2026-09-27. The owner's yes for it: «все три и PR в
-openXC7», to variant 2 of the 16:35Z loop report.
+**PASS, 0 reopens.** One attempt, `board_runs/gen_tokens_8_reopen.log`, from
+18:05:48Z to 18:33:00Z on 2026-09-27. No flash: the node was loaded and keyed,
+and the W24 control had passed at 16:31Z. The owner's yes for it: «все три и PR
+в openXC7», to variant 2 of the 16:35Z loop report.
+
+```
+receipts verified (tag) : 7682304/7682304 under node 0x5452494e
+rows bit-exact          : 135168/135168  (int8 activations from the model's own forward pass)
+transport               : retransmitted jobs 0 (ceiling 256), resyncs 0 (ceiling 32), lost 0, unverified 0, foreign frames 0, late answers 0, bytes skipped while scanning 0
+link                    : reopens 0 (ceiling 4), flushes seen 0, waits [] s
+events kept             : 0 (cap 512); lost 0 + resyncs 0 = 0
+elapsed                 : 1631.3 s of 3600 (4713 answers/s in run())
+longest host pause      : 192.6 ms
+ids board  : 1 3 204 276 405 659 85 1516
+CPU_INT_IDS: 1 3 204 276 405 659 85 1516
+```
+
+What it says, by the prediction table: the first row. Generation finished.
+
+- All 192 calls ran. Every one of the 7,682,304 jobs was credited by one answer
+  whose tag verified under the node key. Every row equals the CPU integer path,
+  and the 8 token ids equal `CPU_INT_IDS`. The setkey step found the node
+  already keyed, and the receipts show the key was ours.
+- A receipt shows the answer was MACed under the node key. It does not by
+  itself prove the FPGA computed it (see the skill's trap list).
+- The two earlier 8-token attempts stay **FAIL**: `gen_tokens_8` (a hole, in
+  `TERN_TC_GENERATE.md`) and `gen_tokens_8_rt` (the stop in call 145, in
+  `TERN_TC_RETRANSMIT.md`). No token of theirs is cited here.
+
+What it does not say:
+
+- **Whether a reopen clears a stop.** No stop happened: 0 losses, 0 resyncs,
+  0 reopens. The hypothesis is still untested.
+- **Why there was no stop.** The runs differ in more than one way:
+
+  | run | 1-min load at start | longest host pause | USB clients | transport events |
+  |---|---|---|---|---|
+  | `gen_tokens_8_rt` (the stop) | not recorded | 4020.9 ms | 91 | stop in call 145 |
+  | `gen_tokens_8_reopen` | 7.9 | 192.6 ms | 146 in all 55 samples | 0 |
+
+  One clean run of 7.7 million answers does not make the link lossless. Of the
+  three 8-token runs at window 24, one had a hole, one stopped after 144 calls
+  with no event, and this one had no event. The window-24 diagnostic
+  (`UART_LOSS_DIAG.md`, 0 lost of 2,016,000) bounds the rate at 1.83 per 10^6
+  jobs (95 %), which allows up to about 14 events in a run of this size.
+- **Not a speed or text claim.** 4713 answers/s is the window-24 link rate.
 
 Command:
 
@@ -206,11 +249,12 @@ Command:
 tri fpga-run gen_tokens_8_reopen --limit 3900 -- python3 -u tern_tc_generate_reopen_ax7203.py --setkey --port /dev/cu.usbserial-110 --keys ../trinet-keys.txt
 ```
 
-Two observations run beside it. Neither sends anything to the board, and
+Two observations ran beside it. Neither sends anything to the board, and
 neither changes the run.
 
-- **Host load.** The run starts only after `tri fpga-quiet` says the 1-minute
-  load stayed at 2 per cpu or less for 120 s. The rehearsals ran on a host at
+- **Host load.** The run started only after `tri fpga-quiet` said the 1-minute
+  load stayed at 2 per cpu or less for 120 s. The log stamps `# load 7.9 31.2
+  54.2` at the start and `8.1 13.1 21.6` at the end. The rehearsals ran on a host at
   load 30 to 158 from other jobs. A run that slows toward its 3600 s ceiling
   for that reason would say nothing about the hypothesis.
 - **USB clients.** `tri fpga-watch-clients gen_tokens_8_reopen` samples the
@@ -230,3 +274,8 @@ neither changes the run.
   Whether these clients do anything to the bridge is not known. If a stop
   lines up with a jump in the count, that says where to look next. If it does
   not, a jump is ruled out as the cause of that stop.
+
+  In this run the count stayed at 146 in all 55 samples, from 18:06:16Z to
+  18:33:19Z (`board_runs/gen_tokens_8_reopen.clients.log`), and there was no
+  stop. So 146 clients held open did not stop a 27-minute run. That says
+  nothing about the moment a client is added.
