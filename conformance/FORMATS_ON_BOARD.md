@@ -308,3 +308,142 @@ and `# exit=0`.
   tolerates would pass.
 - **Cost.** The TRI-NET node is off the board. No receipt run (section 1) is
   possible until it is reloaded and re-keyed.
+
+## 9. MXFP4 against TNF4 in one cell: cost and exactness (simulated; not on the board)
+
+The owner, 2026-09-27: «делай вариант 2, TNF против MXFP4». This builds a
+32-element block dot product for both formats with the section 8 method and
+takes it as far as simulation. **The board has not run it.** Loading it needs
+the owner's yes and replaces the TNF16 design.
+
+- **What this axis can and cannot say.** It measures cost (LUT, FF, Fmax) and
+  exactness of one hardware cell. It says nothing about quality. The block
+  axis on main is unchanged: perplexity MXFP4 21.94 against TNF4 36.72
+  (baseline 14.49). Nothing here can flip that verdict. The TNF paper stays
+  closed.
+- **The two level sets (derived, checked by the spec and the generator).**
+  - `tnf_levels(4, 1)` in `research/block/block_tnf.py` is
+    {0, 1/6, 1/4, 1/3, 1/2, 2/3, 1}, seven levels for eight magnitude codes.
+    Times 12 that is [0, 2, 3, 4, 6, 8, 12].
+  - E2M1 in `conformance/mxfp_ref.py` is [0, 0.5, 1, 1.5, 2, 3, 4, 6]. Times 2
+    that is [0, 1, 2, 3, 4, 6, 8, 12].
+  - So TNF4 is E2M1 without its level 1 (the subnormal 0.5), up to a factor
+    of 4. The E8M0 scale absorbs a power of two, so every TNF4 block value is
+    an MXFP4 block value, and MXFP4 has one magnitude more. TNF4's eighth code
+    is a second zero.
+  - In hardware the formats differ only in an 8-entry table of 4-bit
+    integers: `MXDOT4_E2M1_TABLE 32'hC8643210`, `MXDOT4_TNF4_TABLE
+    32'h0C864320`. Lanes, adders and the result word are shared.
+- **Spec, the one source:** `specs/trinet/mxdot4_on_board_ax7203.t27`, sha256
+  `e63d4a31…483d`. `conformance/mxdot4_board_from_spec.mjs` compiles it with
+  the t27 compiler (wasm `bb39b9a5…`), evaluates 7 test blocks (45 asserts,
+  0 failures), checks the tables against both reference files (pinned by
+  sha256), and writes `fpga/tnet/mxdot4_board_params.v` and
+  `conformance/mxdot4_board_params.py`. `--check` reports drift.
+- **Result word.** 24 bits: a NaN bit, a 9-bit exponent sum `sa + sb` and the
+  exact 14-bit signed sum of 32 integer products. At most 32 × 12 × 12 = 4608,
+  so there is no rounding anywhere. Both formats are exact by construction.
+  On exactness they tie.
+- **Vectors:** 251,616 requests, 125,808 per format, sha256 `107843f1…cb2d`.
+  - 16 pinned blocks per format: ±SUM_MAX, lane 0 and lane 31 alone, TNF4's
+    hole code, NaN scales, both exponent ends.
+  - 256 edge blocks, 65,536 scale pairs, 50,000 uniform and 10,000
+    largest-magnitude blocks per format.
+  - Expected words come from the two reference files, not from the spec's
+    tables. Changing a spec table is caught.
+  - `--fraction-check 3000`: 18,544/18,544 words equal the block value
+    computed as a Fraction from the references' element values and scales.
+- **RTL:**
+  - `fpga/tnet/mxdot4_core.v` is a three-stage core, one request per clock,
+    no DSP, no carry chain. `FORMATS` 1 builds MXFP4 only, 2 TNF4 only, 3
+    both, with the op choosing.
+  - `fpga/vivado/mxdot4_board_ax7203.v` is the board top. Its UART is the
+    TRI-NET node's, as in section 8. A request is 38 bytes and a response 5.
+- **Simulated (Icarus), not measured:**
+  - Core, FORMATS=3: `MXDOT4 SIM: 251616/251616 bit-exact (fails=0)`, the
+    spec's `SIM_PASS_LINE`. Three unknown opcodes also come back BADOP.
+  - Core, FORMATS=1 and 2: 251,619/251,619 as specified. The format the
+    build lacks comes back BADOP with a zero word.
+  - Control: one product changed (3 × 3 → 8) gives 1,828 fails.
+  - Board top from the UART pins: 41 frames (including one BADOP),
+    205/205 response bytes, at 0, −43,000 and +45,000 ppm.
+  - Gate level: the yosys netlist of the core (builder flags, FORMATS=3) on
+    yosys's `xilinx/cells_sim.v`. A 2,000-request smoke run is bit-exact. The
+    full 251,616-request run was still going when this was committed. Its
+    last line is added below when it ends, pass or fail.
+  - Host `conformance/mxdot4_board_ax7203.py --self-test`: every one of seven
+    injected faults is caught, and so is a board with the tables swapped. The
+    host's model core agrees with the reference words on all 251,616
+    requests.
+
+### Cost: the prediction, and what was measured
+
+**Pre-registered in the spec before any synthesis.** Measure yosys logic
+cells of the core alone, one build per format, with the build script's
+`synth_xilinx` flags. Predicted: the two differ by under 5 %
+(`PREDICT_LUT_DIFF_PCT`), because the product tables are the same integers
+bar one row. The record of "before" is file times, not a commit. The spec was
+last written at 06:33:17 UTC, and the first synthesis output is from
+06:40:28 UTC.
+
+**The prediction is refuted.** With the builder's flags (`-flatten -abc9
+-nocarry -nodsp -nosrl`), the core alone takes 1,185 LUTs for MXFP4 and
+1,043 for TNF4: TNF4 is 12.0 % smaller.
+
+**The sign of the gap depends on the mapper.** The same core under four
+other flag sets (derived from yosys stat, same RTL):
+
+| synth_xilinx flags | MXFP4 LUT | TNF4 LUT | TNF4 − MXFP4 |
+|---|---|---|---|
+| `-abc9 -nocarry` (builder), flattened or not | 1185 | 1043 | −12.0 % |
+| `-abc9`, carry chains on | 1185 | 1227 | +3.5 % |
+| abc, `-nocarry` | 1106 | 1114 | +0.7 % |
+| abc, carry chains on | 1063 | 1063 | 0.0 % |
+
+FFs are 426 in every row. Both formats in one core take 1,706 LUTs under the
+builder's flags, 44 % more than MXFP4 alone.
+
+**Board tops, place and route (nextpnr-xilinx, seeds 1–3):**
+
+| top | LUT | FF | DSP | Fmax, MHz (seeds 1, 2, 3) | payload |
+|---|---|---|---|---|---|
+| FORMATS=1, MXFP4 | 1186 | 859 | 0 | 133.16, 138.54, 135.34 | `74cae4d9…8965` (seed 1) |
+| FORMATS=2, TNF4 | 1134 | 859 | 0 | 123.08, 139.14, 140.47 | `ad7e8b2a…c86f` (seed 1) |
+| FORMATS=3, both | 1807 | 859 | 0 | 131.15 | `57676373…1634` |
+
+Fmax is the last "Max frequency" line of each nextpnr log. The slowest,
+123.08 MHz, is 1.79 times the fastest CFGMCLK (68.7 MHz).
+
+**Reading (derived).**
+- The one-format board tops differ by −4.4 % in LUT, TNF4 smaller.
+- The Fmax ranges overlap.
+- The cost gap is smaller than the spread the mapper alone produces. It
+  changes sign across flag sets on identical RTL.
+- There is no robust cost advantage in either direction. A 4-bit table of
+  seven entries against one of eight is below the resolution of this
+  toolchain.
+- What is robust is structural: TNF4 is a subset of MXFP4's values at the
+  same bit width and the same datapath.
+
+### Bitstream (built, not loaded)
+
+- Build command: `tri fpga-build --top mxdot4_board_ax7203 --src
+  fpga/tnet/mxdot4_board_params.v fpga/tnet/mxdot4_core.v
+  fpga/vivado/mxdot4_board_ax7203.v --xdc
+  specs/fpga/constraints/gf16_clean_ax7203.xdc --no-node-params --nosrl
+  --param FORMATS=3`.
+- File sha256 `dec2ada9…d01a`. Payload `57676373…1634`, one build.
+  `artifacts/bitstreams/mxdot4_board_ax7203.manifest.json` has the input
+  hashes, the tools and the yosys script.
+- **Run command, if the owner says yes to the load,** from the repository:
+  `tri fpga-run mxdot4_board_ax7203 --limit 1800 -- python3
+  conformance/mxdot4_board_ax7203.py --port /dev/cu.usbserial-1130`. The
+  window is 6: 6 × 38 = 228 bytes in flight, under the 240 that section 8
+  carried.
+- **PASS** means `MXDOT4 RESULT: 251616/251616 bit-exact (fails=0, lost=0)`
+  and exit 0. One attempt, as in section 8.
+- **Duration (derived).** 251,616 × 38 bytes is 83.7 s on the wire at
+  1,142,857 baud. That is the floor.
+- **What a board PASS would add:** the cell computes both formats exactly on
+  silicon. It would not add a quality claim, and it would not change the
+  cost reading above.
