@@ -205,3 +205,28 @@ Command:
 ```
 tri fpga-run gen_tokens_8_reopen --limit 3900 -- python3 -u tern_tc_generate_reopen_ax7203.py --setkey --port /dev/cu.usbserial-110 --keys ../trinet-keys.txt
 ```
+
+Two observations run beside it. Neither sends anything to the board, and
+neither changes the run.
+
+- **Host load.** The run starts only after `tri fpga-quiet` says the 1-minute
+  load stayed at 2 per cpu or less for 120 s. The rehearsals ran on a host at
+  load 30 to 158 from other jobs. A run that slows toward its 3600 s ceiling
+  for that reason would say nothing about the hypothesis.
+- **USB clients.** `tri fpga-watch-clients gen_tokens_8_reopen` samples the
+  IOKit user clients on the CP2102N every 30 s into
+  `board_runs/gen_tokens_8_reopen.clients.log`. It uses ioreg only. The count
+  has grown all day, almost all of it FwUpdateManagerd (Pioneer's firmware
+  updater):
+
+  | run log | start | clients |
+  |---|---|---|
+  | `uart_loss_w24` | 11:35Z | 57 |
+  | `gen_tokens_8` | 13:18Z | 75 |
+  | `gen_tokens_8_rt` (the stop) | 15:37Z | 91 |
+  | `tern_tc_all_w24_after_e2z` | 16:29Z | 91 |
+  | calibration sample of `tri fpga-watch-clients` | 18:02Z | 146 |
+
+  Whether these clients do anything to the bridge is not known. If a stop
+  lines up with a jump in the count, that says where to look next. If it does
+  not, a jump is ruled out as the cause of that stop.
