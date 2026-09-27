@@ -385,12 +385,13 @@ def install_key(link, key, log=print):
 
 
 DEFAULT_WINDOW = 24
-# Jobs in flight. On the AX7203 through a CP2102N and a USB hub (2026-09-27),
-# 64 in flight lost answer bytes in all three long runs (after 18,984, 9,886
-# and 6,679 verified answers), while 24 carried all 403,200 jobs of --all clean
-# on the same harness and setup. The last hole at 64 had no long host pause
-# before it, so the loss is in the link (adapter, driver, hub or cable), not a
-# queue filled while this process was busy; which part is not yet isolated.
+# Jobs in flight. With W in flight, at most 19*W answer bytes are on their way
+# to the host. The AX7203's UART bridge is a CP2102N: a 512-byte receive
+# buffer, and its datasheet requires handshaking above 1 Mbaud. The node has no
+# RTS/CTS, so it cannot be held off. Measured 2026-09-27 on --all, same setup:
+# 24 (456 B) and 26 (494 B) clean over 403,200 jobs; 30 (570 B) and 64
+# (1,216 B) lost answer bytes. Keep 19*W under 512 until the link has flow
+# control. What stalls the bridge's USB transfers is not measured.
 
 
 def run(link, jobs, rows_ref, key, window=DEFAULT_WINDOW, log=print):
@@ -638,7 +639,8 @@ def main():
     a.add_argument("--seed", type=int, default=0x7213)
     a.add_argument("--window", type=int, default=DEFAULT_WINDOW,
                    help="jobs in flight (default "
-                        f"{DEFAULT_WINDOW}; 64 lost UART bytes on the AX7203 link)")
+                        f"{DEFAULT_WINDOW}; keep 19 x window under the CP2102N's "
+                        "512-byte receive buffer)")
     a.add_argument("--setkey", action="store_true",
                    help="install the key first (op 0x02) and verify the ack")
     a.add_argument("--emit-requests", metavar="HEX",
