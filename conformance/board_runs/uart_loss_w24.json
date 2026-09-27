@@ -1,0 +1,26 @@
+{
+ "window": 24,
+ "planned": 2016000,
+ "sent": 2016000,
+ "accepted": 2016000,
+ "wrong_y": 0,
+ "lost": 0,
+ "in_flight_at_end": 0,
+ "events": [],
+ "aborted": null,
+ "stopped_at_limit": false,
+ "max_pause_ms": 96.4,
+ "pause_at": 1002901,
+ "elapsed_s": 427.5,
+ "summary": {
+  "loss_events": 0,
+  "rate_ci_per_job": [
+   0.0,
+   1.8298013165247693e-06
+  ],
+  "kinds": {},
+  "holes": [],
+  "instrument_ok": true
+ },
+ "spec_sha256": "5d8587dd09d313118af3313edde9b3b6cbb18de9494b041c239ab7f28eaf52cd"
+}
