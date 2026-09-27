@@ -605,6 +605,57 @@ RAMB36**, no CARRY4, no DSP.
   path, and no tool in this flow reports it. If it is under the PHY's hold time,
   the last FCS nibble goes out as an error and the Mac drops every reply; the
   RX counters would still rise.
+
+  **Followed up at 23:23Z in nextpnr-xilinx's own delay model: PASS, as
+  predicted. This is the tool's model, not the board.** The check was written
+  down first in `specs/trinet/e3_tx_hold_model_ax7203.t27` (23:06Z). It was
+  pushed with its runner in `5f372977d` (23:23:22Z, git TZ=UTC) before the one
+  run at 23:23:34Z. `conformance/e3_tx_hold_model.py` re-ran e3z's own
+  nextpnr-xilinx arguments with `--sdf`. The FASM came out byte-equal to e3z's
+  (`95809a97`), so these numbers belong to the bitstream `4fd7923d`. The record
+  is `conformance/model_runs/e3_tx_hold_model.log`.
+
+  | pin | D, ps | hold_fall = D - C_fall, ps | setup_rise = 16000 + C_rise - D, ps |
+  |---|---|---|---|
+  | TXD0 | 7732 | 4510 | 11340 |
+  | TXD1 | 6667 | **3445** | 12405 |
+  | TXD2 | 8072 | 4850 | 11000 |
+  | TXD3 | 8025 | 4803 | 11047 |
+  | TX_CTL | 7370 | 4148 | 11702 |
+
+  C_fall is 3222 ps, via `tq_p` into `u_txc` pin A5. C_rise is 3072 ps, via
+  `tq_n` into pin A3. Both limits are 1000 ps.
+
+  - **The smallest hold is 3.4 ns, on TXD1.** All five pins fall inside the
+    guessed 2 to 10 ns. The bench's 3 ns stand-in is below the model on every
+    pin, so the bench ran a slightly harder case than the model predicts.
+  - **Routing is most of the delay.** Each of the ten LUTs costs 124 ps, so
+    1.24 ns per pin. Routes cost 4.1 to 5.5 ns. The spread between data pins is
+    1.4 ns (6.67 to 8.07 ns), from routing alone.
+  - **The model has no clock skew.** All seven flip-flops get the same clock
+    delay (1184 ps) and the same clock-to-Q (100 ps), and each arc has one
+    number. A real hold check pairs the fastest data with the slowest clock,
+    and that check is not in this model. Clock-to-Q cancels in any case,
+    because every path has exactly one flip-flop.
+  - **Outside the model:** the output buffers, pads, board traces, and the
+    PHY's input.
+  - **E3's other records are unchanged:** its spec, its judge, and the
+    H1 to H4 hypotheses. H2 is still a possible board outcome.
+  - **A gap found on the way: the build manifest did not name its binary.**
+    `build_trinet_node.py` runs `nextpnr-xilinx` from PATH and records only
+    `--version`. Two builds here print the same `0.9.2-107-g7037c948`:
+    - PATH's `~/.local/bin/nextpnr-xilinx`, which links to
+      `~/openxc7-src/nextpnr-xilinx/build`, sha `45bea847`. It writes no
+      ZINV_T1.
+    - The zinv backport, sha `25aeb46a`.
+
+    The spec pins the zinv binary, and the equal FASM is what ties it to e3z.
+    The build table above names the branch, and the ZINV_T1 count in
+    `tri fpga-tristate` guards the FASM. Builds from now on also record the
+    resolved path and sha256 of `yosys` and `nextpnr-xilinx`, under
+    `tools.*-bin` in `manifest.json`.
+  - **An anomaly with no cause found:** the re-run took 151 s, against 36.1 s
+    in the e3z build.
 - **BRAM on this board.** No bitstream from this flow has used a block RAM
   here. `e3z` writes it as two RAMB18 halves at width 4 plus the RAMB36 bit for
   width 9, READ_FIRST, as nextpnr-xilinx's `fasm.cc` does. The mock checks the

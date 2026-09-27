@@ -1,0 +1,26 @@
+e3_tx_hold_model: 2026-09-27T23:23:34Z (UTC, time.gmtime); spec specs/trinet/e3_tx_hold_model_ax7203.t27 12b3480e92d86f3f
+pinned files:
+  ok   /Users/playra/trinity-fpga/specs/trinet/e3_tx_hold_model_ax7203.t27 12b3480e92d86f3f
+  ok   /Users/playra/trinity-fpga/conformance/e3_tx_hold_model.py fbb01db6e9c5b2c9
+  ok   /Users/playra/openxc7-src/nextpnr-xilinx-zinv/build/nextpnr-xilinx 25aeb46a747bc456
+  ok   /Users/playra/openxc7-src/chipdb/xc7a200tfbg484-2.bin 5c88a26d973bff2f
+  ok   /tmp/trinet-node-build/e3z/node.json 3b91491691a17672
+  ok   /tmp/trinet-node-build/e3z/node.fasm 95809a97d96c563e
+  ok   /tmp/trinet-node-build/e3z/src/eth_arp_icmp_ax7203.xdc 8921492b31f5e34f
+  ok   /Users/playra/trinity-fpga/specs/fpga/constraints/eth_arp_icmp_ax7203.xdc 8921492b31f5e34f
+nextpnr: /Users/playra/openxc7-src/nextpnr-xilinx-zinv/build/nextpnr-xilinx --chipdb /Users/playra/openxc7-src/chipdb/xc7a200tfbg484-2.bin --xdc /tmp/trinet-node-build/e3z/src/eth_arp_icmp_ax7203.xdc --json /tmp/trinet-node-build/e3z/node.json --write /tmp/e3txhold/node_routed.json --fasm /tmp/e3txhold/node.fasm --sdf /tmp/e3txhold/e3z.sdf --freq 50.0 --seed 1 --placer heap --router router1 --timing-allow-fail
+nextpnr: exit 0, 151.2 s, log /tmp/e3txhold/nextpnr.log
+fasm: 95809a97d96c563e = e3z
+sdf: /tmp/e3txhold/e3z.sdf b429acfb8b371e32, 3574156 bytes
+sdf: 13392 interconnects, 9453 cell arcs, 4393 cells
+clock: all seven flip-flops from u_rxc_bufg; tq_n on the falling edge, the rest rising
+TXC C_fall (via tq_p, pin A5): 3222.0 ps  (clock 1184.0, clk-to-Q 100.0, route 1814.0, LUT 124.0)
+TXC C_rise (via tq_n, pin A3): 3072.0 ps  (clock 1184.0, clk-to-Q 100.0, route 1664.0, LUT 124.0)
+eth_txd[0]  D   7732.0 ps over 10 LUTs (clock 1184.0, clk-to-Q 100.0, LUTs 1240.0, routes 5208.0); hold_fall   4510.0 >= 1000; setup_rise  11340.0 >= 1000
+eth_txd[1]  D   6667.0 ps over 10 LUTs (clock 1184.0, clk-to-Q 100.0, LUTs 1240.0, routes 4143.0); hold_fall   3445.0 >= 1000; setup_rise  12405.0 >= 1000
+eth_txd[2]  D   8072.0 ps over 10 LUTs (clock 1184.0, clk-to-Q 100.0, LUTs 1240.0, routes 5548.0); hold_fall   4850.0 >= 1000; setup_rise  11000.0 >= 1000
+eth_txd[3]  D   8025.0 ps over 10 LUTs (clock 1184.0, clk-to-Q 100.0, LUTs 1240.0, routes 5501.0); hold_fall   4803.0 >= 1000; setup_rise  11047.0 >= 1000
+eth_txctl   D   7370.0 ps over 10 LUTs (clock 1184.0, clk-to-Q 100.0, LUTs 1240.0, routes 4846.0); hold_fall   4148.0 >= 1000; setup_rise  11702.0 >= 1000
+guess (information only): hold_fall in [2000, 10000] ps on 5/5 pins
+smallest hold_fall 3445.0 ps on eth_txd[1]; the bench stands in 3000 ps for the chain
+VERDICT: PASS

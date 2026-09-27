@@ -126,6 +126,12 @@ def tool_versions():
          "python3": sys.version.split()[0]}
     for tool, repo in (("prjxray", PRJXRAY), ("nextpnr-xilinx-src", NEXTPNR_SRC)):
         v[tool] = first(["git", "-C", repo, "log", "-1", "--format=%h %cd"])
+    # The steps run these names from PATH, and two nextpnr-xilinx builds here print the same
+    # --version (one writes ZINV_T1, one does not): record which file ran, by path and sha256.
+    for tool in ("yosys", "nextpnr-xilinx"):
+        path = shutil.which(tool)
+        v[tool + "-bin"] = ("%s sha256 %s" % (os.path.realpath(path), sha256(path))
+                            if path else "UNAVAILABLE: not on PATH")
     return v
 
 
