@@ -4884,7 +4884,7 @@ implemented different formats --- TNF16 one mantissa bit short, TNF32 with twelv
 trits and eleven mantissa bits where the specification gives six and
 twenty-five, TNF64 likewise --- and none had a reference, which is how the
 divergence survived to be quoted. Written from the specification and checked
-against it they agree on every word swept, and they cost eight to eleven places
+against it they agree on every word compared, and they cost eight to eleven places
 each. $^{\ast}$: the frequency in that row is stated in no record file in the
 repository at this revision --- fifteen of the twenty-one rows carry the mark, and
 no place-and-route log for any row of this table is in the tree --- so those cells,
@@ -4899,7 +4899,7 @@ not been re-placed, and no number in this table should be read as the reconciled
 16-bit format. A code whose exponent field lies above the special row is not a
 TNF word, and the reference decoder refuses it, so the exhaustive TNF rows count
 words: $82{,}944$ of the $131{,}072$ codes at 17 bits and $864$ of the $1{,}024$ at
-10. The sampled rows do not record how many of their codes were words.}
+10. The sampled rows each take $40{,}000$ codes from one fixed 64-bit generator, of which $28{,}480$ are words at 36 bits and $21{,}520$ at 65; the rest are refused. The decoders emit fp32, so a word can be compared only inside fp32's exponent window, zero and special rows included: $9{,}998$ words at 36 bits and $2{,}512$ at 65, every one agreeing with the reference. The other words lie outside the range fp32 holds and are not compared.}
 \label{tab:fullthroughput}
 \small\setlength{\tabcolsep}{4pt}
 \begin{tabular}{rlrrrrrl}
@@ -4916,9 +4916,9 @@ words: $82{,}944$ of the $131{,}072$ codes at 17 bits and $864$ of the $1{,}024$
 8 & \textbf{GF14} (ours) & 14 bits & 587 & $71.15^{\ast}$ & \textbf{0.1212} & $4.54$ & all 16{,}384 \\
 9 & minifloat & 8 bits & 558 & $67.06^{\ast}$ & 0.1202 & $5.49$ & not swept \\
 10 & \textbf{BNF16} (ours) & 17 bits & 571 & 67.13 & \textbf{0.1176} & $3.30$ & all 131{,}072, 0 wrong \\
-11 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}997, 0 wrong \\
-12 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 82{,}944 words \\
-13 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled, 0 wrong \\
+11 & \textbf{TNF32} (ours) & 36 bits & 569 & 66.91 & \textbf{0.1176} & $6.03$ & sampled 9{,}998, 0 wrong \\
+12 & \textbf{TNF16} (ours) & 17 bits & 565 & 66.28 & \textbf{0.1173} & $8.56$ & all 82{,}944 words, 0 wrong \\
+13 & \textbf{TNF64} (ours) & 65 bits & 572 & 65.38 & \textbf{0.1143} & $8.73$ & sampled 2{,}512, 0 wrong \\
 14 & \textbf{TNF8} (ours) & 10 bits & 545 & 62.13 & \textbf{0.1140} & $3.63$ & all 864 words, 0 wrong \\
 15 & \textbf{GF+8} (ours) & 8 bits & 628 & 63.05 & \textbf{0.1004} & $1.08$ & selector live; no reference \\
 16 & posit8 & 8 bits & 540 & $44.33^{\ast}$ & 0.0821 & $4.02$ & not swept \\

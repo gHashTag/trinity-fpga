@@ -118,7 +118,7 @@
   "mhz": 66.91,
   "mhz_per_lut": 0.1176,
   "spread": 6.03,
-  "checked": "sampled 9{,}997, 0 wrong"
+  "checked": "sampled 9{,}998, 0 wrong"
  },
  {
   "rank": 12,
@@ -129,7 +129,7 @@
   "mhz": 66.28,
   "mhz_per_lut": 0.1173,
   "spread": 8.56,
-  "checked": "all 131{,}072"
+  "checked": "all 82{,}944 words, 0 wrong"
  },
  {
   "rank": 13,
@@ -140,7 +140,7 @@
   "mhz": 65.38,
   "mhz_per_lut": 0.1143,
   "spread": 8.73,
-  "checked": "sampled, 0 wrong"
+  "checked": "sampled 2{,}512, 0 wrong"
  },
  {
   "rank": 14,
@@ -151,7 +151,7 @@
   "mhz": 62.13,
   "mhz_per_lut": 0.114,
   "spread": 3.63,
-  "checked": "all 1{,}024, 0 wrong"
+  "checked": "all 864 words, 0 wrong"
  },
  {
   "rank": 15,
