@@ -740,6 +740,12 @@ tri fpga-keycheck
   (`date -u`) this Mac had a default route through `utun8` next to the Wi-Fi
   one. `tri fpga-hostnet` reads the kernel's route, the interface's subnet and
   the ARP table, and sends nothing.
+- **The two steps together were rehearsed off the board**, at 21:57:48Z to
+  21:58:01Z (`date -u`, two runs at once). `ping -c 2` to .222 got 0 of 2
+  replies and left `(incomplete)` in this Mac's ARP table. `hostnet` read that as
+  "no answer" and said ok. So `hostnet` does not stop on the entry that
+  `e3_preping` itself leaves. Nothing answered at .222 at that time. Logs:
+  `rehearsal_runs/e3_preping_hostnet_{1,2}.log`.
 - **The two UART reads.** Each takes about 5 s. The counters count from
   configuration and never reset, so the ping's effect is the difference between
   the reads.
@@ -829,6 +835,10 @@ kept in the repo, as with `/tmp/e3sim`. Three limits apply:
 - On the board, `fe` counts errored frames and false SFDs together. One RX_ER
   can add 2 to `rx` and `fe`, so `fe` is an upper bound on the errored frames,
   not a count of them.
+
+The judge does not use `fe` for any verdict (`judge_board`; "`ed`, `fe` and
+`ce` are printed as information only" above), so this finding changes no
+verdict. It changes only how an `fe` difference in the report is read.
 
 **Where the files point.** This section and the one before it were drafted as
 `conformance/E3_DRAFT_SECTION.md` and merged here. The comment in

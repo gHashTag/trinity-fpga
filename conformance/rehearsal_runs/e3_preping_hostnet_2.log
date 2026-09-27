@@ -1,0 +1,18 @@
+# start 2026-09-27T21:57:48Z
+# load 11.7 41.6 41.6 on 8 cpus
+# cmd sh -c ping -c 2 192.168.1.222; arp -an | grep -F "(192.168.1.222)"; tri fpga-hostnet 192.168.1.222
+# rehearsal (no board)
+PING 192.168.1.222 (192.168.1.222): 56 data bytes
+Request timeout for icmp_seq 0
+
+--- 192.168.1.222 ping statistics ---
+2 packets transmitted, 0 packets received, 100.0% packet loss
+? (192.168.1.222) at (incomplete) on en0 ifscope [ethernet]
+route   192.168.1.222: interface en0, no gateway (direct)
+host    en0 192.168.1.101/24
+arp     (incomplete)
+note    default routes also through utun8; the line above is what the kernel picks now
+hostnet 192.168.1.222: ok; nothing was sent
+# exit=0
+# load 10.0 39.8 40.9 on 8 cpus
+# end 2026-09-27T21:58:01Z
