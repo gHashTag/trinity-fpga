@@ -94,8 +94,9 @@ operator forging their own receipts).
 ## Board run, 2026-09-27 UTC
 
 **Result: FAIL.** The main run lost UART framing after 19,049 jobs. Steps 4 and 5
-were not run: a failed step is recorded and the run stops there. The
-284,160-receipt figure stays withdrawn.
+were held back at first (a failed step is recorded and the run stops there), then
+run once each at the owner's request: step 4 passed, step 5 lost framing the same
+way after 9,951 jobs. The 284,160-receipt figure stays withdrawn.
 
 - Machine: MacBook Pro, Apple M1 Pro, macOS 26.5.2 (25F84), Python 3.14.6,
   pyserial 3.5.
@@ -160,11 +161,59 @@ bit-exact : 33792/33792`, PASS. Got:
   changed.
 - No retry: the failure came after the first job.
 
-**4. `trinet_matvec_demo.py`.** Not run.
+**4. `trinet_matvec_demo.py`.** Not run with steps 1 to 3. Run once at the
+owner's request, 02:22:04Z to 02:22:05Z. There was no power cycle after step 3,
+so the node still held the key that step 3 installed.
 
-**5. `--act int8`, layer 5 w_down.** Not run.
+    python3 trinet_matvec_demo.py --port /dev/cu.usbserial-1130 --baud 1144744 --keys ../trinet-keys.txt
 
-Open, none of it tested: why the framing slipped. Candidates: the CP2102N's
+Expected 320/320. Got:
+
+    jobs (32-wide dots)   : 3200
+    receipts authenticated: 3200/3200 under node0's key
+    rows bit-exact        : 320/320
+    elapsed               : 0.79 s (4032 jobs/s)
+    RESULT: the datapath a model layer needs is verified on silicon.
+
+PASS. This harness checks status, nonce, y and the tag of every job.
+
+**5. `--act int8`, layer 5 w_down.** Not run with steps 1 to 3. Run once at the
+owner's request, 02:22:27Z to 02:22:29Z.
+
+    python3 tern_tc_layer_ax7203.py --mats down --layers 5 --act int8 --n_x 1 --setkey \
+        --port /dev/cu.usbserial-1130 --baud 1144744 --keys ../trinet-keys.txt \
+        --model ~/igla-coder-gpu/c_infer/model.bin
+
+Expected 51,840 jobs, `receipts verified (tag) : 51840/51840`, `rows bit-exact :
+320/320`, PASS. Got:
+
+    model.bin: 1 matrices, 320 rows, 276480 ternary weights (61.8% nonzero)
+    jobs: 51840 (32-trit chunks x 1 x-vectors x 6 digit planes)
+    setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+      [FAIL] L5/down       61/320    rows bit-exact
+    jobs sent               : 51840
+    receipts verified (tag) : 9886/51840 under node 0x5452494e
+    rejected                : {'fabricated': 1, 'short': 1, 'missing': 41954}
+    rows bit-exact          : 61/320  (activations: int8)
+    elapsed                 : 2.08 s (24872 jobs/s)
+      ! nonce 0x5401269e was never issued
+      ! after 9951 sent: short or unframed read (19 bytes)
+    RESULT: FAIL - do not cite these matrices as verified.
+
+- Job 9,886 (nonce `0x0001269e`, bytes `9e 26 01 00`) was answered with nonce
+  bytes `9e 26 01 54`. The next 19-byte read did not start with 0xA5, and the
+  harness stopped. This matches step 3: one frame with a wrong byte, then no
+  frame.
+- The 9,886 jobs answered before that each had a matching tag and the right y,
+  so node0 still signs with the key that step 3 installed. 61 rows are complete;
+  each row is 162 jobs (27 chunks x 6 digit planes).
+- `jobs sent` and `jobs/s` count planned jobs again. Derived: 9,887 answers in
+  2.08 s, about 4,750 jobs/s.
+- No retry: the failure came after the first job.
+
+Open, none of it tested: why the framing slipped. It slipped twice, after 19,049
+jobs and after 9,951 jobs. Between those two runs, all 3,200 jobs of step 4 came
+back framed. Candidates: the CP2102N's
 baud divider at 1,144,744 against the node's (earlier board runs went through a
 CP2102N seen as `usbserial-130` on another Mac); the USB 2.0 hub (the CP2102N
 did not enumerate on the first hub port tried); 64 jobs in flight

@@ -1,0 +1,15 @@
+# start 2026-09-27T02:22:04Z
+matvec 320x320 ternary x ternary on /dev/cu.usbserial-1130 @ 1144744
+---------------------------------------------------------------
+jobs (32-wide dots)   : 3200
+receipts authenticated: 3200/3200 under node0's key
+rows bit-exact        : 320/320
+elapsed               : 0.79 s (4032 jobs/s)
+---------------------------------------------------------------
+RESULT: the datapath a model layer needs is verified on silicon.
+        (ternary activations; int8 activations are Stage B.3.)
+real 1.19
+user 0.28
+sys 0.06
+# exit=0
+# end 2026-09-27T02:22:05Z
