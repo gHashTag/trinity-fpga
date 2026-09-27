@@ -231,7 +231,8 @@ verdict. The log above is the unchanged original; `--parse` on it now prints
 lines, about 20 s, which is more than one no-link reset period (14.7 to
 15.3 s). Note in the log what the cable's other end is.
 
-**Hypotheses for the silent MDIO** (none tested):
+**Hypotheses for the silent MDIO** (first written before the FASM check below;
+none tested on the board):
 
 - MDC or MDIO lands on the wrong package pin, or the two are swapped. The
   constraint file follows LiteX's `alinx_ax7203` (B16 MDC, B15 MDIO); the
@@ -243,6 +244,49 @@ lines, about 20 s, which is more than one no-link reset period (14.7 to
   not enable one.
 - The PHY is not the one the model assumes. That alone would not explain
   silence at all 32 addresses, because registers 2 and 3 are standard.
+
+**FASM check, 2026-09-27 after the run (read-only; checked, not tested on the
+board).** In `/tmp/trinet-node-build/e2/node.fasm`, the build that was flashed:
+
+- B15 (MDIO) is `LIOB33_X0Y235.IOB_Y0` with an input buffer, LVCMOS33, 12 mA,
+  slow slew, no pull. Its OLOGIC tile has the output path (`OQUSED`, `OMUX.D1`)
+  and the tristate route (`LIOI_T0.LIOI_OLOGIC0_TQ`,
+  `IOI_OLOGIC0_T1.IOI_IMUX15_1`).
+- `LIOI3_X0Y235.OLOGIC_Y0.ZINV_T1` is absent: `grep -c ZINV_T1 node.fasm`
+  prints 0. In prjxray this bit is `1 ^ IS_T1_INVERTED`, so an absent bit is not
+  "unset"; it means the T input is inverted.
+- In `node_routed.json` the IOBUF became an OBUFT plus an input buffer. T is
+  driven by a LUT1 NOT of `mdio_oe` and routed by router1 through OLOGIC
+  site-internal pips. nextpnr-xilinx `fasm.cc` writes no FASM for
+  site-internal pips, so the bit is never emitted. nextpnr.log has no warning.
+- The fix exists upstream and is reverted in the tree used here:
+  `6bc9a7ef fix missing ZINV_T1 bits when routing tristate IOs with router1`,
+  then `d1524b4c Revert ...`. Both are ancestors of `7037c948`, the build's
+  HEAD. Why it was reverted is not established.
+
+**Ranked, after the check:**
+
+1. **Tristate polarity inverted (missing ZINV_T1).** The pad drives while the
+   FSM means to listen and floats while it means to talk. The PHY never sees a
+   preamble or a start pattern, so it never answers, and in every listen phase
+   the FPGA reads back its own idle 1s. That gives `FFFF` at all 32 addresses
+   with `pm=0`, which is every line of the log. It also means the RXC change
+   from 25 to 125 MHz is the PHY's own doing, not an E2 write.
+2. Wrong or swapped pins. Three sources agree on B15/B16 and bank-16 RX pins
+   next to them work, so this is now less likely.
+3. Pull-up, drive or IOSTANDARD. None of these produces `FFFF` everywhere on
+   its own.
+
+**Cheapest test that separates 1 from 2 (needs a flash, so the owner's yes).**
+Add the single line `LIOI3_X0Y235.OLOGIC_Y0.ZINV_T1` to the FASM and re-run
+`fasm2frames` and `frames2bit` without re-running P&R. Off the board, confirm the
+frames differ from the flashed ones by exactly that one bit. Then flash it:
+hypothesis 1 predicts `pm` with a PHY bit set and `id=00221622` (KSZ9031, the
+ID an earlier bring-up read, `formal/ksz9031_status_model.v:12`), and hypothesis
+2 predicts `FFFF` again. The lasting fix is to re-apply `6bc9a7ef` or route
+with router2, and to gate CI on `ZINV_T1` being present for every IOBUF pin.
+Note that the node build uses `--nosrl` because SRL hangs router1, so moving
+off router1 is not free.
 
 ## Security notes for E4
 
