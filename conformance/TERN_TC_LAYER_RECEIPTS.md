@@ -636,14 +636,30 @@ first job.
     chance of 189,001 clean jobs would be e^(-189001/11915), about 1e-7.
   - So the old dongle, bus or port very probably made such stalls far more
     frequent. One run cannot give the new rate.
-  - The earlier slips were on older harness revisions (`2b9830c5`,
-    `b1e95f6f`). That is a second difference besides the path.
-- **The bytes.** The node id `4e 49 52 54` sits at offset 11 in both reads.
-  The first 11 bytes of the first read are the tail of the answer for nonce
-  `0x0003e20b`, which ends in `a5 fd 01 0b e2 03 00`. Every job before it was
-  verified (189,001 - 64 outstanding - 1 = 188,936). If there is one hole and
-  the node answers in order, the first 8 bytes of that answer were lost: node
-  id and half the tag. The holes so far are 16, 4, 59, 7 and 8 bytes.
+  - The two earliest slips (19,049 and 9,951 jobs) ran harness `2b9830c5`.
+    Between the window-64 control (`b1e95f6f`, 6,744 jobs) and this run the
+    harness changed only in comments and the `--window` help text (`git diff
+    b1e95f6fd c590308e5`), so for that pair the USB path is the only
+    difference.
+- **The bytes.** An answer is `a5`, y, status, nonce (4 bytes, little
+  endian), node id (4), tag (8): 19 bytes. 188,936 answers were verified, so
+  the next one due is nonce `0x10000 + 188936 = 0x3e208`.
+  - The first read starts `a5 fc 01 08`: the first 4 bytes of the answer
+    for `0x3e208` (y = -4, low nonce byte `08`).
+  - The next byte starts the answer for `0x3e20b`: `a5 fd 01 0b e2 03 00`,
+    then its node id `4e 49 52 54` and the first half of its tag. The other
+    half, `24 7b 50 98`, opens the second read, so `0x3e20b` arrived whole.
+  - Lost: the last 15 bytes of `0x3e208` and all of `0x3e209` and `0x3e20a`,
+    **53 bytes**. The node id at offset 11 instead of 7 says independently
+    that the loss is 15 bytes more than a whole number of answers.
+  - The holes so far are 16, 4, 59, 7 and 53 bytes.
+
+  (Corrected at 10:58Z. This bullet first read the `a5 fd 01 0b e2 03 00`
+  bytes as the tail of an answer, and gave the hole as 8 bytes, which the
+  offset rules out. Byte 1 is the output y, not a counter. The same wrong
+  8 is in the message of commit `c590308e5`, which is not rewritten. The
+  harness bullet above was also corrected: it had called the harness a
+  second difference for all the earlier slips.)
 - **"fabricated" is the harness's label for a misaligned read.** Here it is a
   framing slip, not a forged answer: the 19 bytes straddle two genuine
   answers.
