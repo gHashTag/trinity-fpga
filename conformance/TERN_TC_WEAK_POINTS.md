@@ -137,3 +137,52 @@ bitstreams for node1 and node2 exist in CI but are not loaded.
 - The harness shows each of its checks failing on a cell built to break it
   (`--self-test`), including the 16-byte slip seen on the board.
 - The failure runs are recorded as failures, with their bytes.
+
+**Update, 03:50Z the same day: the sweep ran, and its resolution is not what it
+prints.** `trinet_baud_sweep.py --centre 1144744 --span 0.08` (log
+`board_runs/baud_sweep_1144744.log`, run once) printed a clean window
+1,070,333..1,167,624, "USE THIS RATE 1118978" and "CFGMCLK 67.14 +/- 0.17 MHz".
+The prediction recorded beforehand in the loop state was: the window contains
+1,144,744 (held), and its centre lies within 1 % of 1,144,744 (missed by the
+tool's own number: 2.25 %).
+
+Both numbers are about requested rates, and the adapter does not send
+requested rates. CP2102N datasheet Rev. 1.5, section 4.2.1: clock divider =
+48 MHz / (2 x requested), rounded to the nearest integer; actual rate =
+48 MHz / (2 x divider), so 24 MHz / N on the wire (the 48 MHz oscillator is
++/-0.25 %). Mapped that way (derived), the 33 requested rates were 5 wire rates:
+
+| N | wire baud | sweep steps | result |
+|---|---|---|---|
+| 23 | 1,043,478 | 3 | 0/64 each |
+| 22 | 1,090,909 | 9 | 64/64 each |
+| 21 | 1,142,857 | 9 | 64/64 each |
+| 20 | 1,200,000 | 11 | 0/64 each |
+| 19 | 1,263,158 | 1 | 0/64 |
+
+So 1,118,978 and 1,144,744 are the same rate on the wire, 1,142,857. The
+"+/- 0.17 MHz" is the sweep step, not the resolution. What the sweep does bound
+(derived, assuming the node's tolerance is symmetric; its receiver samples at
+1.5 x BAUD_DIV after the start edge, i.e. mid-bit): the node's rate R satisfies
+R(1-t) between 1,043,478 and 1,090,909 and R(1+t) between 1,142,857 and
+1,200,000, so R is between 1,093,168 and 1,145,455 and **CFGMCLK is between
+65.6 and 68.7 MHz**. The earlier "about 68.7 MHz" sits at the top edge of that
+range; "67.14" is its middle, not a measurement. The margin question this point
+asks cannot be answered with this adapter at this speed: its neighbouring rates
+are 4.5 % apart.
+
+**Pre-registered, before it runs: the edges are the adapter's, not the node's.**
+If the rounding above sets the pass/fail edges, they sit on the divider
+boundaries 24 MHz / 22.5 = 1,066,667 and 24 MHz / 20.5 = 1,170,732. Two narrow
+sweeps, 7 steps of about 0.05 %, 64 jobs each, run once:
+
+    trinet_baud_sweep.py --centre 1066667 --span 0.0015 --steps 7
+    trinet_baud_sweep.py --centre 1170732 --span 0.0015 --steps 7
+
+Prediction: lower sweep, every step below 1,066,667 is 0/64 and every step
+above it is 64/64; upper sweep, every step below 1,170,732 is 64/64 and every
+step above it is 0/64. A step within 0.01 % of the boundary may go either way
+and does not count. Any other clean/empty pattern refutes the reading, and then
+the edges belong to the node. Afterwards the port gets 24 zero bytes and one
+640-job `wk` layer-0 check, as after the wide sweep (that check passed at
+03:46Z: `receipts verified (tag) : 640/640`, `rows bit-exact : 64/64`).
