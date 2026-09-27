@@ -564,3 +564,43 @@ window with a clean `--all`, and it buys no speed (4,727 against 4,716
 answers/s). The hub is not excluded as the source of the stalls that let the
 bridge buffer fill. Window 64 without the hub, owner-approved, is still
 waiting for the adapter to be plugged in directly.
+
+### Rerun step 4 (pre-registered): `--all` at window 64, UART on its own hub, 2026-09-27 09:40Z
+
+At 09:32Z the owner moved the Mac end of the UART cable ("подключил в другой
+usb"). `system_profiler SPUSBHostDataType` and `ioreg -p IOUSB` then show:
+
+- CP2102N at location 0x00110000, `/dev/cu.usbserial-110`, 12 Mb/s, on bus
+  0x00. Its parent is a Genesys Logic "USB2.1 Hub" (05e3:0610, bcdDevice
+  0x0663, bDeviceProtocol 1 = single transaction translator) at 0x00100000.
+  The same dongle's USB 3 hub (05e3:0626) sits at 0x00200000.
+- The Digilent FT232H stays on bus 0x01 behind the FE1.1s hub (1a40:0101).
+  openocd is not running, so that bus carries no JTAG traffic during the run.
+- `tri fpga-usb` prints `HUB ['0x110000']`. **This is not the direct
+  connection the owner approved.** The USB-C to USB-A adapter contains a hub.
+
+What changed against the three window-64 slips: the hub model (Genesys instead
+of FE1.1s), the bus (0x00 instead of 0x01), the port and the adapter. The UART
+bridge, board, node bitstream, harness, window, baud rate and USB cable end on
+the board did not change. Both hubs are single-TT, so this run cannot say
+whether "any hub" matters. It can only say whether that particular dongle, bus
+or port mattered.
+
+Command, unchanged from step 2 except the port:
+
+    python3 tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-110 \
+      --baud 1144744 --keys ../trinet-keys.txt \
+      --model /Users/playra/igla-coder-gpu/c_infer/model.bin --window 64
+
+- **PASS** means `receipts verified (tag) : 403200/403200`, rows 33792/33792
+  and exit 0.
+- **Prediction: FAIL.** The favoured hypothesis is the bridge's 512-byte
+  buffer (window 26 passed, window 30 slipped). 1,216 bytes can be in flight
+  at window 64, and a single-TT hub is still in the path.
+  - A FAIL keeps the old dongle, bus and port out of the explanation. The size
+    of its hole is one more estimate of the stall length.
+  - A PASS would point at the old FE1.1s dongle, its bus or its port. The
+    three old slips came after 6,744 to 19,049 jobs, so a clean 403,200 would
+    not be chance.
+- One attempt. It is retried once only if it fails before the first job. The
+  record then keeps both runs.
