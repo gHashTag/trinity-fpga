@@ -1,0 +1,22 @@
+self-test (no board)
+  ok   pack/unpack round trip, 500 vectors
+  ok   balanced-ternary digits rebuild every q in [-364, 364]
+  ok   siphash24 reproduces the published 26-byte vector
+  ok   TC02 parse: 42 ternary matrices; w_down is 864-in (27 chunks), wk 320-in
+  ok   TC02 parse: 6451200 ternary weights = tern_tc's 6.45M
+  ok   honest cell, ternary activations: 12/12 rows, 222/222 receipts
+  ok   honest cell, int8 activations: 12/12 rows, 1332/1332 receipts
+  ok   rejects a cell signing with another key (counted as 'tag')
+  ok   rejects a wrong answer with a valid tag (counted as 'lie')
+  ok   rejects one flipped tag bit (counted as 'tag')
+  ok   rejects a nonce this run never issued (counted as 'fabricated')
+  ok   rejects a response from another node id (counted as 'node')
+  ok   rejects a dropped response (counted as 'short')
+  ok   an unkeyed cell (status 0x04) gets no credit, though its y is right
+  ok   setkey: ack tag verifies under the key sent
+  ok   after setkey, the same cell passes
+  ok   a second setkey is refused (0x03) and the first key holds
+self-test: PASS
+real 2.23
+user 2.01
+sys 0.08

@@ -1,0 +1,19 @@
+# start 2026-09-27T03:29:36Z
+# usb HUB ['0x1130000']
+# cmd python3 gft_zphi_ax7203.py --self-test
+self-test (no board)
+  ok   Z[phi] multiply agrees with 60-digit decimal phi on 2000 pairs (worst 2.0e-47)
+  ok   a GFTernary weight applies as the Fibonacci step t*(b, a + b)
+  ok   12 jobs per chunk: 2664 jobs for 6 rows of wk and 6 of w_down
+  ok   honest cell: 24/24 rows, 2664/2664 receipts
+  ok   rows fail under an oracle with phi^2 = 1 instead of phi + 1: 12/24
+  ok   rows fail under weights taken as t, not t*phi (scale forgotten): 0/24
+  ok   rows fail under the host dropping digit plane 3^0: 0/24
+  ok   a validly signed wrong answer is rejected ('lie') and its row fails
+  ok   a cell signing with another key earns nothing
+self-test: PASS
+real 2.78
+user 2.55
+sys 0.05
+# exit=0
+# end 2026-09-27T03:29:39Z

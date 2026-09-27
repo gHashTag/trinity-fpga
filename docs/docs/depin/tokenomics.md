@@ -14,7 +14,7 @@ $TRI is the native token of the Trinity DePIN network. It rewards node operators
 Total Supply = 3^21 = 10,460,353,203 $TRI
 ```
 
-The supply is derived from the **Trinity Identity**: the number of unique states representable by 21 balanced ternary trits. This is a fixed, non-inflationary cap -- no additional tokens will ever be minted.
+The supply is derived from the **Trinity Identity**: the number of unique states representable by 21 balanced ternary trits. This is a fixed, non-inflationary **cap on how much can ever be mined** -- not a pre-mined balance. At genesis the minted supply is **zero**. Every $TRI that will ever exist is panned by accepted work, up to this ceiling.
 
 | Property | Value |
 |----------|-------|
@@ -22,56 +22,56 @@ The supply is derived from the **Trinity Identity**: the number of unique states
 | Token Name | Trinity Token |
 | Decimals | 18 |
 | Total Supply | 10,460,353,203 (3^21) |
-| Network | Ethereum (Sepolia testnet) |
+| Network | **TON** and **Solana** (multi-chain) |
 
 ## Allocation
 
+There is no allocation. **100% of $TRI is mined by accepted work.** No founder
+pre-mine, no team allocation, no treasury reserve, no pre-sale and no
+pre-allocated liquidity. Every token enters circulation the same way: the Queen
+accepts a `.t27` spec, or a node returns a correct receipt-backed job, and the
+protocol mints the reward to whoever did the work.
+
 ```mermaid
-pie title $TRI Token Allocation
-    "Node Rewards (40%)" : 40
-    "Founder (20%)" : 20
-    "Community (20%)" : 20
-    "Treasury (10%)" : 10
-    "Liquidity (10%)" : 10
+pie title $TRI is 100% mined by accepted work
+    "Mined by accepted .t27 specs and verified jobs" : 100
 ```
 
-| Category | Percentage | Amount ($TRI) | Purpose |
-|----------|-----------|---------------|---------|
-| **Node Rewards** | 40% | 4,184,141,281 | Emitted to node operators for useful work |
-| **Founder** | 20% | 2,092,070,640 | Core team allocation with vesting |
-| **Community** | 20% | 2,092,070,640 | Grants, bounties, ecosystem growth |
-| **Treasury** | 10% | 1,046,035,320 | Protocol development and operations |
-| **Liquidity** | 10% | 1,046,035,320 | DEX liquidity and market making |
+| Source | Share | How it enters circulation |
+|--------|-------|---------------------------|
+| **Accepted work** | **100%** | Minted the instant a verifier accepts a spec or job, to the account that did it. Nothing is minted any other way. |
+| Founder / team | 0% | The team earns $TRI exactly like everyone else -- by getting its own work accepted. |
+| Treasury / pre-sale / liquidity | 0% | None. Development is funded by hardware sales and grants, not by the token; DEX liquidity is provided by holders of already-mined $TRI. |
 
-## Vesting Schedules
+It is panned, not printed: the only way to hold a $TRI is to have done work a
+verifier accepted.
 
-:::note Smart Contract Only
-Vesting is implemented in `TrinityToken.sol` on-chain. The node software (`depin.zig`) does not enforce vesting -- it is handled at the contract level.
-:::
+## Vesting
 
-| Category | Cliff | Vesting Period | Schedule |
-|----------|-------|---------------|----------|
-| Founder | 12 months | 48 months | Linear monthly after cliff |
-| Community | None | 36 months | Linear monthly, governed by DAO |
-| Treasury | 6 months | 24 months | Linear monthly after cliff |
-| Liquidity | None | Immediate | Available at TGE for DEX pools |
-| Node Rewards | None | Ongoing | Emitted per-operation, no cap per period |
+There is nothing to vest. Vesting releases pre-allocated tokens over time; with
+no pre-mine and no allocation, no such balance exists. Each $TRI is minted to
+the worker at the instant its work is accepted and is theirs immediately. The
+`TrinityToken.sol` vesting schedule belonged to the superseded pre-allocation
+model and no longer applies.
 
 ## Node Reward Emissions
 
-The Node Rewards pool (40% of supply) is emitted dynamically based on actual work performed. There is no fixed emission schedule -- rewards flow proportionally to useful computation.
+The **entire 3^21 supply is mineable** and is emitted dynamically as work is
+performed -- there is no pool set aside for anything else and no fixed schedule.
+Rewards flow proportionally to useful, verified computation, up to the cap.
 
-**Estimated emission curve:**
+**Illustrative emission curve** (estimates, counting down from the 10,460M cap):
 
-| Year | Estimated Emission | Cumulative | Pool Remaining |
-|------|-------------------|------------|----------------|
-| 1 | ~400M TRI | 400M | 3,784M |
-| 2 | ~600M TRI | 1,000M | 3,184M |
-| 3 | ~800M TRI | 1,800M | 2,384M |
-| 4 | ~900M TRI | 2,700M | 1,484M |
-| 5 | ~700M TRI | 3,400M | 784M |
+| Year | Estimated Emission | Cumulative mined | Remaining below cap |
+|------|-------------------|------------------|---------------------|
+| 1 | ~400M TRI | 400M | 10,060M |
+| 2 | ~600M TRI | 1,000M | 9,460M |
+| 3 | ~800M TRI | 1,800M | 8,660M |
+| 4 | ~900M TRI | 2,700M | 7,760M |
+| 5 | ~700M TRI | 3,400M | 7,060M |
 
-Emission rates are governed by network activity. As the pool diminishes, per-operation rates may be adjusted via governance to extend the emission timeline.
+Per-operation rates are governed by network activity and may be adjusted to
+pace mining against the cap.
 
 ## Staking
 
@@ -122,13 +122,14 @@ The following features are designed but not yet implemented in the node software
 ## Contract Address
 
 :::caution Testnet Only
-$TRI is currently deployed on Ethereum Sepolia testnet. Mainnet deployment is planned for a future milestone.
+$TRI is a real, transferable token. Chains of record are **TON** (Telegram distribution: Mini Apps, TON Connect, @wallet) and **Solana** (deep DEX liquidity), with one canonical 3^21 supply mirrored across both by a lock-and-mint bridge. The Ethereum Sepolia contract below was the original testnet proof of concept and is superseded as a chain of record; it stays only as a testnet artefact. The reasoning that moved TRI from a non-transferable credit to a transferable token, and what a compliant issuance still requires, is recorded in `specs/trinet/settlement_law.t27` under finding `ISSUANCE_AT_SMALL_N`.
 :::
 
-| Network | Address |
+| Chain | Status / address |
 |---------|---------|
-| Sepolia Testnet | [`0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469`](https://sepolia.etherscan.io/address/0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469) |
-| Ethereum Mainnet | Not yet deployed |
+| TON | chain of record -- not yet deployed |
+| Solana | chain of record -- not yet deployed |
+| Ethereum Sepolia (testnet PoC, superseded) | [`0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469`](https://sepolia.etherscan.io/address/0xef368e29FA3aB2eaf02BccD05438ED3bafE9f469) |
 
 ## Governance
 
@@ -150,6 +151,7 @@ Governance proposals require a quorum of 5% of staked supply and a simple majori
 
 ## Next Steps
 
+- [Minting](./minting.md) -- how an accepted spec mints TRI on-chain (100% mined, zero pre-mine)
 - [Rewards](./rewards.md) -- detailed reward rates and bonus multipliers
 - [Quick Start](./quickstart.md) -- start earning $TRI now
 - [Architecture](./architecture.md) -- how the network secures the token economy

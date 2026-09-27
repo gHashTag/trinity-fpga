@@ -1,0 +1,28 @@
+# start 2026-09-27T11:35:12Z
+# usb HUB ['0x110000']
+# usb clients 57 {'BrowserOS neo': 1, 'FwUpdateManagerd': 56}
+# cmd python3 uart_loss_diag_ax7203.py --arm 1 --port /dev/cu.usbserial-110 --keys ../trinet-keys.txt --setkey --json board_runs/uart_loss_w24.json
+# limit 1500 s
+spec specs/trinet/uart_loss_diag_ax7203.t27 sha256 5d8587dd09d31311; harness pinned 8a9a5f6ef57fdad6
+arm 1: window 24, 2016000 jobs (5 x 403200), port /dev/cu.usbserial-110 @ 1144744
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+------------------------------------------------------------------
+window                      : 24 (456 B in flight)
+jobs sent                   : 2016000 of 2016000 planned
+answers accepted (tag + y)  : 2016000
+wrong y under a valid tag   : 0
+answers lost                : 0
+events                      : 0 
+loss events (bytes/whole/unresolved): 0
+loss rate                   : none; 95 % interval [0.000, 1.830] per 10^6 jobs
+hole sizes (bytes)          : -
+longest host pause          : 96.4 ms (after 1002901 answers)
+elapsed                     : 427.5 s
+instrument check            : ok (accepted + wrong y + lost + in flight = 2016000, sent = 2016000)
+------------------------------------------------------------------
+record: board_runs/uart_loss_w24.json
+real 429.31
+user 92.18
+sys 23.68
+# exit=0
+# end 2026-09-27T11:42:21Z

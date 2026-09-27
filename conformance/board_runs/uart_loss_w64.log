@@ -1,0 +1,149 @@
+# start 2026-09-27T11:27:26Z
+# usb HUB ['0x110000']
+# usb clients 57 {'BrowserOS neo': 1, 'FwUpdateManagerd': 56}
+# cmd python3 uart_loss_diag_ax7203.py --arm 0 --port /dev/cu.usbserial-110 --keys ../trinet-keys.txt --setkey --json board_runs/uart_loss_w64.json
+# limit 1500 s
+spec specs/trinet/uart_loss_diag_ax7203.t27 sha256 5d8587dd09d31311; harness pinned 8a9a5f6ef57fdad6
+arm 0: window 64, 2016000 jobs (5 x 403200), port /dev/cu.usbserial-110 @ 1144744
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+  event    1 bytes      at job 7650 (sent 7714): anchor job 7657 at +15, hole 118 B, 7 answer(s) lost; 38 B scanned
+  event    2 bytes      at job 7889 (sent 7953): anchor job 7892 at +20, hole 37 B, 3 answer(s) lost; 57 B scanned
+  event    3 bytes      at job 16999 (sent 17063): anchor job 17000 at +16, hole 3 B, 1 answer(s) lost; 38 B scanned
+  event    4 whole      at job 50441 (sent 50505): anchor job 50442 at +0, hole 19 B, 1 answer(s) lost
+  event    5 bytes      at job 74408 (sent 74472): anchor job 74415 at +10, hole 123 B, 7 answer(s) lost; 38 B scanned
+  event    6 bytes      at job 74744 (sent 74808): anchor job 74750 at +28, hole 86 B, 6 answer(s) lost; 57 B scanned
+  event    7 bytes      at job 99888 (sent 99952): anchor job 99891 at +24, hole 33 B, 3 answer(s) lost; 57 B scanned
+  event    8 bytes      at job 172007 (sent 172071): anchor job 172008 at +3, hole 16 B, 1 answer(s) lost; 38 B scanned
+  event    9 bytes      at job 172162 (sent 172226): anchor job 172175 at +24, hole 223 B, 13 answer(s) lost; 57 B scanned
+  event   10 bytes      at job 235807 (sent 235871): anchor job 235819 at +10, hole 218 B, 12 answer(s) lost; 38 B scanned
+  event   11 bytes      at job 236586 (sent 236650): anchor job 236591 at +19, hole 76 B, 5 answer(s) lost; 38 B scanned
+  event   12 bytes      at job 237624 (sent 237688): anchor job 237635 at +18, hole 191 B, 11 answer(s) lost; 38 B scanned
+  event   13 bytes      at job 238190 (sent 238254): anchor job 238194 at +20, hole 56 B, 4 answer(s) lost; 57 B scanned
+  event   14 bytes      at job 248804 (sent 248868): anchor job 248808 at +11, hole 65 B, 4 answer(s) lost; 38 B scanned
+  event   15 bytes      at job 272709 (sent 272773): anchor job 272714 at +23, hole 72 B, 5 answer(s) lost; 57 B scanned
+  event   16 bytes      at job 275064 (sent 275128): anchor job 275071 at +14, hole 119 B, 7 answer(s) lost; 38 B scanned
+  event   17 bytes      at job 294358 (sent 294422): anchor job 294368 at +11, hole 179 B, 10 answer(s) lost; 38 B scanned
+  event   18 bytes      at job 365913 (sent 365977): anchor job 365915 at +11, hole 27 B, 2 answer(s) lost; 38 B scanned
+  event   19 bytes      at job 365918 (sent 365982): anchor job 365920 at +7, hole 31 B, 2 answer(s) lost; 38 B scanned
+  event   20 bytes      at job 400291 (sent 400355): anchor job 400293 at +18, hole 20 B, 2 answer(s) lost; 38 B scanned
+  event   21 bytes      at job 433026 (sent 433090): anchor job 433035 at +22, hole 149 B, 9 answer(s) lost; 57 B scanned
+  event   22 bytes      at job 490446 (sent 490510): anchor job 490449 at +16, hole 41 B, 3 answer(s) lost; 38 B scanned
+  event   23 bytes      at job 530357 (sent 530421): anchor job 530364 at +28, hole 105 B, 7 answer(s) lost; 57 B scanned
+  event   24 bytes      at job 589071 (sent 589135): anchor job 589076 at +5, hole 90 B, 5 answer(s) lost; 38 B scanned
+  event   25 bytes      at job 625751 (sent 625815): anchor job 625762 at +7, hole 202 B, 11 answer(s) lost; 38 B scanned
+  event   26 bytes      at job 657401 (sent 657465): anchor job 657403 at +11, hole 27 B, 2 answer(s) lost; 38 B scanned
+  event   27 bytes      at job 666635 (sent 666699): anchor job 666637 at +19, hole 19 B, 2 answer(s) lost; 38 B scanned
+  event   28 bytes      at job 671345 (sent 671409): anchor job 671350 at +29, hole 66 B, 5 answer(s) lost; 57 B scanned
+  event   29 bytes      at job 767081 (sent 767145): anchor job 767087 at +26, hole 88 B, 6 answer(s) lost; 57 B scanned
+  event   30 bytes      at job 767089 (sent 767153): anchor job 767090 at +13, hole 6 B, 1 answer(s) lost; 38 B scanned
+  event   31 bytes      at job 768547 (sent 768611): anchor job 768553 at +16, hole 98 B, 6 answer(s) lost; 38 B scanned
+  event   32 bytes      at job 769051 (sent 769115): anchor job 769053 at +12, hole 26 B, 2 answer(s) lost; 38 B scanned
+  event   33 bytes      at job 781040 (sent 781104): anchor job 781042 at +17, hole 21 B, 2 answer(s) lost; 38 B scanned
+  event   34 bytes      at job 801208 (sent 801272): anchor job 801210 at +21, hole 17 B, 2 answer(s) lost; 57 B scanned
+  event   35 bytes      at job 803687 (sent 803751): anchor job 803689 at +19, hole 19 B, 2 answer(s) lost; 38 B scanned
+  event   36 bytes      at job 828802 (sent 828866): anchor job 828804 at +17, hole 21 B, 2 answer(s) lost; 38 B scanned
+  event   37 bytes      at job 828807 (sent 828871): anchor job 828809 at +1, hole 37 B, 2 answer(s) lost; 38 B scanned
+  event   38 bytes      at job 835198 (sent 835262): anchor job 835200 at +17, hole 21 B, 2 answer(s) lost; 38 B scanned
+  event   39 bytes      at job 837093 (sent 837157): anchor job 837099 at +15, hole 99 B, 6 answer(s) lost; 38 B scanned
+  event   40 bytes      at job 839991 (sent 840055): anchor job 839998 at +25, hole 108 B, 7 answer(s) lost; 57 B scanned
+  event   41 bytes      at job 855798 (sent 855862): anchor job 855802 at +13, hole 63 B, 4 answer(s) lost; 38 B scanned
+  event   42 bytes      at job 863889 (sent 863953): anchor job 863896 at +11, hole 122 B, 7 answer(s) lost; 38 B scanned
+  event   43 bytes      at job 866159 (sent 866223): anchor job 866162 at +11, hole 46 B, 3 answer(s) lost; 38 B scanned
+  event   44 bytes      at job 867634 (sent 867698): anchor job 867636 at +16, hole 22 B, 2 answer(s) lost; 38 B scanned
+  event   45 bytes      at job 933760 (sent 933824): anchor job 933766 at +27, hole 87 B, 6 answer(s) lost; 57 B scanned
+  event   46 bytes      at job 942654 (sent 942718): anchor job 942657 at +15, hole 42 B, 3 answer(s) lost; 38 B scanned
+  event   47 whole      at job 981471 (sent 981535): anchor job 981481 at +0, hole 190 B, 10 answer(s) lost
+  event   48 bytes      at job 983923 (sent 983987): anchor job 983931 at +19, hole 133 B, 8 answer(s) lost; 38 B scanned
+  event   49 bytes      at job 984250 (sent 984314): anchor job 984251 at +14, hole 5 B, 1 answer(s) lost; 38 B scanned
+  event   50 bytes      at job 984604 (sent 984668): anchor job 984608 at +1, hole 75 B, 4 answer(s) lost; 38 B scanned
+  event   51 bytes      at job 985069 (sent 985133): anchor job 985074 at +9, hole 86 B, 5 answer(s) lost; 38 B scanned
+  event   52 bytes      at job 986936 (sent 987000): anchor job 986938 at +25, hole 13 B, 2 answer(s) lost; 57 B scanned
+  event   53 bytes      at job 987213 (sent 987277): anchor job 987219 at +26, hole 88 B, 6 answer(s) lost; 57 B scanned
+  event   54 bytes      at job 987662 (sent 987726): anchor job 987675 at +18, hole 229 B, 13 answer(s) lost; 38 B scanned
+  event   55 bytes      at job 988089 (sent 988153): anchor job 988093 at +5, hole 71 B, 4 answer(s) lost; 38 B scanned
+  event   56 bytes      at job 988369 (sent 988433): anchor job 988371 at +4, hole 34 B, 2 answer(s) lost; 38 B scanned
+  event   57 bytes      at job 1010088 (sent 1010152): anchor job 1010096 at +2, hole 150 B, 8 answer(s) lost; 38 B scanned
+  event   58 bytes      at job 1040243 (sent 1040307): anchor job 1040244 at +8, hole 11 B, 1 answer(s) lost; 38 B scanned
+  event   59 bytes      at job 1041547 (sent 1041611): anchor job 1041549 at +16, hole 22 B, 2 answer(s) lost; 38 B scanned
+  event   60 bytes      at job 1042016 (sent 1042080): anchor job 1042019 at +17, hole 40 B, 3 answer(s) lost; 38 B scanned
+  event   61 bytes      at job 1051511 (sent 1051575): anchor job 1051514 at +13, hole 44 B, 3 answer(s) lost; 38 B scanned
+  event   62 bytes      at job 1074594 (sent 1074658): anchor job 1074598 at +13, hole 63 B, 4 answer(s) lost; 38 B scanned
+  event   63 bytes      at job 1087842 (sent 1087906): anchor job 1087844 at +20, hole 18 B, 2 answer(s) lost; 57 B scanned
+  event   64 bytes      at job 1088102 (sent 1088166): anchor job 1088125 at +20, hole 417 B, 23 answer(s) lost; 57 B scanned
+  event   65 bytes      at job 1089411 (sent 1089475): anchor job 1089415 at +12, hole 64 B, 4 answer(s) lost; 38 B scanned
+  event   66 bytes      at job 1091587 (sent 1091651): anchor job 1091596 at +12, hole 159 B, 9 answer(s) lost; 38 B scanned
+  event   67 bytes      at job 1101512 (sent 1101576): anchor job 1101514 at +25, hole 13 B, 2 answer(s) lost; 57 B scanned
+  event   68 bytes      at job 1106633 (sent 1106697): anchor job 1106639 at +20, hole 94 B, 6 answer(s) lost; 57 B scanned
+  event   69 bytes      at job 1124319 (sent 1124383): anchor job 1124329 at +5, hole 185 B, 10 answer(s) lost; 38 B scanned
+  event   70 bytes      at job 1129509 (sent 1129573): anchor job 1129512 at +14, hole 43 B, 3 answer(s) lost; 38 B scanned
+  event   71 bytes      at job 1137838 (sent 1137902): anchor job 1137840 at +17, hole 21 B, 2 answer(s) lost; 38 B scanned
+  event   72 bytes      at job 1166882 (sent 1166946): anchor job 1166883 at +2, hole 17 B, 1 answer(s) lost; 38 B scanned
+  event   73 bytes      at job 1175933 (sent 1175997): anchor job 1175939 at +24, hole 90 B, 6 answer(s) lost; 57 B scanned
+  event   74 bytes      at job 1224504 (sent 1224568): anchor job 1224508 at +14, hole 62 B, 4 answer(s) lost; 38 B scanned
+  event   75 bytes      at job 1241427 (sent 1241491): anchor job 1241428 at +13, hole 6 B, 1 answer(s) lost; 38 B scanned
+  event   76 bytes      at job 1242957 (sent 1243021): anchor job 1242961 at +9, hole 67 B, 4 answer(s) lost; 38 B scanned
+  event   77 bytes      at job 1247747 (sent 1247811): anchor job 1247748 at +1, hole 18 B, 1 answer(s) lost; 38 B scanned
+  event   78 bytes      at job 1252753 (sent 1252817): anchor job 1252754 at +14, hole 5 B, 1 answer(s) lost; 38 B scanned
+  event   79 bytes      at job 1344542 (sent 1344606): anchor job 1344545 at +10, hole 47 B, 3 answer(s) lost; 38 B scanned
+  event   80 bytes      at job 1350105 (sent 1350169): anchor job 1350117 at +12, hole 216 B, 12 answer(s) lost; 38 B scanned
+  event   81 bytes      at job 1352006 (sent 1352070): anchor job 1352010 at +11, hole 65 B, 4 answer(s) lost; 38 B scanned
+  event   82 bytes      at job 1352410 (sent 1352474): anchor job 1352414 at +15, hole 61 B, 4 answer(s) lost; 38 B scanned
+  event   83 bytes      at job 1392304 (sent 1392368): anchor job 1392310 at +25, hole 89 B, 6 answer(s) lost; 57 B scanned
+  event   84 bytes      at job 1392956 (sent 1393020): anchor job 1392959 at +11, hole 46 B, 3 answer(s) lost; 38 B scanned
+  event   85 bytes      at job 1396667 (sent 1396731): anchor job 1396668 at +16, hole 3 B, 1 answer(s) lost; 38 B scanned
+  event   86 bytes      at job 1398651 (sent 1398715): anchor job 1398662 at +17, hole 192 B, 11 answer(s) lost; 38 B scanned
+  event   87 bytes      at job 1404869 (sent 1404933): anchor job 1404875 at +15, hole 99 B, 6 answer(s) lost; 38 B scanned
+  event   88 bytes      at job 1412322 (sent 1412386): anchor job 1412328 at +9, hole 105 B, 6 answer(s) lost; 38 B scanned
+  event   89 bytes      at job 1419397 (sent 1419461): anchor job 1419399 at +20, hole 18 B, 2 answer(s) lost; 57 B scanned
+  event   90 bytes      at job 1423686 (sent 1423750): anchor job 1423690 at +17, hole 59 B, 4 answer(s) lost; 38 B scanned
+  event   91 bytes      at job 1433074 (sent 1433138): anchor job 1433079 at +8, hole 87 B, 5 answer(s) lost; 38 B scanned
+  event   92 bytes      at job 1448987 (sent 1449051): anchor job 1448988 at +14, hole 5 B, 1 answer(s) lost; 38 B scanned
+  event   93 bytes      at job 1477598 (sent 1477662): anchor job 1477603 at +16, hole 79 B, 5 answer(s) lost; 38 B scanned
+  event   94 bytes      at job 1483976 (sent 1484040): anchor job 1483983 at +17, hole 116 B, 7 answer(s) lost; 38 B scanned
+  event   95 bytes      at job 1484268 (sent 1484332): anchor job 1484273 at +18, hole 77 B, 5 answer(s) lost; 38 B scanned
+  event   96 bytes      at job 1486563 (sent 1486627): anchor job 1486566 at +2, hole 55 B, 3 answer(s) lost; 38 B scanned
+  event   97 bytes      at job 1498213 (sent 1498277): anchor job 1498215 at +24, hole 14 B, 2 answer(s) lost; 57 B scanned
+  event   98 bytes      at job 1609668 (sent 1609732): anchor job 1609672 at +11, hole 65 B, 4 answer(s) lost; 38 B scanned
+  event   99 bytes      at job 1612431 (sent 1612495): anchor job 1612432 at +12, hole 7 B, 1 answer(s) lost; 38 B scanned
+  event  100 bytes      at job 1612994 (sent 1613058): anchor job 1612997 at +3, hole 54 B, 3 answer(s) lost; 38 B scanned
+  event  101 bytes      at job 1630260 (sent 1630324): anchor job 1630267 at +4, hole 129 B, 7 answer(s) lost; 38 B scanned
+  event  102 bytes      at job 1679295 (sent 1679359): anchor job 1679298 at +3, hole 54 B, 3 answer(s) lost; 38 B scanned
+  event  103 bytes      at job 1680813 (sent 1680877): anchor job 1680816 at +21, hole 36 B, 3 answer(s) lost; 57 B scanned
+  event  104 bytes      at job 1702203 (sent 1702267): anchor job 1702216 at +26, hole 221 B, 13 answer(s) lost; 57 B scanned
+  event  105 bytes      at job 1712711 (sent 1712775): anchor job 1712713 at +14, hole 24 B, 2 answer(s) lost; 38 B scanned
+  event  106 bytes      at job 1759842 (sent 1759906): anchor job 1759844 at +31, hole 7 B, 2 answer(s) lost; 57 B scanned
+  event  107 bytes      at job 1763975 (sent 1764039): anchor job 1763977 at +28, hole 10 B, 2 answer(s) lost; 57 B scanned
+  event  108 bytes      at job 1764124 (sent 1764188): anchor job 1764125 at +16, hole 3 B, 1 answer(s) lost; 38 B scanned
+  event  109 bytes      at job 1764572 (sent 1764636): anchor job 1764577 at +24, hole 71 B, 5 answer(s) lost; 57 B scanned
+  event  110 bytes      at job 1765091 (sent 1765155): anchor job 1765098 at +24, hole 109 B, 7 answer(s) lost; 57 B scanned
+  event  111 bytes      at job 1768199 (sent 1768263): anchor job 1768201 at +29, hole 9 B, 2 answer(s) lost; 57 B scanned
+  event  112 bytes      at job 1804895 (sent 1804959): anchor job 1804902 at +16, hole 117 B, 7 answer(s) lost; 38 B scanned
+  event  113 bytes      at job 1804905 (sent 1804969): anchor job 1804907 at +9, hole 29 B, 2 answer(s) lost; 38 B scanned
+  event  114 bytes      at job 1804910 (sent 1804974): anchor job 1804915 at +10, hole 85 B, 5 answer(s) lost; 38 B scanned
+  event  115 bytes      at job 1814726 (sent 1814790): anchor job 1814732 at +34, hole 80 B, 6 answer(s) lost; 57 B scanned
+  event  116 bytes      at job 1940997 (sent 1941061): anchor job 1941000 at +8, hole 49 B, 3 answer(s) lost; 38 B scanned
+  event  117 bytes      at job 1955053 (sent 1955117): anchor job 1955069 at +1, hole 303 B, 16 answer(s) lost; 38 B scanned
+  event  118 bytes      at job 1958376 (sent 1958440): anchor job 1958379 at +15, hole 42 B, 3 answer(s) lost; 38 B scanned
+  event  119 bytes      at job 2011514 (sent 2011578): anchor job 2011515 at +8, hole 11 B, 1 answer(s) lost; 38 B scanned
+  event  120 bytes      at job 2011770 (sent 2011834): anchor job 2011776 at +24, hole 90 B, 6 answer(s) lost; 57 B scanned
+  event  121 bytes      at job 2013128 (sent 2013192): anchor job 2013138 at +24, hole 166 B, 10 answer(s) lost; 57 B scanned
+------------------------------------------------------------------
+window                      : 64 (1216 B in flight)
+jobs sent                   : 2016000 of 2016000 planned
+answers accepted (tag + y)  : 2015426
+wrong y under a valid tag   : 0
+answers lost                : 574
+events                      : 121 {'bytes': 119, 'whole': 2}
+loss events (bytes/whole/unresolved): 121
+loss rate                   : 1 per 16,661 jobs; 95 % interval [49.803, 71.716] per 10^6 jobs
+hole sizes (bytes)          : [3, 3, 3, 5, 5, 5, 6, 6, 7, 7, 9, 10, 11, 11, 13, 13, 14, 16, 17, 17, 18, 18, 18, 19, 19, 19, 20, 21, 21, 21, 21, 22, 22, 24, 26, 27, 27, 29, 31, 33, 34, 36, 37, 37, 40, 41, 42, 42, 43, 44, 46, 46, 47, 49, 54, 54, 55, 56, 59, 61, 62, 63, 63, 64, 65, 65, 65, 66, 67, 71, 71, 72, 75, 76, 77, 79, 80, 85, 86, 86, 87, 87, 88, 88, 89, 90, 90, 90, 94, 98, 99, 99, 105, 105, 108, 109, 116, 117, 118, 119, 122, 123, 129, 133, 149, 150, 159, 166, 179, 185, 190, 191, 192, 202, 216, 218, 221, 223, 229, 303, 417]
+longest host pause          : 40.9 ms (after 2011644 answers)
+elapsed                     : 424.31 s
+instrument check            : ok (accepted + wrong y + lost + in flight = 2016000, sent = 2016000)
+------------------------------------------------------------------
+record: board_runs/uart_loss_w64.json
+real 426.02
+user 97.51
+sys 23.49
+# exit=0
+# end 2026-09-27T11:34:32Z

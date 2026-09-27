@@ -442,3 +442,8352 @@ this implementing", read it.
 alone would have been an interpretation -- this campaign has been wrong on interpretations
 several times. `256 of 256, 0 differ` is not an interpretation. Source narrows the search
 space; measurement still decides.
+
+## A 100% failure rate is a broken harness until proven otherwise
+
+A sweep of all 496 specs reported `PARSE OK: 0  FAIL: 496`. Read literally that is
+"the parser is completely dead" — a finding so large it would have reframed the whole
+session, and it would have been reported to a sleeping user as fact.
+
+It was exit 127. The shell's cwd had reset between calls, `./bootstrap/target/release/t27c`
+did not exist at that relative path, and every one of the 496 invocations was
+`command not found`. The binary builds to the **workspace** target dir,
+`target/release/t27c`, not `bootstrap/target/release/t27c` — `cargo build` was run from
+`bootstrap/`, but the workspace root owns the output directory.
+
+The tell was the shape of the result, not its content. Real breakage is ragged: some
+specs parse, some do not. **A clean 0% or a clean 100% is the signature of a harness
+fault — the measurement never reached the thing being measured.** Before reporting any
+total, run the tool once, by hand, on one input, and look at the actual stderr. The
+correct count here was 496/496, the exact opposite of the first reading.
+
+Corollary for absolute vs. relative paths: any sweep that shells out in a loop should
+resolve its binary to an absolute path once, up front, and fail loudly if it is missing —
+so a missing tool reports as "tool missing", never as "every case failed".
+
+## A gate that is always bypassed is not a gate, and nobody will report it
+
+`scripts/tri` — the wrapper the README tells every new reader to run to verify the repo
+(`./scripts/tri test`) — was broken for **every** subcommand. Line 15 passed
+`--repo-root` before the subcommand name, but it is a per-subcommand clap option, not a
+global one, so every invocation died with `unexpected argument '--repo-root' found`.
+
+The interesting part is why it survived. `scripts/tri check-now` is pre-commit Gate 1/4.
+A permanently failing gate does not get fixed; it gets bypassed with `--no-verify`, and
+the bypass is invisible in the history. The gate had stopped being a gate and became a
+toll, and the toll was free.
+
+Two habits from this:
+
+**When a hook blocks you, read the hook before satisfying it.** The instinct is to make
+the error go away — bump the date, add the trailer. Doing that here would have left the
+wrapper broken and re-armed the same trap for the next agent. The block was a symptom;
+the wrapper was the defect.
+
+**Suspect any documented command you have not personally run this session.** The README
+had shipped a broken verification command through multiple doc-sync commits, because
+doc-sync passes edit prose and do not execute the fences. Run the fence.
+
+## Ask who occupies the corner you claim to own
+
+`COMPETITORS.md` was careful, sourced, and honest in tone: it named five commercial NPUs
+and explained, correctly, that this project does not race them on TOPS or SDK breadth.
+It then claimed the project owns "the inspectable open silicon and formal / assurance
+corner" — and named nobody in that corner.
+
+That corner is crowded. Vericert is verified HLS with the *compiler itself* proved
+correct in Coq; this project's compiler is unverified Rust. Kami does modular refinement
+from spec to RTL; this project has conformance vectors, not a refinement relation.
+Amaranth ships formal verification via SymbiYosys as a built-in.
+
+**A competitive document is not honest because each sentence is true. It is honest when
+the omissions do not do the arguing.** The audit question that finds this in one pass:
+*for each corner the document claims, who else is standing in it, and are they ahead?*
+If the answer is "nobody" the claim is almost certainly under-researched, not uncontested.
+
+The repair is not deleting the claim — it is narrowing it until it survives contact.
+Here that meant conceding the compiler-correctness and refinement axes outright, and
+promoting the one genuinely unusual artefact (a machine-checkable tape-out conformance
+gate) to the load-bearing position, explicitly labelled as the claim most worth attacking.
+
+## A tool's own summary line is a claim, not evidence
+
+`validate-conformance` printed `101 total, 43 valid, 0 invalid, 58 empty/skipped`. That
+went into a report, a `NOW.md` entry, a GitHub issue, and a memory file as "the
+conformance corpus is roughly half-hollow" — and it became the headline recommendation
+for the next wave: *populate the empty files*.
+
+Zero files were empty. The validator resolved payloads with `.as_array()`, and the
+corpus stores vectors both as `{"vectors": [...]}` and as `{"vectors": {"case_a": {…}}}`.
+Every object-shaped file counted as zero. Of the 58: 45 were fully populated (one
+carried 20 vectors), 8 were schema files that carry no vectors by construction, 5 were
+benchmark reports. Among the false positives was `FORMAT-SPEC-001.json` — the numeric
+SSOT the whole positioning rests on, reported as empty by its own repo's validator.
+
+Opening four of the flagged files took under a minute and would have caught it before it
+propagated to four places. The distinction that matters:
+
+**A summary is the tool's interpretation of the data. Only the data is the data.** When
+a count is about to become a plan — "populate these 58 files" — open the objects it
+counted, at least a sample across categories, and confirm the count means what the label
+says. Categories matter more than sample size here: the 58 held four distinct shapes,
+and reading three files of the same shape would have confirmed the wrong conclusion.
+
+**A gate with a high false-positive rate is worse than no gate**, because it launders
+noise as signal and nobody reads warning 43 of 58. The repair is to make the tool
+classify rather than binarise — this one now reports vectors / report / definition /
+empty, and the single genuinely stale artefact it had been hiding for months
+(a CLARA coverage file covering 7% of the current corpus) became visible the moment the
+false positives stopped.
+
+The general form, and the reason this keeps recurring in this campaign: **the failure
+mode is never a wrong number, it is an unexamined label.** `FAIL: 496` meant "binary not
+found". `58 empty/skipped` meant "object-shaped". Both were accurate counts of something
+other than what their word said.
+
+## Gates check the cheap proxy; audit the gate against the property it names
+
+Three consecutive waves in this repo each turned up one gate enforcing something weaker
+than its own label:
+
+| Gate | Name claims | Actually tests |
+|---|---|---|
+| `scripts/tri check-now` (Gate 1/4) | NOW freshness | nothing — the wrapper was broken, so it was bypassed with `--no-verify` |
+| `validate-conformance` | conformance corpus is populated | array-shaped payloads only, so 58 of 101 files were false positives |
+| Gate 2/4 "Seal coverage" | seal coverage | `[[ -f "$seal_file" ]]` — that a file *exists* |
+
+The third is the sharpest. `.trinity/seals/` held **730 seal files and not one verified**.
+480 were written on the same day as a commit that rewrote the specs they sealed, and
+nothing was re-baselined for four months across a run of codegen fixes. **Presence is not
+integrity**, and only presence was ever enforced, so the drift was structurally invisible —
+there was no observation that could have revealed it short of running `--verify` by hand.
+
+The audit that finds this class in one pass, for each gate: **write down the property the
+gate's name claims, then read the gate and write down the property it tests. Where the two
+differ, that is the hole.** It takes minutes and does not require understanding the domain.
+
+Two riders learned the same wave:
+
+**A gate that cannot fail teaches people to route around it.** The broken wrapper made
+Gate 1/4 fail always, so commits used `--no-verify` — which silently disabled the other
+three gates too. A gate is a hazard when it is always red *or* always green.
+
+**Check the gate's file resolution, not just its predicate.** Gate 2/4 derived
+`basename "$spec" .t27` → `gf16.json`, while `seal --verify` reads a path-derived
+`numeric_triformat-gf16.json`. Both "worked" on macOS only because the filesystem is
+case-insensitive and `GF16.json` happened to match. On Linux CI the gate would look for a
+file that does not exist. Two naming schemes for one artefact is a defect even when every
+individual test passes.
+
+## Evidence that cites a command nobody can run is not evidence
+
+`conformance/clara_spec_coverage.json` recorded
+`{"command": "bash scripts/clara/demo.sh", "result": "20/20 passed, 0 failed"}`.
+`scripts/clara/` does not exist anywhere in the repository — not renamed, not moved,
+absent. The row had been carried as passing evidence for four months.
+
+This reframes what "narrow the claim vs regenerate the evidence" means. There was no
+claim to narrow: an artefact asserting a result from a command that cannot be executed is
+not weak evidence, it is **not evidence**, and the only repair is to replace it with
+something regenerable. The new command writes a `reproduce` field into its own output for
+exactly this reason.
+
+**When auditing an evidence file, run its own stated reproduction command before reading
+its numbers.** If the command does not exist, the numbers do not need checking.
+
+And the corollary that governs what an audit may do on its own: **regenerating the
+measurement is repair; rewriting the baseline is a decision.** Re-running coverage was
+safe and mechanical. Re-sealing 496 specs would have rewritten 730 provenance records and
+canonicalised whatever the current codegen emits, with no independent oracle that it is
+right — so it was reported, scoped, and left for a human. An audit that quietly re-baselines
+the thing it was auditing has destroyed the evidence it was sent to check.
+
+## Read the gate's body, not its name — some gates are one `echo`
+
+The gate audit from the previous wave was applied to CI. Three of nineteen workflows had
+this for their entire job body:
+
+```yaml
+- name: Validate schemas
+  run: |
+    echo "Validating JSON schemas..."
+```
+
+`seal-coverage.yml`, `schema-validation.yml`, `check-now-freshness.yml`. Each reported
+green on every pull request. The README cited one of them — *"CI · Schema validation ·
+GREEN · Conformance vectors validated"* — as evidence. **That row was backed by an echo
+statement.**
+
+This is the terminal form of the claimed-vs-tested gap: not a weak proxy, but no test at
+all, wearing the name of one. It is invisible from every angle except opening the file —
+the job name is right, the status badge is green, the README cites it truthfully as
+"passing". `grep -L` for workflows whose steps contain no command other than `echo` finds
+the whole class in seconds, and is worth running against any repo whose CI you are about
+to cite.
+
+The repair pattern that avoids the obvious trap: **do not make a hollow gate blocking on
+the same commit that makes it real.** `seal-coverage` was wired to a checker that returns
+0 of 496 — switching it on would have walled off every PR behind a re-baseline nobody had
+reviewed. It went in non-blocking, publishing the true number to the job summary, with the
+enforcing flip named as the next step. A gate that reports honestly and does not block is
+a real improvement over a gate that lies and does not block; a gate that blocks on a
+number nobody has agreed to is a new outage.
+
+**And never hollow one out to make it pass.** If duplication or cost makes a gate not
+worth keeping, delete it — an empty gate is strictly worse than a missing one, because a
+missing gate is visible in the workflow list and an empty one reports green.
+
+## Two derivations of one path is a bug even when every test passes
+
+Seal files in this repo are named `<parent-dir>_<module-name>.json`, where module-name
+comes from the spec's `module` declaration — not from its filename. The pre-commit gate
+guessed `basename "$spec" .t27`. Both derivations had lived side by side for months.
+
+Both failure directions were live:
+
+```
+specs/base/types.t27    tool -> base_tritype-base.json   EXISTS
+                        gate -> types.json               MISSING   # flags a sealed spec
+specs/numeric/gf16.t27  tool -> numeric_triformat-gf16.json  EXISTS
+                        gate -> gf16.json                     "EXISTS"
+```
+
+The second only matched because an unrelated `GF16.json` collided **case-insensitively on
+macOS**. The same gate on Linux CI would have looked for a file that does not exist. A
+case-insensitive filesystem is a bug-concealer: it makes two different names test as one,
+so a naming disagreement passes locally and fails only in CI, or fails only for the
+contributor on a different OS.
+
+The fix is not to correct the guess — it is to delete it. `t27c seal-path <spec>` now
+prints the canonical path and the gate asks the compiler. **When a shell script and a
+compiled tool must agree on a derived path, the script should call the tool, not
+reimplement the rule.** Any rule expressed twice will diverge; the only question is
+whether you find out from a test or from a user.
+
+Related: the gates here are also **local-only** — the tracked hook is a three-line stub,
+and the real four-gate hook installs into `.git/hooks/` only if someone runs an installer
+script. Before trusting "the pre-commit gate catches this", check that a fresh clone
+actually gets the gate.
+
+## State the evidence class, and let the weaker claim stand
+
+A campaign of audits produced a document of numbered findings. The temptation at write-up
+time is to round every observation up to a theorem. Two of them could not survive it.
+
+The seal-path function was described in a commit as "injective by construction". It is
+not. The encoding flattens `/` to `_`, and `_` is legal inside a path component, so
+`specs/a_b/c.t27` and `specs/a/b_c.t27` both yield `a_b_c.json`. What was true — and
+sufficient — is that it is injective **on this corpus**: 496 specs, 496 distinct images,
+measured. The general claim was never needed; it was reached for because it sounded
+finished.
+
+So every proposition now carries a tag: `PROVED` (machine-checked), `MEASURED`
+(reproducible over a **stated domain**), `CONJECTURE`. The discipline is not decoration.
+It forces the domain into the sentence, and the domain is where these claims actually
+break.
+
+Three habits followed from it:
+
+**Write the counterexample into a test that asserts the limitation holds.** Not a
+`// TODO: not injective in general` comment, which decays — an assertion that
+`Σ(a_b/c) == Σ(a/b_c)`. If someone changes the encoding, that test fails and drags the
+documentation back into review. A limitation pinned by a passing test is maintained; one
+pinned by prose is not.
+
+**A partial invariant plus a guard at the mutation site beats a total invariant nobody
+re-checks.** The residual collision risk was closed at `seal --save`, which refuses to
+overwrite a seal whose recorded owner differs. The predecessor scheme had a *stronger*
+sounding rule and no guard, and it silently destroyed a seal that stayed broken for
+months.
+
+**Validate a checking pipeline in both directions before trusting it.** A yosys proof
+recipe was confirmed by running it on a property that is true (exit 0) *and* one that is
+false (exit 1). A pipeline that only ever reports success is indistinguishable from one
+that checks nothing — which is exactly the CI-theater failure from the previous wave,
+arriving in a new costume.
+
+## Verify a citation's title from the source before it goes in a document
+
+Six arXiv identifiers were assembled from memory for a related-work table. Fetching each
+one's `citation_title` showed that one — recalled confidently as a numerics paper — was
+*Graph-based Joint Pandemic Concern and Relation Extraction on Twitter*. It was dropped.
+
+Identifiers are exactly the kind of detail that feels retrievable and is not. The check is
+one HTTP request per entry and it is not optional in a document whose entire value is that
+its claims are checkable. The same rule already applies to a tool's summary line and to an
+evidence file's reproduction command; a citation is the same object — a claim about
+something you have not looked at.
+
+Where a description is genuinely the source's own words, quote it and say so; where it is
+your assessment, keep it outside the quotes. A table that mixes the two silently is doing
+the same work as an omission.
+
+## A tool that silently discards what you asked it to check
+
+The plan was to preprocess SystemVerilog with `sv2v` so Yosys could read the project's
+assertions. `sv2v`'s README, read before installing: *"Assertions are also supported, but
+are simply dropped during conversion."*
+
+"Supported" here means *parsed without error*, not *preserved*. Measured on 0.0.13 — a
+module with a `property` block and an `assert property` goes in; a module with **zero**
+assertions comes out; **exit 0**, no warning, no diagnostic.
+
+Had that been wired up, `sv2v → yosys → sby` would have run to completion and reported
+success while proving nothing, because there would have been no properties left to
+violate. **That is worse than the broken state it replaced**, which at least failed loudly
+at parse. A pipeline can be built entirely from real, well-regarded tools and still be
+theater.
+
+Two things generalise:
+
+**Read a tool's stated limitations before adopting it, and treat "supported" as a word
+that needs unpacking.** One line of a README saved a working, green, meaningless CI job.
+The install came *after* the README, and the empirical confirmation after that — cheapest
+check first.
+
+**When a transform can silently reduce your inputs, measure the output population, not
+just the exit code.** The guard that catches this is counting what survived: the CI job
+now runs `stat` and fails when zero `$check` cells reach the netlist. Validated in both
+directions — the real emitter yields 2 and passes, `sv2v` output yields 0 and fails. The
+same shape applies far outside formal verification: a filter step, a migration, a
+codegen pass. *Exit 0 over an empty set* is the most expensive kind of pass, because
+nothing downstream can tell it from success.
+
+## When a tool refuses your input, consider changing the input
+
+Two waves went into the fact that Yosys's frontend accepts neither named `property`
+blocks nor inline `assert property (@(posedge clk) …)`. The reflex was to find a
+translator — and the translator deleted the properties.
+
+Yosys *does* accept immediate assertions inside `always`. Nearly the whole property set
+maps onto them: `a |-> b` is `assert (!(a) || (b))`, and `a |-> ##N b` is
+`assert (!($past(a, N)) || (b))`. Emitting that subset made the properties provable in an
+afternoon, after two waves spent trying to make the unreadable form readable.
+
+**Meet the tool where it is.** When a consumer rejects your format, generating what it
+accepts is often far cheaper than making it accept what you generate — and it removes a
+dependency rather than adding one.
+
+Two riders:
+
+**Name what does not survive the translation, in the artefact itself.** `s_eventually` is
+liveness; an immediate assertion evaluates in one cycle and cannot express it. Those
+behaviors are reported on stderr *and* written into the generated file as a
+`NOT TRANSLATED` comment. A partial translation that does not state its own coverage is
+the vacuity failure again, one level up: the run is green and the domain quietly shrank.
+
+**Let the prover correct you.** The first delayed-implication guard was `rst_n` alone, and
+the prover produced a counterexample: one cycle after reset, the antecedent's history
+predates the reset. The right guard is `rst_n && $past(rst_n)`. A refutation on a property
+you believed was a design error found for free — which is only possible once the
+properties are actually being checked.
+
+## A test that pins the implementation's shape cannot notice it is wrong
+
+Formal verification found a lost-interrupt race in generated RTL: three interrupt sources
+and a clear-on-read were emitted as four independent non-blocking assignments, and
+last-write-wins meant a `status_read` concurrent with an event destroyed that event.
+
+Two unit tests covered exactly that code. Both passed. They asserted the **literal text**:
+
+```rust
+assert!(v.contains("if (inference_done) irq_status[0] <= 1'b1;"));
+assert!(v.contains("if (status_read)    irq_status     <= 3'b000;"));
+```
+
+Those tests passed for precisely as long as the bug existed, and failed the moment it was
+fixed — they had to be rewritten as part of the fix. **They were not testing the design;
+they were holding it still.** A string-match against emitted code asserts *"the generator
+still produces what it produced yesterday"*, which is a snapshot, not a property. Snapshot
+tests are useful for catching unintended churn and worthless for catching a defect that
+was present when the snapshot was taken.
+
+The rewritten versions assert reachable behaviour — that every source contributes its bit
+unconditionally, and that the clear applies to the *previous* value only — with the real
+guarantee carried by a proof harness. The distinction generalises past hardware: **if a
+test would fail when the code is corrected, it is pinning the bug, not guarding against
+it.** Worth asking of any assertion written by copying a line out of the implementation.
+
+## Prove the mechanism, not just the counterexample
+
+A refutation says *"there exists a state where this fails"*. It is easy to file that as
+"can occasionally misbehave" and move on.
+
+Better: after the refutation, state the failure as a property and prove **it**.
+`$past(inference_done) && $past(status_read) |-> irq_status[0] == 0` came back PROVED —
+so the event is not *sometimes* lost, it is **always** lost whenever a read coincides.
+That converts a probabilistic-sounding bug report into a definite statement about every
+reachable state, and it is what justified changing generated RTL rather than adding a
+caveat.
+
+Two supporting habits, both of which paid here:
+
+**Make the experiment discriminating.** Two properties differing by exactly one guard —
+`!$past(status_read)` — one proving, one refuting, isolate the cause with no further
+argument. Prefer a minimal-pair over a single failing check.
+
+**Validate a regression harness against the broken version.** The checked-in property file
+was run against the *old* RTL and confirmed to refute. A harness that has only ever been
+run against a fixed design is untested: it might pass because the properties are vacuous.
+
+## When a property that cannot fail, fails, the harness is wrong
+
+Three properties came back refuted at once, one of them
+`irq_enable == 0 |-> !irq_out` — a tautology over combinational logic
+(`irq_out = |(irq_status & irq_enable)`). A tautology cannot be refuted, so the run was
+not evaluating what it appeared to.
+
+The cause: Yosys's `sat` refuses to run with more than one module selected, and its error —
+`Only one module must be selected for the SAT pass!` — surfaces as a non-zero exit that
+reads exactly like `proof did fail`. Adding `-flatten` to `prep` fixed all three.
+
+**Keep one property in every harness whose answer you already know.** It costs nothing and
+converts a whole class of silent harness faults into an obvious contradiction. This is the
+same instrument as the earlier rules — a clean 0%/100% is a harness fault, a gate that
+cannot fail is not a gate — applied to a prover: the check is not on the result but on
+whether the result is *possible*.
+
+## A refutation is only a bug if the counterexample state is reachable
+
+Five properties were checked against an AXI-Lite slave. Three came back refuted. Two were
+real defects. The third — `bresp == 2'b00` — was an artifact, and `bresp` is *only ever
+assigned* `2'b00`, so it cannot be violated in any reachable state.
+
+The cause is temporal induction. `sat -tempinduct` proves *if the property held for the
+last k cycles it holds now*, and its base case may start from an **unreachable** state
+where a register holds garbage. Re-running from a reachable start settles it:
+
+```
+tempinduct (unconstrained init) -> REFUTED     # artifact
+BMC from zero-init state        -> PROVED      # truth
+```
+
+Both genuine defects refuted under **both** settings — which is the discriminator worth
+keeping: **cross-check every refutation against a reachable start before believing it.**
+A real bug survives the change of proof method; an induction artifact does not.
+
+The general form matters more than the yosys specifics. A model checker answers a question
+about a *model*, and the model includes assumptions about which states can occur. When a
+result is surprising, the first suspect is the state space, not the design. This is the
+reachability twin of the earlier rules — a tautology that fails means a broken harness; a
+refutation from an impossible state means a mis-scoped one. Both are the tool answering a
+different question than the one asked.
+
+The corollary is what nearly went wrong: a false bug report is *more* expensive than a
+missed one, because it gets acted on. Someone would have "fixed" a correct reset value.
+
+## Count what must balance, not what should look right
+
+The AXI slave's handshakes were shaped correctly. VALID was never deasserted without a
+handshake — a property that **proved**, on the buggy design. Every shape-based check
+passed. A protocol lint would have signed it off.
+
+The defect was arithmetic: `ready` was asserted at reset and never dropped, while the
+module had one response register per channel, so two accepted transactions could share one
+response beat and hang the master. What exposed it was counting:
+
+```verilog
+outstanding <= outstanding + accepted - completed;
+assert (outstanding <= 1);
+```
+
+**When a design promises a conservation law — one response per request, one release per
+acquire, one pop per push — assert the balance directly.** Shape properties check that
+each event looks right; a balance checks that none went missing. Those are different
+failures, and the second is the one that hangs a bus.
+
+This also composes with the reachability rule above: a counter makes the violating state
+concrete and obviously reachable, so the refutation is hard to dismiss as an artifact.
+
+Two for two: both RTL defects found in this campaign were *missing events* — a lost
+interrupt and a lost response — in modules whose per-event logic was individually correct.
+
+## Every `assume` narrows what the `assert` proves — say so
+
+A master-side property was refuted: *"beats consumed must not exceed the beats the
+transfer asked for."* Tempting to file as a third defect. It was not filed, because
+`rvalid` is a free input in that harness — the prover was free to have the slave deliver
+beats nobody requested. **A misbehaving environment is indistinguishable from a defect in
+the unit under test, and only assumptions tell them apart.**
+
+Adding a minimal slave model (`assume (!rvalid || burst_active)`) made a *different*
+property meaningful and provable — the one that caught a real bug. The over-read property
+stayed refuted even after the fixes, and was recorded as **inconclusive, not claimed**,
+because building a slave model faithful enough to settle it was more work than the wave
+had.
+
+Three things this fixes in how such results get written up:
+
+**An unconstrained input is an adversary, not a wire.** Any property about a unit's
+response to its environment is really a property about *that environment's* contract too.
+State the contract, or state that you didn't.
+
+**Report inconclusive as inconclusive.** The pressure at write-up time is to sort every
+result into bug or non-bug. A third category — *the harness cannot currently decide this* —
+is honest and cheap, and it names the next piece of work precisely.
+
+**The `assume` list belongs in the artefact.** A harness with hidden assumptions overstates
+its own coverage in exactly the way a hollow gate does; the properties look proved, and the
+domain quietly shrank. Every `assume` is written into the checked-in property file with the
+reason it is there.
+
+## The test's name can be the bug report
+
+Among the tests holding defects in place was one called `dma_burst_length_is_max`. It
+asserted `m_axi_arlen <= 8'hFF` — a fixed 256-beat burst on every transfer, regardless of
+size. The RTL then stopped consuming once the byte count ran out, abandoning the burst.
+
+The test was not merely pinning the implementation. **Its name asserted the defect as the
+contract.** Anyone auditing the test list would read "burst length is max" as an
+intentional design decision and move on. Another in the same file asserted
+`if (m_axi_rlast || bytes_remaining <= 32'd8)` — and that `||` *was* the bug, written into
+a test as expected behaviour.
+
+Eight such tests were rewritten across this campaign, and **all four RTL defects found had
+one**. That correlation is not a coincidence: a defect that survives review usually does so
+because something in the repository asserts it is correct.
+
+**When auditing, read the test names as claims about intent and ask whether each is
+actually desirable.** `*_is_max`, `*_always_*`, `*_never_*` in a test name are assertions
+about the specification, not the code, and they are worth checking against the
+specification. A defect with a test defending it is invisible to every tool that trusts
+the test suite — which is all of them.
+
+## When a model's precondition fails, re-check it with ports only
+
+A formal environment model is code, and code has bugs. A model that is wrong in the
+*permissive* direction lets defects through; wrong in the *restrictive* direction it
+manufactures them. The second is worse, because it looks like a finding.
+
+An AXI4 slave model tracked one burst at a time and asserted — rather than assumed — the
+precondition that the master issues one at a time. **That precondition refuted.** Read
+naively: the master overlaps bursts. Instead the same claim was checked with properties
+using only the unit's own ports:
+
+```
+!(arvalid && rready)                   PROVED
+no back-to-back AR handshakes          PROVED
+```
+
+Both held, which located the fault in the model — it cleared `burst_active` from its own
+beat counter rather than from the master-visible `rlast`, so one disagreement latched it
+high forever and every later handshake violated the precondition.
+
+**Port-only properties are the arbiter**, because they involve no model at all. When a
+modelled property and a port-only property disagree, the model is the newer, less-tested
+artefact. Two habits follow:
+
+**Assert a model's preconditions; never assume them.** An assumption that the unit behaves
+is precisely the assumption that hides misbehaviour. Written as an assertion, the same
+statement becomes a check that the model is applicable — and it fires loudly when it is not.
+
+**Key model state off the signals the unit actually drives**, not off a parallel count the
+model maintains. Two counters that should agree are two things that can disagree; deriving
+from `rlast` rather than from a private tally removed a whole failure mode.
+
+## Record the anomaly instead of picking a story
+
+The same wave ended with a result that could not be explained: with a one-beat transfer
+constrained, `arlen == 0` at the address handshake **refuted**, while hand-tracing the RTL
+said it must hold — the length and the valid are assigned on the same cycle from state
+committed in the same non-blocking group.
+
+Two tidy stories were available. *"Found a one-cycle hazard"* — a fifth defect for the
+campaign tally. Or *"harness artifact, moving on"* — a clean close. Both would have been
+written confidently and one of them would have been wrong.
+
+It was recorded as an **anomaly**: named, reproduced, and explicitly not classified. The
+dependent property was marked open too, on the ground that **a harness with one unexplained
+result cannot be trusted to settle a second**.
+
+The asymmetry that decides this: a **false finding costs more than a missing one, because
+it gets acted on.** Someone edits correct RTL, or writes off a real bug as noise. A missing
+finding stays missing and is found later.
+
+There is a pull, especially at write-up time and especially in a run that has produced
+several real fixes, to make every thread terminate in a verdict. Resist it. **"Reproduced,
+unexplained, here is the exact command"** is a complete and useful deliverable — it is the
+next person's starting line rather than a wrong turn they have to discover.
+
+## Constraints can be silently inert — prove that your assumptions are active
+
+Yosys's `sat` ignores `$assume` cells unless `-set-assumes` is passed. Opt-in, no warning,
+no diagnostic. A harness missing the flag still runs, still prints `PROVED` or `REFUTED`,
+and every constraint in it does nothing — so a property meant to hold *given a compliant
+environment* is quietly checked against an arbitrary one.
+
+That cost a full wave. An `arlen` anomaly was recorded as unexplained, and a dependent
+property left open, when the harness had simply never applied its own constraints. The
+test that would have caught it on day one is two lines:
+
+```verilog
+always @(posedge clk) assume (1'b0);                  // unsatisfiable
+always @(posedge clk) if (rst_n) assert (a == !a);    // manifestly false
+```
+
+Assumptions live → the assertion is vacuously true → **PROVED**. Assumptions inert → the
+false assertion is reachable → **REFUTED**. It is now the first step of the CI job: a green
+result there is what licenses reading any other harness's assumptions as meaningful.
+
+**Whenever a tool takes constraints, verify the constraints are in force before trusting a
+result that depends on them.** Not "read the docs" — construct an input whose answer
+differs between the two worlds and check which one you are in. The same shape applies to a
+linter's config, a mock's expectations, a test fixture's setup: anything that is supposed
+to narrow behaviour can fail to, and the failure looks like a passing run.
+
+This is the third instance of one instrument in this campaign. A tautology that fails means
+a broken harness. A gate that cannot fail is not a gate. **Constraints that constrain
+nothing are the same defect** — each is caught by including one case whose answer you
+already know.
+
+## Put the assertions inside the module when you need a readable counterexample
+
+Two waves were spent unable to see why a property refuted. The harness instantiated the
+design under test inside a wrapper, and `sat` refuses to run with more than one module
+selected, so `-flatten` was required — which mangles every signal name, leaving VCDs full
+of `$auto$async2sync.cc:116:execute$453` and nothing else.
+
+The fix was mechanical: append the assertions to a **copy of the module itself**, before
+its `endmodule`. One module, no `-flatten`, and `-show state -show bytes_remaining …`
+prints a legible cycle-by-cycle table. The cause was visible in one reading.
+
+**When a counterexample is unreadable, change the harness's shape, not your guessing
+strategy.** Several hours went into reasoning about what the trace *might* contain; the
+trace itself took ten minutes to obtain and settled it immediately. The generalisation:
+if the diagnostic output of a tool is unusable, that is the bug to fix first — everything
+downstream of it is speculation.
+
+## Proving code unreachable is a reason to delete it, not to add it
+
+Having found that a counter could wrap when a value hit zero, the reflex was a clamp. It
+was written, and then reverted, because the same session had *proved* that state
+unreachable under the protocol contract — and in the out-of-contract case the counter
+underflows to a **large** value, where the result is arithmetically correct rather than a
+wrap. The clamp guarded nothing reachable and added a branch.
+
+**A defensive check whose trigger condition you have just proved impossible is not
+defensive, it is noise** — it implies a hazard that does not exist, and the next reader
+must re-derive that to touch the code. Guard what the contract permits; document what the
+contract forbids.
+
+The corollary is where the judgement lies: full immunity to a non-compliant peer was not
+achievable here at all. The only way to stop consuming early was to abandon a burst, which
+is itself the protocol violation fixed two waves earlier. **Sometimes robustness against a
+lawless environment and correctness against the specification are in direct conflict, and
+the specification wins** — but say so in the code, so the absent hardening reads as a
+decision rather than an oversight.
+
+## Test that a property can fail, not just that it passes
+
+A passing property is compatible with two very different situations: the design is
+correct, or the property was never really evaluated. The second has two distinct causes,
+and neither reports anything unusual.
+
+**Guard vacuity.** `G |-> P` is free whenever `G` is unreachable. The exact oracle needs
+no `cover` support: replace the assertion *body* with `assert (1'b0)`, keeping the guard.
+That run **proves if and only if `G` is unreachable**. Neutralise the file's other
+assertions to `assert (1'b1)` first, so each result speaks about exactly one guard.
+
+**Interesting-case vacuity.** Guard reachability is necessary, not sufficient.
+`assert (!A || B)` is trivially satisfied whenever `A` is false, so a property can be
+evaluated on every cycle and still test nothing. Probe the case the property exists to
+cover by asserting its negation — **a refutation is the witness that the case occurs.**
+
+The one that justified the exercise: a regression witness for a burst-abandonment bug
+required a *multi-beat* burst to mean anything. Had the harness only ever produced
+single-beat bursts, it would have proved, stayed green forever, and silently stopped
+guarding the defect it was written for.
+
+**Make the witnesses permanent, as runs that must fail.** A CI step expecting refutation
+looks strange and is exactly right: if it ever starts passing, a case became unreachable
+and the property depending on it has gone free. Distinguish refutation from error when
+checking — grep the prover's failure text rather than trusting a non-zero exit, since a
+syntax error also exits non-zero.
+
+The recurring shape across this whole campaign, now found in five places: **a check that
+cannot fail is indistinguishable from no check.** A shell gate that always errored and got
+bypassed; a CI job that was one `echo`; a validator whose predicate matched the wrong
+shape; constraints the prover silently ignored; and properties whose antecedents might
+never occur. The instrument is the same each time — *include a case whose answer you
+already know, and confirm you get it.*
+
+## Neutralise, don't delete, when isolating one assertion
+
+Isolating a single property by deleting the others produced nineteen consecutive tool
+errors: the assertions sat inside `always @(posedge clk) if (…)` blocks, so removing the
+statement left a dangling `if` with no body.
+
+Replacing them with `assert (1'b1)` keeps the syntax intact and the semantics inert. The
+same applies to disabling a branch, a test, or a validation step while bisecting:
+**substitute a no-op of the same syntactic category rather than removing the construct.**
+
+There is a second, subtler version of this that also cost a run: an insertion offset was
+computed on the original text and then applied *after* a regex substitution had changed
+the string's length, so the probe landed past `endmodule`. **Recompute positions after any
+edit that changes length**, or work on structure rather than offsets. Both failures
+presented as "the tool is broken" and were purely mechanical.
+
+## A runaway loop has a safety shadow — check that instead
+
+Two modules failed to terminate when a count parameter was zero: a terminator written
+`index == count - 1` compares against all-ones, never matches, and the FSM runs forever.
+
+Non-termination is a **liveness** property, and immediate assertions — the only form the
+open-source prover accepts here — cannot express one. The instinct is to reach for a
+heavier tool. Unnecessary: a loop that never ends almost always has some counter or index
+that leaves its legitimate range, and *that* is pure safety.
+
+```
+valid  |-> neuron_id < num_neurons        REFUTED before the fix, PROVED after
+writes <= num_words   (while active)      REFUTED before the fix, PROVED after
+```
+
+**Look for the safety shadow of a liveness property before escalating tooling.** "It runs
+forever" is hard; "this index exceeds its bound" is a one-line assertion a bounded model
+checker settles in seconds. The same substitution works for deadlock (a queue depth
+exceeds capacity), for livelock (a retry counter exceeds its limit), and for leaks (an
+allocation balance goes negative).
+
+The general lesson is about the shape of the question: **an unbounded property often has a
+bounded consequence, and the consequence is the one worth asserting.**
+
+## When siblings disagree, the odd one out is a bug, not a contract
+
+The hardest part of reporting a zero-count defect is that it could be intentional — maybe
+callers are simply required to pass a non-zero count, and the guard is the caller's job.
+Nothing in the module says either way.
+
+The evidence was in the family. `layer_sequencer` already contained
+`if (num_chunks == 0) state <= DONE_ST` — and did **not** do the same for neurons. The
+adjacent `multilayer_sequencer` guards `num_layers > 0`. Two siblings handle the zero case
+and two do not, and the module that guards one of its own two counts and not the other is
+not expressing a contract. It is inconsistent with itself.
+
+**Before deciding whether an omission is deliberate, look at how the same question is
+answered next door.** A convention followed in three places and broken in one is an
+oversight; a rule broken everywhere may be the real convention, written down nowhere. This
+resolves the "is it a bug or is it by design?" question without needing to find whoever
+wrote it — and it makes the report far harder to wave away, because the counter-example is
+the author's own code.
+
+The corresponding audit sweep is cheap: for a family of related modules, grep each for how
+it handles the degenerate input — zero, empty, one — and line the answers up. Divergence
+in the column *is* the finding.
+
+## Check the premise of a long-carried question before answering it
+
+A design question rode nine waves as the recommended-but-deferred item:
+*"BitNet v2 moves the binding constraint from weight width to activation width — is a
+ternary-weight datapath still the right target?"* Each restatement made it sound
+better established.
+
+Fetching the abstract took one request. **BitNet v2 keeps 1-bit weights.** Its
+contribution is a Hadamard transform that makes 4-bit *activations* viable. So the
+ternary-weight premise was validated by the paper, not threatened by it — and the
+question, as phrased, had no answer because it presupposed something false.
+
+**A question repeated across many sessions accumulates authority it never earned.** Each
+time it is carried forward it looks more like settled context and less like a claim. The
+cheap defence: before doing the work a long-standing question implies, spend one request
+checking the sentence it rests on. Especially when the question originated in your own
+earlier summary — restating your own inference back to yourself is how an inference
+becomes a premise.
+
+The corollary that made the wave worth it: **answering the question properly meant reading
+what the system actually does**, and that is where the real finding was. The paper said
+weights were fine; the RTL said *activations* were ternary too — more aggressive than any
+published variant, on the axis the field finds hardest. Nobody had asked that question,
+because everybody was asking the other one.
+
+## "N of N emitted" is not "N of N integrated"
+
+A README row read *"RTL pipeline · GREEN · 9/9 modules"*. Nine modules are emitted, so the
+row is true. The top level instantiates **three** of them; the MAC, the weight memory, the
+DMA, the bus slave and the interrupt block are never instantiated, the memory port is tied
+to zero, and one input is declared and never referenced.
+
+Nothing in the row is false. It is a **count of artefacts presented where a reader infers a
+count of working parts** — the same shape as a gate that reports on a proxy, arriving in a
+status table instead of a CI job.
+
+Two checks, both mechanical:
+
+**For any "N components" claim, grep the top level for instantiations and compare.** One
+command, and it distinguishes a library from a system. Emission, compilation, and
+integration are three different milestones that a single number silently merges.
+
+**Ask what the verification actually ranges over.** Six defects had been found and fixed in
+these blocks — real work, cheapest possible place to find them — but every property was
+module-scoped. Until the blocks are wired there is no system behaviour to state a property
+about, and saying so bounds the claim honestly rather than letting "28 properties proved"
+imply an engine was verified.
+
+The generalisable habit: **when a project reports progress as a count, find out what the
+denominator is a count of.** Modules that exist, modules that compile, modules that are
+reachable from the top, and modules exercised by a test are four different denominators,
+and the gap between the first and the last is where a project's real state hides.
+
+## A property about a signal is not a property about the wire it feeds
+
+Wiring a MAC to a memory with one cycle of read latency needs the control path delayed by
+one cycle, or chunk *N*'s control meets chunk *N−1*'s data. The property written for it:
+
+```verilog
+assert (mac_valid_q == $past(layer_valid));     // the skew register lags by one
+```
+
+True, provable — and useless. It constrains the *register*, not the consumer. Rewiring the
+MAC's `valid_in` straight to `layer_valid`, reintroducing exactly the hazard, left it
+**PROVING**. The register still existed and still behaved; nothing tied it to the MAC.
+
+The repair states the property on the **consumer's own output**, which can only be what it
+is if the consumer saw the intended input:
+
+```verilog
+assert (mac_valid_out == ($past(mac_valid_q) && $past(mac_last_q)));
+```
+
+Correct build proves; unskewed build refutes.
+
+**When asserting that A drives B, phrase it over something only B can produce.** A property
+naming only signals *upstream* of the connection cannot see the connection. This is the
+integration-level form of vacuity: not an unreachable guard, but a true statement about the
+wrong side of a wire.
+
+Two carry-overs:
+
+**Composition bugs are invisible to module-scoped verification, by construction.** The
+sequencer was correct, the memory was correct, the MAC was correct, and the assembly was
+wrong. No amount of per-module proving reaches it — the first property that could was the
+first one spanning two modules.
+
+**The rule that caught it was already written down.** *Validate a regression harness
+against the broken version.* Deliberately reintroducing the defect and confirming the
+property refutes took two minutes and was the only reason eight green properties were not
+shipped with one certifying nothing. **A harness only run against a correct design has not
+been tested — it has been demonstrated.**
+
+## Reduce the model, not the property, when the prover cannot handle a construct
+
+`sat` cannot model `$mem_v2`, so a proof involving a 4096-entry BRAM simply errors. Two
+ways out: weaken the property until it avoids the memory, or shrink the memory.
+
+Shrinking is correct here and the reasoning is what matters: **the properties never read
+memory contents** — they are about control alignment — so `chparam -set DEPTH 4` plus
+`memory_map` changes nothing the properties observe. The claim proved is the same claim.
+
+Weakening the property would have silently narrowed what was verified; reducing the model
+narrows only what is *simulated*, and the narrowing is auditable — one flag, one line of
+justification. **State which of the two you did.** "Proved with a reduced memory depth,
+because no property reads memory" is a complete disclosure; "proved" alone is not.
+
+The related mechanic: when the properties must reference internal signals, put them in the
+module under `` `ifdef FORMAL `` rather than in a wrapper. A wrapper forces `-flatten`,
+which mangles exactly the names the properties need.
+
+## Give an unmade decision an interface, and it becomes trackable
+
+A design question sat open for ten waves: ternary activations, or 4-bit? It could not be
+answered, and the reason turned out to be structural — **the choice had no address**. It
+lived in the *absence* of a module. Nothing in the code said "activations are ternary";
+the datapath simply had no layer boundary, and the ternary assumption leaked in through
+what the neighbouring ports happened to be.
+
+Building the missing module changed the question's status without answering it. The width
+is now one output port. A 4-bit variant changes `trit [1:0]` to `act [3:0]` and swaps a
+comparison for a scale-and-round; nothing else moves.
+
+**An unmade decision with no interface is untrackable. The same decision with an interface
+is a diff.** Before agonising over an open architectural question, check whether the
+artefact that would embody it exists — if it does not, building it is usually more
+valuable than deciding, and often makes the decision obvious.
+
+The related habit: **an assumption implied by an absence is the hardest kind to audit.**
+Grep finds a wrong constant; nothing finds a missing stage. When reviewing, ask what the
+data must pass through that is not there.
+
+## Prefer a total function to a documented precondition
+
+The requantizer compares an accumulator against a symmetric threshold. If the host writes
+a *negative* threshold, `acc >= threshold` and `acc <= -threshold` are both true. Written
+as parallel comparisons that is a don't-care — and in a design whose output alphabet has a
+**reserved invalid code**, a don't-care is a corruption waiting to happen, with no error
+path anywhere downstream.
+
+Written as a priority chain it costs one ternary operator and the output is legal for every
+input, including inputs the host should never produce.
+
+**When the cost of totality is a line, pay it rather than documenting a precondition.** A
+precondition is a promise made by code you do not control, and the failure it permits here
+is silent: an invalid code propagates through every consumer without a single assertion
+firing. The reserved-value case generalises — any enum with an unused encoding deserves a
+proof that the unused encoding is unreachable, not a comment saying it should be.
+
+## A substring ban catches the documentation that justifies it
+
+Three times now, a test forbidding a literal has failed on the module's own explanation of
+why that literal is forbidden:
+
+- `!contains("8'hFF")` — failed on the comment describing the old hardwired burst length
+- `!contains("2'b11")` — failed on both the comment *and* the assertion enforcing the ban
+- a `FORMAT-SPEC` filter — matched the schema file it was meant to classify
+
+The fix each time is to narrow to the syntactic context that matters — strip comments,
+skip assertion lines, match an assignment rather than an occurrence. **A ban on a string is
+a ban on a construct; write it against the construct.** The tell is that the test fails on
+the very commit that adds the safeguard, which reads as a false alarm and is really a
+badly-scoped assertion.
+
+## A test whose name contains a number will be renamed every time the system grows
+
+Adding one file to a bundle broke `bundle_order_has_twelve_entries`,
+`build_sv_entries_returns_eleven_files`, and two lookups indexing `entries[9]` and
+`entries[10]`.
+
+None of those tests was wrong about the system; they were asserting an *incident* of it.
+The invariants they should have carried — `BUNDLE_ORDER.len() == BUNDLE_FILE_COUNT`, "the
+last entry is the manifest", "the top-level entry contains the top name" — survive growth
+untouched, and are found by lookup rather than by position.
+
+**If a test's name has to change when the system grows correctly, the test is asserting the
+wrong thing.** Same for positional indexing into an ordered collection: it encodes today's
+order as a requirement. Both are cheap to write and quietly convert every future addition
+into a small tax.
+
+## A signal that appears exactly twice is connected and unused
+
+A double-buffer controller computed a ping-pong decision. The top level declared a wire for
+it and passed it to the controller's output port — and never read it. The activation memory
+had `wr_en` tied to `1'b0`. So the controller was correct, its output was wired, nothing
+acted on it, and there was no path from a layer's output to the next layer's input at all.
+
+The whole thing was visible in one number:
+
+```
+grep -c use_buffer_a <top>     # 2
+```
+
+**Two occurrences means a declaration and a connection, with no consumer.** Three or more
+means something reads it. This costs one command per suspicious signal and finds a class of
+defect that no per-module check can reach — every module involved is individually correct,
+and linters see a driven, loaded wire.
+
+The generalisation for reviewing an integration: **count uses of each signal crossing the
+seam, and look at every one with a count of two.** Same for a module instantiated but whose
+outputs go nowhere, and for an output port assigned from a constant. A tie-off is a
+deferred decision, and tie-offs are invisible in any view that does not span the boundary
+they sit on.
+
+## Check the rate, not just the name, when reusing an address
+
+An activation memory's write address looked obvious: the double-buffer controller already
+produced `write_addr`, so wire it up. Wrong by a factor of 27 — `write_addr` counts
+*neurons*, and the requantizer emits one packed word per **27** neurons. The right address
+was a dedicated word counter reset at layer start.
+
+**A signal named for what it addresses is not necessarily the address you need.** When
+connecting two stages, compare their *rates* before their names: how many items does the
+producer emit per item the consumer indexes? Packing, batching, and serialisation all
+introduce a divisor that a plausible-looking name hides.
+
+The same check catches the mirror error — an address that advances too slowly because the
+consumer was assumed to be per-item when it is per-burst.
+
+## Integration defects are a distinct class, and you cannot find them early
+
+Three consecutive waves, three defect classes, none reachable by any module-level property:
+
+| Defect | Why module-level proving missed it |
+|---|---|
+| latency skew — control met data a cycle early | sequencer, memory and MAC each individually correct |
+| absent stage — no layer boundary existed | nothing to state a property *about* |
+| dead control signal — decision computed and ignored | controller correct, consumer simply absent |
+
+Every module had properties. Every property proved. **The composition was wrong in three
+different ways.**
+
+Two things follow. **Module-level verification bounds its own claim**, and saying so is part
+of reporting it honestly — "28 properties proved" implies far more than it delivers if the
+modules are not wired together. And **there is no way to front-load this**: the seam has to
+exist before you can assert across it, so the integration effort is not a phase you can
+verify your way past. Build the seam, then assert on it, and expect the first assertions
+across a new seam to find something.
+
+## A property you cannot prove yet is a finding, not a bad property
+
+Wiring a prefetch controller to a shared memory produced a property that refuted: the
+prefetcher could write an address the compute stage was reading, even though the
+sequencer's state machine appeared to make that impossible, and even with the environment
+constrained so the memory only answers questions it was asked.
+
+Three options, and the choice matters more than the result:
+
+1. **Ship the failing assertion.** Breaks the build for everyone, and turns a finding into
+   an outage.
+2. **Weaken it until it passes.** This is deliberate vacuity — the exact failure mode
+   catalogued elsewhere in this file, committed knowingly. It converts an open question
+   into a false green.
+3. **Record the gap.** The property is written into the RTL as a comment and into the
+   findings document with its exact reproduction, and is *not* asserted.
+
+Option 3, every time. **The pressure at the end of a work session is to leave everything
+green, and a weakened assertion looks exactly like a solved problem.** It is worse than a
+missing assertion, because it actively certifies the thing it stopped checking.
+
+State three things when recording: the property as written, that it was reproduced under a
+*constrained* environment (so it is not an artefact), and that it is not asserted. That
+turns "we did not finish" into a precise starting point rather than an absence someone has
+to rediscover.
+
+## Count the tie-offs — they are decisions someone deferred
+
+Across three waves of integration work, every structural gap announced itself as a
+constant:
+
+```verilog
+assign prefetch_done = 1'b1;   // "tied off until X is wired"
+assign mem_addr      = 32'd0;
+assign mem_rd_en     = 1'b0;
+.wr_en(1'b0)                   // on BOTH memories -- neither was ever written
+```
+
+The comment on the first one was honest. The others carried none, and one of them meant
+the weight memory in a machine-learning accelerator had never been loaded.
+
+**A tie-off is a deferred decision wearing the costume of a design choice.** They are
+trivially greppable — a constant on the right-hand side of an `assign`, a literal in a port
+map — and each one bounds what any test above it can possibly be checking. An engine whose
+memories are tied to zero will still pass every property about its sequencers.
+
+Two habits: **grep for constant port connections before believing an integration is
+complete**, and when you write one, put the condition for removing it in the comment. "Tied
+off until X is wired" is a to-do with an owner; `1'b0` alone is indistinguishable from
+intent, and the next reader has to prove a negative.
+
+## A refutation that survives a correct fix means another cause, not a wrong diagnosis
+
+A property refuted; the trace identified a stale completion flag; the flag was fixed; the
+property **still refuted**.
+
+The pull at that moment is strong and wrong: conclude the diagnosis was mistaken, revert,
+start over. The first diagnosis was correct and **incomplete**. A second, independent
+defect sat in a *different module* — a level-triggered handshake sampled one cycle too
+early — and each defect would have been masked by the other's correctness.
+
+**Re-read the trace instead of reverting.** The second trace looked different from the
+first, which is itself the signal: if a fix changes the counterexample, it addressed
+something real. A fix that leaves the counterexample identical is the one that missed.
+
+This is why composition defects cluster. Two modules that are each individually correct can
+still disagree at their seam, and when two seams are broken at once, fixing either alone
+changes nothing observable at the top. **Expect multi-cause failures at integration
+boundaries, and treat "still failing" as a request for the next trace rather than a verdict
+on the last one.**
+
+## The recorded gap is what made the fix possible
+
+A previous session left this property reproduced, documented, and **not asserted** —
+choosing that over weakening it until it passed.
+
+That decision is what made this session possible. A softened assertion would have shipped
+**two real defects under a green check**, and nobody would have taken the trace that found
+them, because there would have been nothing to investigate.
+
+**An honestly recorded failure is a work item; a weakened assertion is a lie with a
+maintenance cost.** The asymmetry is worth internalising: leaving something visibly
+unfinished costs a little discomfort now and preserves the information. Papering over it
+costs nothing now and destroys the information permanently — the next person sees green and
+has no reason to look.
+
+## Ask the tool for the signals you named, not for a dump
+
+Two waves were lost to unreadable counterexamples. `-dump_vcd` after `-flatten` produced
+files full of `$auto$async2sync.cc:116:execute$1477` — every user-facing name mangled by
+the flattening the prover required.
+
+The working approach was smaller, not bigger: **top-level signal names survive flattening**,
+so naming them explicitly gets a clean table.
+
+```
+sat ... -show pf_bram_we -show mac_valid_q -show layer_start -show start_prefetch
+```
+
+Two independent defects were visible in one reading of that table.
+
+**When a diagnostic dump is unusable, ask for less rather than more.** A full dump of a
+transformed netlist is mostly artefacts of the transformation; a named projection of the
+signals you already suspect is legible by construction. The same applies to logs, traces,
+and profiles — a filtered view of hypotheses beats an exhaustive view of everything, and it
+is usually one flag away.
+
+## Wiring a module is not using it — the property must name the connection
+
+An AXI-Lite slave was instantiated to replace a bundle of top-level config ports with
+proper CSRs. Instantiation is easy to verify by eye and easy to get wrong in a way nothing
+notices: a previous wave left a double-buffer controller connected to a wire that no
+consumer ever read, and it stayed dead for four waves.
+
+So the properties written alongside the instantiation name the *connection*, not the
+module:
+
+```verilog
+a_start_is_ctrl_bit0:     assert (start == reg_ctrl[0]);
+a_status_reflects_engine: assert (reg_status[0] == busy && reg_status[1] == done);
+```
+
+Both would be **vacuously true** if the slave were instantiated and ignored — `start` would
+simply be something else. Naming both sides is what makes them bite.
+
+**When integrating a component, assert an equality that spans the boundary.** "The module
+is instantiated" is checkable by grep and means little; "this internal signal equals that
+register bit" cannot hold unless the wire exists. The cheap version of this check is the
+grep-count rule — a signal appearing exactly twice is connected and unused — and the strong
+version is a property that fails if the connection is removed.
+
+## Tests named for an interface break when the interface improves — invert them
+
+Replacing a config port bundle with a register aperture broke three tests
+(`control_ports_present`, `top_control_ports_present`, and two string matches on a
+declaration whose whitespace shifted). None of them was wrong about the old design; all of
+them asserted an *incident* of it.
+
+The rewrite did two things, and the second is the one worth remembering. It renamed them to
+`host_aperture_replaces_config_ports` — and it **inverted** them, so they now assert the
+**absence** of the old ports as well as the presence of the new ones:
+
+```rust
+for gone in ["input  wire        start,", "input  wire [5:0]  num_layers,"] {
+    assert!(!v.contains(gone), "config port should be a CSR now: {gone}");
+}
+```
+
+**When a change makes a test obsolete, ask whether the negation is now the interesting
+claim.** Often the thing you just removed is exactly what must not come back — a reverted
+refactor, a reintroduced tie-off, a resurrected port. Deleting the test throws that away;
+inverting it converts a broken test into a regression guard for free.
+
+The related smell, seen repeatedly here: a test that asserts a string containing formatting
+(`"reg [31:0] cycles;"`) breaks when a declaration is realigned. Match on the semantic part
+or normalise whitespace; a test that fails on `git diff -w`-invisible changes is measuring
+the wrong thing.
+
+## An invariant written against one producer assumes how many producers there are
+
+A double-buffer invariant said: never write the buffer being read. It was correct, proved,
+and had guarded a real defect. Then a second writer arrived — an input DMA whose whole
+purpose is to fill the buffer *about to be read*, because that is where the first layer's
+input belongs.
+
+The invariant immediately flagged the **correct** new code as a violation.
+
+The reflex when a proved property starts failing on a change you believe is right is to
+weaken or delete it. Neither is right here. The property was always about *the requantizer
+writing into a buffer under active read* — that scope was simply implicit while there was
+only one writer to be confused about. It now says so:
+
+```verilog
+always @(posedge clk) if (rst_n && !dma_local_we)
+    a_no_read_write_same: assert (...);
+```
+
+**Adding a producer to a shared resource is the moment to re-read every invariant about
+that resource** — not to relax them, but to make explicit the domain they were always
+about. The same applies to a second caller of a function, a second writer to a table, a
+second scheduler touching a queue. A single-producer invariant reads as a global truth
+right up until it isn't.
+
+The corollary: **if scoping an invariant makes it vacuous, it was the wrong invariant.**
+Here the scoped version still bites — a requantizer write into a live buffer is still
+forbidden — which is the check that the scoping was honest rather than a way of switching
+it off.
+
+## `busy` was a decode, not a state — proxies bite in design too
+
+An interlock needed "is the engine running?". The available signal was
+`busy = (current_layer != 0) || layer_start` — a *decode of a counter*, not a recorded
+state. It is false during the entire first layer, so an interlock built on it has a hole
+exactly where the first inference happens.
+
+This is the same failure the campaign kept finding in gates — a check written against a
+cheap proxy instead of the property it names — arriving in the RTL instead of in CI. A
+counter comparison that is *usually* equivalent to "active" is not the same object as a
+flag set at start and cleared at done, and the difference shows up precisely at the
+boundaries where interlocks matter.
+
+**When something needs a state, give it a register.** Deriving it from whatever is nearby
+costs nothing to write and produces a signal that is right in the common case and wrong at
+the edges — the worst possible distribution for a safety interlock.
+
+The wider habit: **before keying safety logic off an existing signal, read its definition
+rather than its name.** `busy`, `ready`, `done`, `active` are all names that invite the
+assumption that someone maintained them as state.
+
+## An interlock that names one of two mutually exclusive activities is half an interlock
+
+A DMA and a compute engine shared a buffer and must never run together. The guard written
+for it blocked the DMA while compute was active — and nothing blocked compute while the DMA
+was active. A host starting the DMA and *then* requesting inference walked straight through.
+
+Mutual exclusion is symmetric by definition, and a guard for it is naturally written from
+whichever side you were thinking about when the hazard occurred to you. **Write the second
+direction at the same time as the first, or the guard encodes the order in which you
+happened to imagine the failure.**
+
+The test is mechanical: for a guard of the form "A may not start while B runs", ask whether
+"B may not start while A runs" exists. If both activities are host-triggerable through
+writable registers, both directions are reachable.
+
+## When a change invalidates a property, ask whether it becomes two
+
+Adding an interlock broke a property asserting `start == reg_ctrl[0]` — correct before,
+and now deliberately false whenever the interlock fires. The options that come to mind are
+delete it or relax it to match the new behaviour.
+
+Neither is best. It became **two** properties:
+
+```verilog
+// the new behaviour
+assert (start == (reg_ctrl[0] && !dma_busy));
+// ...and the interlock is the ONLY thing that may suppress a start
+always @(posedge clk) if (rst_n && !dma_busy)
+    assert (start == reg_ctrl[0]);
+```
+
+The second is the one that would otherwise have been thrown away: it pins down that the
+change did *exactly* what was intended and nothing more. Relaxing the original to the new
+form silently permits any *future* condition to suppress a start too.
+
+**A property invalidated by an intentional change usually splits into "the new behaviour"
+and "nothing else changed".** The second half is free to write, and it is the half that
+catches the next unintended broadening.
+
+## Two fixes, neither sufficient — report that, not the last one
+
+Two genuine defects were fixed against one failing property: a state signal that was
+actually a decode, and a one-directional guard on a symmetric constraint. The property still
+refutes.
+
+The temptation is to describe the wave by its last action, or to keep going until something
+turns green. Neither serves. What is *true* is: the property is the sole remaining failure
+(confirmed by neutralising it alone and watching everything else pass), the residual cause
+is bounded to a timing relationship rather than a missing guard, and both landed fixes are
+independently worth having.
+
+**A partially-closed gap, precisely bounded, is a better deliverable than an
+unbounded-but-green one.** Say how far it moved, what remains, and how you know the
+remainder is what you say it is — "neutralising this one assertion makes every other pass"
+is a stronger statement about scope than any amount of narrative.
+
+## Three partial fixes in a row means change what is observable, not the observer
+
+One property refused to close across three waves. Each attempt was a real improvement and
+each narrowed the failure window:
+
+1. a status signal that was a decode became a proper state register
+2. a one-directional guard on a symmetric constraint became symmetric
+3. the guard was extended across three more pipeline-stage valids
+
+All three were correct. None was sufficient, and the pattern — *each fix narrows, none
+closes* — is itself the diagnostic. The fourth attempt was spent on a trace instead, and it
+showed why: the supervisor being gated **runs its own state machine and does not stop when
+the host clears the request bit**. The signal the gate keyed off tracked a *request*, not a
+*state*. Quiescence lived inside a submodule and simply was not observable from where the
+gate was written.
+
+**When successive guards each narrow a window without closing it, stop adding conditions
+and ask what the guard cannot see.** Accumulating terms at the observation point is the
+signature of a missing observable — the fix is usually one output port on the module that
+actually knows, not a fifth conjunct on the module that does not.
+
+The corollary that made stopping the right call: **the diagnosis is a better deliverable
+than a fourth narrowing.** Naming the change ("`multilayer_sequencer` needs an `idle`
+output, and the interlock keys off that") converts an open bug into a scoped task, and
+leaves the accumulated conditions replaceable by one that answers the right question rather
+than entrenched as four that nearly do.
+
+This is the same distinction as request-versus-acknowledge in a handshake, one level up: a
+supervisor that can be *asked* to stop is not one that *has* stopped, and any interlock
+built on the ask inherits the gap.
+
+## Replacing a compound guard is where terms get dropped
+
+A four-condition interlock was replaced with one better condition — the module's own idle
+state, exported specifically so the guard could ask the right question. The new guard was
+more principled, shorter, and **still wrong**.
+
+`seq_idle` subsumed three of the four old terms. It did not subsume `!reg_ctrl[0]`, which
+was there for a different hazard entirely: a host setting two control bits **in the same
+write**. At that instant the sequencer genuinely *is* idle, so the new condition permits
+exactly the case the dropped term existed to block.
+
+**Before replacing a compound guard, write down what each term was for.** A replacement
+that covers three of four leaves a hole precisely where the fourth was — and the hole is
+harder to see than the original mess, because the new guard *looks* like it was derived
+from first principles.
+
+The tell that this had happened: the failure survived a fix that was independently correct.
+That is the same signal as elsewhere in this file — a refutation surviving a real fix means
+another cause — and here the other cause was something the fix itself removed.
+
+## Time spent understanding why a fix fails is not lost from fixing it
+
+One property stayed open across four waves:
+
+| Wave | Action | Outcome |
+|---|---|---|
+| 1 | recorded as open rather than weakened | property preserved |
+| 2 | two narrowings (state register; symmetric guard) | window smaller, still open |
+| 3 | third narrowing attempted; **diagnosis** produced instead | cause identified |
+| 4 | act on diagnosis | closed, five lines |
+
+Waves 2 and 3 look like failure and were not. Wave 1 preserved the information; waves 2–3
+bounded the problem until wave 3 could say *why no top-level fix could work*; wave 4 was
+trivial once that was known.
+
+**The strong temptation in the middle of this is to weaken the property so the run goes
+green.** Each wave offered that exit and each refusal is why the final fix was five lines
+in the right place rather than a fifth condition in the wrong one.
+
+Two habits worth carrying: **when successive fixes each narrow without closing, spend the
+next attempt on a trace rather than a fix** — the pattern is diagnostic, not just
+frustrating. And **a diagnosis that names a concrete change is a complete deliverable**; it
+converts an open bug into scoped work, and the person who acts on it may well be you next
+session with no memory of the reasoning.
+
+## After adding constraints, prove the behaviour still exists
+
+Four consecutive sessions were spent adding interlocks — each one narrowing what a system
+was allowed to do, each one correct. Every safety property passed at the end.
+
+That is exactly when a green result means least. **An over-tight guard makes every safety
+property hold by making the system do nothing**, and no safety property can distinguish
+"the bad thing cannot happen" from "nothing happens".
+
+So the next session audited instead of extending. Six probes, each asserting an activity is
+*impossible*, where a **refutation** is the evidence it still occurs:
+
+| Probe | Expected | Meaning |
+|---|---|---|
+| `!dma_busy` | refutes | the DMA can still start |
+| `!mac_valid_q` | refutes | compute can still run |
+| `!(dma_busy && mac_valid_q)` | **proves** | ...and never together |
+
+The last line is the pair that carries the claim. **A safety property and a liveness
+witness together say something neither says alone**: "this combination is impossible" is
+only interesting once "each of these is possible" is established.
+
+Two habits:
+
+**Order matters — audit before extending.** The natural next step was a new property built
+on top. On a stalled engine it would have proved trivially and the error would have
+compounded into everything after it. One session of checking bought certainty for all the
+work that follows.
+
+**Write the liveness witnesses as CI, not as a one-off.** The hazard is not that today's
+guard is too tight; it is that tomorrow's will be, and every safety property will keep
+passing while it happens.
+
+The general form applies well beyond hardware: after tightening validation, rate limits,
+permissions, or retry conditions, the tests that still pass are not evidence the system
+works — they are evidence it does not do the forbidden thing, which an inert system also
+achieves. Add a check that the permitted thing still happens.
+
+---
+
+## A verdict harness must prove its own baseline before any verdict is evidence
+
+A probe harness that decides "the probe refuted" from a nonzero exit code cannot tell
+*your property failed* from *something else failed*. While one interlock attempt was in
+the tree, an obligation `yosys` generates itself (`async2sync`) began failing, and every
+row of a six-row liveness table silently flipped to "refutes" — including the row whose
+expected answer was "proves". The table was reporting on a failure no probe had caused.
+Diagnosis took four rounds, and each round produced a confident, wrong attribution:
+first "my interlock created concurrency", then "it's the implicit-net shadowing", then
+"it's the async reset". All three were wrong, and the harness said nothing.
+
+The fix is one cheap run, placed first:
+
+```bash
+# baseline: no probe, no -DFORMAL. If this does not prove, no probe verdict means anything.
+yosys -q -p "read_verilog -sv -formal <design>; prep -top <top> -flatten; memory_map; \
+             async2sync; chformal -lower; sat -verify -prove-asserts -seq N -set-init-zero"
+```
+
+Generalises to any pass/fail harness that collapses a rich outcome into an exit code:
+integration suites, lint gates, benchmark regressions. **Before trusting a differential
+verdict, establish that the undisturbed system passes.** If it does not, every difference
+you measure is against a broken reference.
+
+## A reference above its declaration silently forks the signal
+
+Emitting a block that reads `dma_local_we` at line 125 when the wire is declared at line
+262 does not error. Verilog's implicit-net rule conjures a fresh one-bit wire at first
+use, so the block reads an **undriven twin** with the same name. The solver was then free
+to fabricate DMA writes, and refuted a property that had nothing to do with the change.
+No warning, and the emitted file reads correctly to a human.
+
+When a generator inserts code, **the insertion point is a correctness property, not
+formatting.** The safe shape is to split declaration from driver:
+
+```verilog
+wire start;                       // early, where consumers are
+...
+assign start = a && b && c;       // after every signal it reads is declared
+```
+
+Applies to any code generator that splices into an ordered document — Verilog nets, C
+declarations before use, import blocks, migration ordering. If insertion order can change
+meaning, pin it with a test that asserts the relative position, not just the presence.
+
+## Completion is not evidence that work was done
+
+Third instance of one shape in this campaign: zero neurons, zero words, and now zero
+bytes. **A zero-sized job satisfies its completion contract without doing anything**, so
+gating on "the transfer finished" admits a transfer that wrote nothing. Gate on the
+observable effect — a write actually asserted — not on the done flag.
+
+When you find the same defect shape twice, look for the third before it finds you: sweep
+every module that reports completion and ask what its zero-sized case does.
+
+## An open finding needs a gate, or it rots
+
+A property that refutes and cannot be fixed today has three possible homes. Weakening it
+until it passes destroys the finding. A comment in a doc gets forgotten. The third is
+best: keep the property, put it behind its own guard so the green set stays green, and
+**gate in CI that it still refutes**.
+
+```yaml
+- name: Prop. 25 is still open (must refute)
+  run: |
+    if yosys -q -p "... -DFORMAL_OPEN ..."; then
+      echo "::error::now PROVES -- promote it out of the open guard and update the docs"
+      exit 1
+    fi
+```
+
+The day someone fixes it, the build goes red and tells them to promote it. An expected
+refutation is a real gate: it pins the *boundary* of what is proved, and a boundary that
+moves without anyone noticing is how a known gap turns into a forgotten one.
+
+## Withdraw a fix that costs more than it buys
+
+Three interlocks were tried for one refuting property. None closed it, and each broke
+something that had been proving. All three were withdrawn and the finding was recorded
+instead. The instinct to ship *something* after that much work is the thing to resist:
+a fix that does not fix the target and regresses the baseline is strictly worse than an
+honest open finding, and the sunk effort is not an argument for it.
+
+---
+
+## A generated file's comments are not evidence about the generated file
+
+The standing rule is *verify the artifact, not the source*. A comment **inside** the
+artifact is still source. An emitter wrote:
+
+```verilog
+// A zero-length request moves no data and completes immediately.
+IDLE: if (start && (length != 32'd0)) begin
+```
+
+The comment describes the intent. The code does the opposite — it drops the request
+entirely — and the two sat adjacent for several waves. Reading the comment produced a
+published claim that was confidently, specifically wrong, and it propagated into a
+proposition, a README row, a commit message and an issue before a sweep contradicted it.
+
+When a comment and the code it annotates disagree, the comment is usually the older of
+the two and always the one with no test. **Grep for behaviour, not for prose:** the guard
+condition, the state transition, the assignment. If a claim about behaviour cannot be
+traced to a line that executes, it is not established.
+
+## When a defect shape appears twice, enumerate the class
+
+Three waves found one shape — a zero-sized job — one module at a time. Two were noticed
+while chasing something else; the third was a *guess* at a mechanism, and the guess was
+wrong. A single sweep over every module that takes a count found both real instances at
+once and produced something none of the individual investigations had: a **policy
+question**.
+
+```
+layer_sequencer       zero neurons  completes
+weight_prefetch_ctrl  zero words    completes
+multilayer_sequencer  zero layers   DROPPED   <- host hangs
+dma_controller        zero length   DROPPED   <- host hangs
+```
+
+A 2–2 split. **Neither policy is wrong in isolation; the disagreement is the defect**,
+because a caller cannot know which to expect. That framing is only visible from the
+sweep — each module in isolation looks defensible.
+
+The generalisation: after the second sighting of any defect shape, stop fixing instances
+and enumerate the class. Boundary values (zero, one, max, overflow), empty collections,
+single-element cases, absent optional fields, first and last iteration. Cheap, mechanical,
+and it converts a stream of accidents into one decision.
+
+## The unobservable outcome is the dangerous one
+
+Ranking the ways a request can fail:
+
+1. **Completes correctly** — fine.
+2. **Errors** — visible, caller can react.
+3. **Completes vacuously** (reports done, did nothing) — visible if the caller checks.
+4. **Silently dropped** (no work, no completion, no error) — **invisible**. The caller
+   waits forever for a result that was never coming.
+
+Wave 574 assumed the DMA was in class 3 and treated that as the bug. It was in class 4,
+which is worse. When choosing how to handle a degenerate input, **prefer the outcome the
+caller can observe** — a completion that did nothing beats a silence that did nothing.
+
+Pair the two halves or you get neither: assert the request completes *and* assert it
+performed no work. The first alone permits a module that lies; the second alone permits
+one that hangs. In CI that means a gate with deliberately mixed polarity — some
+properties must PROVE, others must REFUTE — so write the expected verdict next to each.
+
+---
+
+## A rule with no gate is a preference
+
+The clearest result of the documentation audit: two reproduce blocks were added that
+violated a rule recorded **in the same file** — *evidence citing a command that does not
+exist is not evidence* — written by the same author, in the two waves immediately after
+that rule was written down. Neither block was ever executed. Both cited a binary not on
+PATH.
+
+Writing a rule down does not apply it. Restating it does not either. The only thing that
+applies a rule is a check that fails when it is broken:
+
+```python
+# in CI: no ```bash block may cite a binary that is not on PATH
+if re.search(r"^\s*t27c ", block, re.M):
+    fail(f"L{n}: cites bare `t27c` (binary is at ./target/release/t27c)")
+```
+
+Applies to every convention you're tempted to record in a style guide, a CLAUDE.md, or a
+review checklist. **If you find yourself writing a rule, ask in the same breath what
+would fail when it is violated.** If the answer is "someone would notice in review", the
+rule will be violated, and most likely by the person who wrote it.
+
+## Documentation is evidence, so audit it like evidence
+
+A markdown document full of ```` ```bash ```` fences reads as reproducible. Classify the
+blocks before believing that:
+
+| class | test |
+|---|---|
+| **runnable** | contains a line matching a command pattern |
+| **template** | contains `<placeholders>` — never meant to run |
+| **transcript** | contains no command; it's showing output |
+
+Fourteen of nineteen were transcripts wearing a command's clothes. A reader cannot
+distinguish them, and neither can a future maintainer deciding whether a claim still
+holds. Transcripts belong in ```` ```text ````; the fence is a type annotation, not
+decoration.
+
+Then run the runnable ones. Not "check they look right" — execute them, and check the
+exit for 127 specifically, since *command not found* is the failure that makes a block
+look plausible while proving nothing.
+
+## Trace claims to gates mechanically, then check the misses by hand
+
+To ask "is every claim in this document still checked?", extract the identifiers each
+claim cites — function names, property names, file paths, commands — and grep the CI
+workflows and test files for them. Claims whose identifiers appear nowhere are candidates
+for *unchecked*.
+
+**Candidates, not conclusions.** Of six that matched nothing, four were false negatives:
+the extractor could not see prose labels like `'DMA can start'` that appear verbatim in
+the workflow. Checking those six by hand cost minutes and prevented publishing four wrong
+"ungated" claims — which would have been the exact error the audit existed to find.
+
+A heuristic that produces a shortlist is doing its job. Treating its output as a verdict
+is how an audit becomes the thing it was auditing.
+
+## Distinguish "has a check" from "the check is sufficient"
+
+The gate map establishes that each claim *has* something re-checking it. It does not
+establish the check is *adequate*: one gate counts conformance files without measuring
+whether the vectors inside them test anything. Recording that limit inside the audit is
+what keeps the audit honest — an audit that overstates its own coverage is worse than
+none, because it stops anyone looking again.
+
+The follow-up is the vacuity oracle applied to gates: break each gate deliberately and
+confirm the claim it guards actually goes red.
+
+---
+
+## Test that your gates bite, not just that they exist
+
+Establishing that every claim *has* a check is the easy half. The hard half is that the
+check *fails when the claim is false*. Redirect the vacuity oracle at the gates
+themselves: for each gate, apply one mutation that should violate the claim it guards,
+and require the gate to go red.
+
+```
+gate                     mutation                                    verdict
+Prop 7 interrupt_ctrl    revert clear-then-set -> set-then-clear      red
+Prop 24 liveness         tie start off, stalling the engine           red
+Prop 27 doc gate         make a block cite a binary not on PATH       red
+```
+
+**Three phases, and the first two are what make the third mean anything:**
+
+| phase | requirement | catches |
+|---|---|---|
+| baseline | unmutated, every gate passes | "went red" not caused by the mutation |
+| control | semantically neutral edit, every gate still passes | a gate that fires on *any* change and scores 100% detecting nothing |
+| mutation | each gate goes red for its own mutation | the actual claim |
+
+Skipping the control is the subtle failure: a gate that reports failure unconditionally
+passes every mutation test perfectly. Add a dead variable, an unused import, a reordered
+comment — anything semantically inert — and require green.
+
+**A clean sweep is a reason to check the harness, not to celebrate.** 13/13 on a first
+run is precisely the moment to ask what would have to be broken for the harness to
+report that anyway.
+
+## The mutation a safety check cannot see
+
+Stalling the system under test leaves every safety property true — something that does
+nothing violates nothing. Only a liveness check notices. When choosing mutations, include
+at least one that makes the system *inert* rather than *wrong*, because that is the
+mutation that distinguishes a suite which proves behaviour from one which merely proves
+absence of misbehaviour.
+
+If no gate goes red when you disable the feature entirely, the suite is measuring
+silence.
+
+## State the lower bound your method gives you
+
+Mutation testing bounds from below and never from above: each gate detected *the*
+mutation chosen for it, which is one point per claim, not coverage over all possible
+violations. Write that limit into the result, in the same document, at the same
+prominence as the number.
+
+The pattern across several audits: every method has a ceiling, and the useful artifact is
+the number **plus** the ceiling. A result reported without its ceiling gets cited later as
+if it had none — usually by the person who produced it, two waves on.
+
+---
+
+## Before believing a bounded proof, ask how far away a violation is
+
+A bounded model check proves a property over N steps. If a counterexample needs more than
+N steps, the tool reports success and has established nothing:
+
+```
+a_addr_never_wraps  -seq 24  ->  PROVES
+# the address is 12 bits; wrapping needs 4096 writes. The bound is 24.
+```
+
+That "proof" says *no wrap within 24 cycles*, which nobody doubted. Two modules passed
+it while both contained a wrap that silently corrupts data.
+
+The fix is to **scale the model until the counterexample fits** — narrow the address,
+shrink the memory, reduce the queue depth. Both modules refuted within one cycle of the
+scaled bound. Scaling changes what you proved, so say so: the claim becomes "this design,
+at this scale, does not wrap", plus the argument that the width is a parameter and not
+the mechanism.
+
+Generalises past formal: a fuzz run that never reaches a 10,000-element list, a load test
+that stops below the connection limit, a soak test shorter than the leak's doubling time.
+**A green result from a search that could not have found the bug is not evidence.** Ask
+what the smallest failing input looks like, then confirm the search reaches it.
+
+## When a correct fix does not make the property pass, look again
+
+The most valuable defect in this wave was found because a *second* defect kept the
+property red after the first was fixed correctly. The temptation at that moment is to
+assume the fix was wrong and revert it, or to weaken the property. Both destroy the
+signal.
+
+A property that stays red after a fix you believe is right is telling you there is a
+second cause. Two things make this actionable:
+
+- Verify the fix independently (the fix's own unit test passes, the shape matches a known
+  good module).
+- Then read the counterexample rather than patching again.
+
+The second defect here — data, write-enable and address registered together, so the
+memory sees a *post-increment* address and index 0 is never written — had nothing to do
+with the sizing question being investigated. It was found only because the first fix's
+failure was treated as information.
+
+## An unconstrained input is an adversary
+
+Two refutations in this wave were faults in my own harness, not the design: a tracker that
+compared state across two different transfers, and a free `rlast` that let the solver play
+a bus slave which never ends a burst. Both looked exactly like design defects.
+
+Under formal, every unconstrained input is chosen by something actively trying to break
+you. That is the tool's value and its main trap: **a refutation is a claim about the
+environment until the environment is pinned down.** Before reporting one, ask what
+protocol the real driver obeys that your harness has not been told about — then either
+assume it explicitly, or instantiate the compliant model.
+
+Same discipline in ordinary testing: a failure with an unspecified mock is a fact about
+the mock.
+
+## Stop patching after the second attempt
+
+Two fixes were applied to one refuting property; neither closed it. The third attempt was
+not made. The property is recorded as an expected refutation with a CI gate, so closing
+it turns the build red and asks for promotion.
+
+The rule that keeps this honest: **after two failed attempts, the next action is a
+counterexample read carefully, not a third patch.** Patches that follow a wrong model
+compound — each one adds behaviour that the next investigation must account for, and by
+the fourth you are debugging your own repairs.
+
+---
+
+## Scanning for the broken form of a shape only finds what nobody fixed
+
+After finding a defect shape twice, the instinct is to grep for it. That scan returned
+**zero** candidates — because both instances had just been repaired. The scan was
+searching for the *symptom* of an unfixed bug, so a clean result meant nothing about the
+rest of the codebase.
+
+Enumerate the **class**, not the symptom. The symptom was "a self-incremented address
+co-assigned with a write-enable". The class is "every write port" — and the right question
+is semantic: *does this port present address, data and enable from the same stage?*
+Enumerating the class found a third port that had never been checked at all, and proved it.
+
+The general form: when a scan for a known bug pattern comes back empty, ask whether it
+could have found the bug *before* you fixed it. If the answer is "only in the exact form I
+already repaired", the scan measured your memory, not the code.
+
+## A property a known defect would have passed is the wrong property
+
+The first property written for the wrap defect required the write address to *increase*.
+It passes a design that skips slot 0 entirely — which is precisely what the second defect
+did. Monotonicity was too weak, and nothing revealed that until a second bug hid inside
+the gap.
+
+The check to run at the moment a defect is fixed: **would my property have failed on the
+code I just repaired?** Run it against the pre-fix version. If it passes, strengthen it
+before moving on — you have written a property that describes the fix rather than the
+requirement.
+
+Here the requirement was contiguity — no gap, no repeat, starting at zero — which is
+strictly stronger than monotonicity and catches both defects. Cheapest possible moment to
+discover that: right then, with the broken version still in reach.
+
+## Do not diagnose with a tool that just contradicted itself
+
+A counterexample extraction reported a trace in which the guard signal was low the whole
+time — which cannot violate a property guarded on that signal. That is the tool telling
+you it is unreliable, not the design telling you something subtle.
+
+The disciplined response is to stop, record the finding as-is, and fix the instrument
+before using it again — ideally by validating it against a property with a *known*
+counterexample. Continuing to reason from a self-contradictory trace produces confident
+conclusions from noise, which is worse than having no trace at all.
+
+Same rule as the baseline check, one level up: **verify the instrument on a case whose
+answer you already know, before trusting it on one you don't.**
+
+---
+
+## When two attempts stall on the same item, suspect the instrument
+
+Two waves produced nothing on one open finding. Both times the conclusion was "the design
+is subtle". It wasn't — the counterexample had never actually been parsed. An ad-hoc regex
+over the tool's text output silently dropped every row, and the resulting trace showed a
+guard signal low throughout, which cannot violate a property guarded on that signal.
+
+The signal to watch for: **a diagnosis that contradicts its own premise.** A trace where
+the failing condition never occurs, a profiler where the hot path isn't called, a log
+where the error precedes the request. That is the instrument reporting on itself.
+
+Fixing the reader took one wave and made the defect legible in the first query. Two waves
+of "the design is subtle" were the cost of not suspecting it earlier.
+
+## Validate a reader against a known answer, in CI
+
+A parser for diagnostic output has no natural test — it is *the* thing you would use to
+check itself. Break the circle with a case whose answer you already know:
+
+```python
+# the prefetch with its clamp removed MUST wrap; if the reader cannot see that,
+# the reader is broken, not the design
+refuted, trace = run_and_read(script_with_known_bug, "known.json")
+assert refuted and any(addr[t] < addr[t-1] and we[t] for t in range(1, depth))
+```
+
+Make it a CI step. A diagnostic tool that silently degrades is worse than none, because
+its output still looks like evidence. This applies to log parsers, metric scrapers, crash
+symbolicators, coverage extractors — anything whose failure mode is "returns something
+plausible".
+
+Two concrete traps found in one tool:
+- **The format lies about being a format.** `yosys sat -dump_json` writes RTLIL names
+  verbatim, so a name containing `\e` makes the document invalid JSON. Repair before
+  parsing; do not assume a `.json` extension means parseable.
+- **Compressed formats need full expansion.** WaveJSON uses `.` for "same as previous".
+  A reader that skips those characters loses most of the trace while appearing to work.
+
+## Query the trace, do not read it
+
+Once the reader worked, the defect was found by asking a question, not by scanning a
+table: *at which timestep does the guard hold and the assertion fail?* One line, exact
+answer, `t=28: local_addr=1, expected 0`.
+
+Eyeballing a 30-cycle × 90-signal table is how the earlier misreadings happened. **Encode
+the property you are checking as a predicate over the trace and let it find the row.**
+The predicate is already written — it is the assertion that failed.
+
+## Keep a fix that misses its target only if it is right on its own terms
+
+Two fixes were applied to a refuting property; neither closed it. Earlier guidance says
+withdraw a fix that does not fix the target. The refinement: **withdraw it when it costs
+something** — a regressed property, added complexity, a weakened invariant. Keep it when
+it is independently correct and everything else still passes.
+
+Both fixes here were kept: one sequential index per transfer, and reset on every start.
+Each is defensible without reference to the property that motivated it. The test is not
+"did it work" but "would I write this if I had seen the code fresh".
+
+---
+
+## A strobe assigned in only one branch holds everywhere else
+
+The defect that had survived four waves of inspection:
+
+```verilog
+READ_DATA: if (rvalid) begin ... local_we <= 1'b1; ... end
+           else local_we <= 1'b0;      // runs ONLY while in READ_DATA
+READ_ADDR: begin ... end               // local_we not mentioned -> it HOLDS
+```
+
+The `else` looks like it deasserts the strobe, and it does — in exactly one state. Every
+other state leaves the register untouched, so a signal meant as a one-cycle pulse stays
+high across state transitions and keeps firing at a stale address.
+
+The fix is a default assignment before the `case`, so any state that does not explicitly
+set the strobe leaves it low. **Any signal whose meaning is "this cycle, do X" needs a
+default, not a per-branch clear.**
+
+The same trap outside hardware: a flag set inside one branch of a dispatch and cleared in
+that branch's `else`, while other branches never touch it. Set defaults at the top of the
+handler, not at the bottom of one path.
+
+## Scale everything the scaled signal touches
+
+Half a wave was lost to a false lead. A model was scaled by narrowing a signal from 12
+bits to 3 so a counterexample would fit the bound — but the test harness still declared
+the matching wire at 12 bits. Nine bits undriven, every comparison against them `x`, and
+`x` fails every comparison. The result is a **confident refutation of an innocent design**,
+indistinguishable from a real defect.
+
+Two rules fall out:
+- When you shrink a parameter for tractability, shrink it at every boundary that touches
+  it — DUT, wrapper, reference model, expected values.
+- In a trace, learn what your reader prints for `x` versus for *no data*. Reading `-` as
+  "unparsed" instead of "undefined" is what hid this. **An `x` in a comparison is a
+  defect in the harness until proven otherwise.**
+
+## Report each property's discriminating power separately
+
+Two properties were added for one defect. Both proved after the fix. Only one of them
+*also* refuted when the fix was reverted; the other proved either way at that bound, so it
+distinguishes nothing and is evidence of nothing.
+
+Reporting "2 properties proved" would have been true and misleading. **A property that
+passes on both the fixed and the broken design contributes zero information**, and saying
+so is the difference between a result and a number. Check each property against the broken
+version separately, and record which ones actually discriminate.
+
+## A sweep's value is not only what it was aimed at
+
+A sweep for oversized-request handling produced five distinct defects, and **four had
+nothing to do with request size** — an off-by-one in write pairing, a dual-role pointer, a
+misplaced reset, a held strobe. They surfaced because the sweep forced attention onto code
+paths nothing else had exercised, and because each fix that failed to close the property
+exposed the next cause underneath.
+
+The practical consequence: judge a systematic sweep by total defects found, not by hit
+rate against its stated target. A sweep that finds nothing of its named kind but four
+other real bugs has done its job.
+
+---
+
+## A blocker you recorded rather than forced can dissolve on its own
+
+Three fixes for one defect were tried and withdrawn because each broke an unrelated
+baseline that nobody could explain. The defect was recorded as open and gated, not
+patched around. Eight waves later the same fix was re-applied unchanged and the baseline
+proved — the blocker had gone away with three *other* defects fixed in the meantime.
+
+Had the original fix been forced through by weakening the baseline check, the three later
+defects would have had one less signal pointing at them, and the weakened check would
+still be in the tree.
+
+**When a fix is blocked by something you cannot explain, record the blockage and move on
+to work that is explainable.** Unexplained blockers are frequently symptoms of defects you
+have not found yet; fixing those retires the blocker for free. The cost is carrying an
+open item; the alternative is carrying a silent workaround.
+
+## A global flag cannot answer a per-instance question
+
+The defect: a consumer could read a buffer nothing had written. Three attempts gated on a
+single `input_loaded` bit — *has anything been written* — when the property asked *was the
+buffer this reader reads written*. No tuning of one bit answers a question indexed by
+which instance is in play.
+
+The tell is a mismatch of arity between the flag and the property. If the property
+mentions a selector (`use_buffer_a ? ... : ...`, a channel id, a tenant, a shard), the
+state backing it must be indexed by that same selector. One flag per instance, set by the
+actual event, not one flag for the system.
+
+This shape recurs far outside hardware: a global `initialized` boolean guarding
+per-connection state, one `dirty` flag for a set of caches, a single retry counter across
+independent requests.
+
+## Prefer an observable error to a stall, when refusing is the only alternative
+
+Given "this operation cannot safely proceed", the tempting fix is to refuse to start it.
+That deadlocks whenever the unsafe condition is *legitimate* — here, a layer that
+correctly produces no output, which is a valid case the system deliberately supports.
+
+And a stalled system passes every safety property, because something that does nothing
+violates nothing. So the failure mode is invisible to exactly the checks that motivated
+the change.
+
+The better shape: **do not perform the unsafe operation, complete anyway, and raise an
+error the caller can observe.** Here that meant not starting the layer *and* driving an
+error interrupt — no garbage computed, no deadlock, and the host learns why. Verify with
+liveness witnesses that the system still does its work afterwards.
+
+## An expected-refutation gate is how an open defect closes itself
+
+The property was kept in the codebase, guarded, with CI asserting it **must still fail**.
+When the fix finally worked, the build went red and said: promote this. That is the whole
+value — an open defect that announces its own resolution rather than waiting for someone
+to remember it.
+
+Worth pairing with the inverse, added when the last one closed: a gate asserting **no
+expected-refutation guard remains**. Together they make "what is knowingly broken" a
+checked property of the repository instead of institutional memory.
+
+---
+
+## A bounded result is a claim about (system, scale) — publish both
+
+"All properties proved" is not a property of a design. It is a property of the design
+*paired with the bound the checker ran at*, and the two are inseparable: a bounded model
+check at depth N says nothing about a counterexample needing N+1 steps. Two modules once
+"proved" an address never wraps while both wrapped, because the wrap needed 4096 writes
+and the bound was 24.
+
+So measure the ceiling and publish it with the claim:
+
+```
+seq  DEPTH  verdict     time
+ 40      4  PROVED      40.7s     <- what CI runs
+ 60      4  PROVED     246.1s     <- 1.5x the bound, still holds
+ 80      4  undecided   >300s     <- the ceiling
+ 40      8  PROVED      70.5s
+ 60      8  PROVED     219.7s     <- both axes at once
+```
+
+Two things this buys that a single number does not. **Headroom**: the claim holds at 1.5×
+what CI uses, so it is not perched on the edge of its own tractability. And **cost
+shape**: 1.5× the unrolling cost 6× the time, while doubling memory cost 1.7×. Knowing
+which axis is expensive tells you which one you can afford to raise later.
+
+Raise the axes **together** at least once. Each alone can pass while the combination does
+not, and a single-axis sweep would never show it.
+
+Generalises to any bounded search: fuzzing iterations, property-test case counts, load-test
+concurrency, soak-test duration. Report the largest setting you verified, not just the one
+you run by default.
+
+## Undecided is a third verdict — do not fold it into pass or fail
+
+A timeout means the solver ran out of time. It is not a failure (nothing was shown wrong)
+and not a pass (nothing was shown right). Folding it into "fail" is alarmist and gets the
+result ignored; folding it into "pass" is false, and it is the direction people drift
+because green is comfortable.
+
+Give it its own column. In this sweep, four modules of five extended to 4× their bound and
+one became **intractable at 2×** — its proof is real at its own bound and *nothing is known
+beyond it*. That is the single most useful line in the table: it names the one place a
+deeper defect could sit unseen. Collapsing it into either binary would have erased it.
+
+The same applies to skipped tests, flaky retries, and partial rollouts. A result you did
+not obtain is information, and it belongs in the report at the same prominence as the ones
+you did.
+
+## Check the ceiling, or it drifts
+
+Recording "proved at depth 40" in a document is a snapshot. The design grows, the state
+space grows, and one day the depth that used to complete no longer does — silently,
+because nothing re-runs the larger configurations.
+
+A scheduled gate that re-establishes each documented scale, and fails when one starts
+refuting **or stops completing**, turns the ceiling into a checked property rather than a
+remembered one. Both failure directions matter: a refutation means a real defect at depth,
+a new timeout means the claim quietly shrank.
+
+---
+
+## A batch verdict is the minimum over its members
+
+A checker that verifies a whole suite in one invocation returns one answer, and that
+answer describes its *worst* member:
+
+```
+a_sanity                  PROVED    0.2s
+a_no_overwrite            PROVED   87.2s
+a_rready_implies_active   PROVED    0.4s
+all three together        undecided >240s
+```
+
+Two separate problems here. The parts sum to under 90 seconds while the whole exceeds
+240 — a combined instance can be superlinearly harder than its pieces, so batching costs
+real verification depth. And the single number concealed that two members were verified
+four times deeper than the third.
+
+Splitting bought a 2.9× deeper bound at the same wall time, and it names the failure:
+a red batch says *something in here broke*; per-member runs say which.
+
+**When members of a suite differ by orders of magnitude in cost, an aggregate describes
+one of them and none of the others.** Run them separately and report a table. Applies
+directly to test suites with one slow integration test, benchmark runs reported as a
+single mean, and any pass/fail gate over a heterogeneous set.
+
+## A limit attributed to the system may be a limit of the question
+
+One module was recorded as "the one place a deeper defect could hide" because its proof
+would not extend. Re-asking the same question one property at a time removed the limit
+entirely — the module was never the problem.
+
+Before concluding that a component is intractable, expensive, or unverifiable, check
+whether the *shape of the query* is what is intractable. Batching, an over-broad scope, a
+join that fetches more than needed, a test that exercises ten behaviours at once: each
+turns a tractable question into an intractable one and then attributes the difficulty to
+the subject.
+
+The tell is a large gap between the cost of the whole and the sum of the parts. If you
+have never measured the parts, you do not know which you are looking at.
+
+## Replacing a global count with a local invariant is the right instinct — establish the alignment first
+
+The expensive property bounded a wide counter across an entire unrolling. The natural
+replacement is a *local* invariant relating that counter to something already constrained,
+plus an existing property covering the rest — cheap for a solver because it needs no
+history.
+
+The attempt refuted twice, both times on the sampling alignment between a counter
+registered off one signal and an address assigned from another on the same edge. The idea
+was sound; what was missing was one concrete fact about *when* each signal holds which
+value.
+
+The lesson is about order: **establish the alignment as its own small measured question
+before building an argument on it.** Assert the relation at each candidate offset and see
+which one proves — that is a directed experiment with three outcomes, versus a guess with
+two. Guessing it inside a larger property means every failure is ambiguous between "wrong
+offset" and "wrong idea".
+
+---
+
+## Check what kind of result you have before measuring how far it extends
+
+A verification campaign spent a wave measuring how deep each proof holds, and produced a
+careful table of ceilings. Two of the six entries had no ceiling: they were proved by
+k-induction, which holds for all time, and the sweep had re-measured them with plain
+bounded checking and reported "proved to 8× the bound" — **understating a result that was
+already unbounded.**
+
+Nothing in the aggregate output distinguished the two modes. One flag in the invocation
+did, and it was never checked.
+
+Before quantifying a result, classify it. A bounded search and a proof by induction are
+different kinds of claim, and so are a sampled benchmark versus an exhaustive one, a
+statistical test versus a deterministic check, a spot audit versus a full reconciliation.
+**Measuring the extent of a claim that does not have an extent produces a number that is
+worse than no number**, because it looks like a limit where none exists.
+
+## The same parameter name can mean different things in different modes
+
+Acting on the measurement above, bounds were raised across the suites — including one
+where the parameter is an *induction depth*, not a search bound. Raising it there buys
+nothing and costs a great deal: the proof was already unbounded.
+
+`-seq 80` reads identically in both invocations. Only the presence of another flag changes
+what it means.
+
+When a tool's parameter changes meaning by mode, the safe move is to key any bulk edit on
+the **mode**, not on the parameter. Grep for the mode flag first, partition the call sites,
+and apply the change only to the partition where it means what you intend. The bulk edit
+that treats all call sites alike is the one that quietly does the wrong thing to a subset.
+
+## An aggregate can be uninformative in a way that looks informative
+
+Six suites, six verdicts, all green. That summary was accurate and told you almost
+nothing: two of the numbers meant something categorically different from the other four,
+and one was the minimum over three members whose costs differed by two orders of
+magnitude.
+
+The fix is not more precision in the aggregate but **a per-member map**: one row per
+property, with its own depth and its own cost. That converts "everything passes" into a
+picture that names the single genuinely shallow item — which is the only part of the
+summary anyone can act on.
+
+Worth doing once for any suite whose members are heterogeneous. The cost is one sweep; the
+result is knowing which of your green checks are load-bearing.
+
+---
+
+## Splitting a suite pays only when its members differ in cost
+
+Splitting one suite into per-property runs bought a 2.9× deeper bound. Applying the same
+move to another suite bought nothing. The difference is measurable in advance:
+
+| | suite A | suite B |
+|---|---|---|
+| cheapest member | 0.2 s | 276 s |
+| dearest member | 87.2 s | 299 s |
+| ratio | **436×** | **1.08×** |
+| gain from splitting | 2.9× deeper | none |
+
+Where one member dominates, isolating it removes the others from a shared instance and the
+achievable depth rises. Where every member costs the same because the **shared setup** is
+the expense, splitting buys attribution and nothing else.
+
+**The diagnostic is one run: time a trivially true member.** If a tautology costs what a
+real property costs, the model is the bottleneck. One invocation, before committing to a
+restructuring.
+
+The general form applies to test suites, benchmark harnesses, and build graphs: measure
+the spread across members before parallelising or sharding. A flat cost profile means the
+fixture is the cost, and splitting only multiplies fixture setup.
+
+## A partition produced by a timeout is a partition of the timeout
+
+A sweep reported "8 of 20 proved" and it was true. It invites exactly one reading — *those
+8 are easier than these 12* — which was false. All 20 proved given more time; the budget
+simply fell across a plateau where everything cost nearly the same.
+
+The tell was available and nearly missed: a **tautology** was in the failing group. A
+trivially true assertion cannot be intrinsically hard, so its presence proves the split is
+an artifact of the budget rather than of the subject.
+
+Whenever a run is cut off by a limit — time, memory, iterations, rate limit — the
+resulting pass/fail split describes where the limit fell. Before reporting it as a
+property of the items, include a known-trivial item as a control and check which side it
+lands on.
+
+## Use the identifier the tool returned, never the one you predicted
+
+A commit body was written with `Closes #2012` while the issue actually created was #2014 —
+the number was guessed from the previous one instead of read from the tool's output. #2012
+was an unrelated open issue that the merge would have closed.
+
+Caught by checking, then fixed by amending the message and force-pushing the feature
+branch. Cheap here; silent and confusing had it merged.
+
+**Any identifier a tool mints — issue numbers, PR numbers, run IDs, generated paths — must
+be read back from that tool's output before being embedded anywhere.** Sequential-looking
+identifiers are the dangerous case, because a wrong guess is well-formed, plausible, and
+points at something real.
+
+---
+
+## When you name a measurement error, audit your own record for it
+
+One wave established that *a partition produced by a timeout is a partition of the
+timeout*. The obvious follow-through — search the campaign's own published numbers for
+that shape — found a ceiling published a wave earlier as "undecided at depth 80" which
+in fact **proves in 396 s** against the 300 s budget that had been used. The design was
+never the limit; the budget was.
+
+The correction cost one re-run. It was found only because naming the error prompted a
+sweep of prior results rather than just future ones.
+
+**A newly understood failure mode is a query to run against everything you have already
+published.** Not the next measurement — the previous ones. Every claim of the form "we
+could not do X" that came from a resource limit rather than a hard result is a candidate,
+and the resource limit is rarely recorded next to the claim.
+
+The practical habit: when a run is cut short, write the budget into the result — "undecided
+within 300 s", never "undecided". Then a later reader, including you, can tell a limit from
+a finding at a glance.
+
+## Batch overhead tells you where the cost lives
+
+Two suites, both batched, opposite profiles:
+
+- One suite's batch was **worse than the sum of its parts** — a single instance containing
+  every property was superlinearly harder. Cost lives in the properties; splitting helps.
+- The other's batch cost **1.4× a single property** — twenty properties for barely more
+  than one. Cost lives in the shared model; splitting cannot help.
+
+That ratio is a cheap diagnostic on its own: time the batch, time one member, divide. Near
+1 means a shared fixture dominates and the only lever is making the fixture cheaper. Much
+greater than 1 means the members interact, and isolating them buys real headroom.
+
+Same reasoning applies to test fixtures, container startup in CI shards, and any harness
+where a costly setup is amortised across cases.
+
+---
+
+## A stub measures cost, not behaviour — and the baseline check tells you which
+
+To find where a solver's time goes, replacing a subsystem with a same-interface stub is a
+fast and legitimate experiment: it answered "the datapath is 31% of the cells and 87% of
+the time" in two runs.
+
+What it cannot answer is anything about correctness. Under the stub, **all twenty
+properties failed — including a tautology**. A trivially true assertion cannot be broken
+by swapping a multiplier, and the baseline check confirmed why: the stubbed build did not
+pass with *no properties at all*. The build was unsound, so every verdict from it was
+noise.
+
+Keep the two apart deliberately:
+- **timings** from a stub are usable, because they measure how long the tool ran;
+- **verdicts** are not, because they describe a system you did not build.
+
+Run the baseline on the modified build before reading any pass/fail from it. This is the
+same rule that applies to mutation harnesses and probe rigs, and this was the first time
+it caught *my own replacement* rather than someone's change to the design.
+
+## Cell count is a poor proxy for solving cost
+
+The stub removed 31% of cells and 0.4% of flops, and cut solve time by **8×**. The
+expensive part was combinational — a wide parallel multiply and its adder tree — and
+unrolling a bounded check multiplies combinational logic once per step while sequential
+state grows only linearly.
+
+So when a bounded proof is slow, look for **wide combinational structures**, not for
+register count. Arithmetic, comparators, priority encoders and crossbars dominate; state
+machines and counters usually do not.
+
+The same intuition misleads in reverse elsewhere: a design that looks small by flop count
+can be very expensive to verify, and a design with many registers but simple logic can be
+cheap.
+
+## A knob exists only if someone built one
+
+Memory depth was scalable for proofs because it was already a module parameter — one flag,
+no edits. The datapath was not, and no amount of tool knowledge changes that: the width
+was a literal at 26 sites across six generators, and the lane count 37 times in one.
+
+**Scalability for testing is a property of the code, not of the tool.** When a system
+resists being shrunk for a test, the finding is usually "this quantity was never
+parameterised", and the fix is a refactor with its own risk — not a flag you have yet to
+discover.
+
+Worth recording as a design habit: quantities you will one day want to shrink for a test —
+widths, lane counts, queue depths, batch sizes, retry limits — are cheap to parameterise
+when written and expensive to parameterise later.
+
+## Do not start an invasive refactor to serve a measurement, late
+
+The obvious follow-through was to thread a width parameter through six generators. It was
+measured, scoped, and **not attempted** — a change touching every consumer of a datapath,
+made at the end of a long session, motivated by a proof budget rather than by the design,
+is how correct code acquires defects.
+
+Deliberately stopping at "measured and scoped" leaves the next session a task that starts
+fresh with the full picture. The alternative — a half-finished refactor plus a tired
+reviewer — trades a known cost for an unknown one.
+
+---
+
+## Verify that a guard actually guards
+
+Fifteen waves of a verification campaign rested on a "baseline" run — the design compiled
+*without* its properties — used to distinguish "your check failed" from "something else
+failed". It never excluded a single property. The tool's `-formal` flag **predefines the
+`FORMAL` macro**, so every `` `ifdef FORMAL `` block was compiled whether or not the define
+was passed.
+
+The test costs one three-line module and two runs:
+
+```verilog
+module guardtest(input wire clk, input wire a, output reg q);
+    always @(posedge clk) q <= a;
+`ifdef FORMAL
+    always @(posedge clk) g: assert (q != a);   // must vanish without the define
+`endif
+endmodule
+```
+
+Compare the cell counts with and without. Identical means the guard is not a guard. Fixing
+it was a rename to a macro the tool does not own — after which the excluded build had **0**
+assertion cells instead of 28.
+
+Generalises to every conditional-compilation scheme: debug builds, feature flags, test-only
+code paths, `NDEBUG`, sampling switches. **A flag that quietly implies another define turns
+conditional code into unconditional code**, and nothing in the output says so. Assert the
+absence, not just the presence: a test that the guarded thing *disappears* is the one
+nobody writes.
+
+The deeper cost was diagnostic, not correctness. An earlier wave spent four rounds trying
+to separate a failing probe from a failing property. No flag existed that could separate
+them — the confusion was structural, and invisible.
+
+## Distinguish "the tool failed" from "the check failed"
+
+A harness reported `REFUTED` in 0.1 seconds. A refutation that fast is not a refutation —
+the input file was missing, the tool errored, and a nonzero exit was read as a verdict.
+
+```python
+if rc == 0:                       return "PROVED"
+if "proof did fail" in output:    return "REFUTED"
+return f"TOOL ERROR: {first_error_line(output)}"
+```
+
+Third time this shape appeared in one campaign: a trace reader that returned an empty trace
+on a parse error, a stub build whose unsoundness read as twenty property failures, and now
+a missing file. Each time the failure was *plausible* — it looked exactly like the thing
+being measured.
+
+Two habits close it: parse the tool's own words for the specific outcome rather than
+trusting the exit code, and treat implausible timings as evidence. A check that normally
+takes 40 seconds and "fails" in 0.1 has not run.
+
+## Add the mirror of every property you have
+
+A campaign accumulated forty propositions, and every one constrained **writes** — write
+addresses, write enables, write ordering, writes-before-reads. The read path had no
+coverage at all, and nobody noticed because the write properties kept finding real defects.
+
+Reading the existing set as a list of *shapes* rather than of facts makes the gap obvious:
+if you have "the write strobe is a pulse", ask about the read strobe; if you have "the
+write address is contiguous", ask about the read address; if you have "no read before
+write", ask about "no read past what was written".
+
+Here two mirrors proved immediately (the read path was sound) and one refuted, which is a
+good outcome either way: proving a mirror costs one run and converts an assumption into a
+fact.
+
+---
+
+## A self-comparison is not an undefined-value detector
+
+To decide whether a property was failing because of the design or because its operands were
+undefined, I asserted the obvious thing:
+
+```verilog
+assert (fv_maxwr_a == fv_maxwr_a);   // PROVED -- and meaningless
+```
+
+The optimiser folds `a == a` to constant true before any value is considered. The check
+proves on a signal that is undefined, unconstrained, or does not exist at all. Same for
+`x != x`, `a - a == 0`, `a & ~a == 0` — every algebraic identity is discharged
+structurally, never by reading the signal.
+
+The generalisation is worth holding onto: **a probe whose result is determined by its own
+syntax tests nothing.** Before trusting a diagnostic assertion, ask what input would make
+it fail. If the answer is "none", the tool will happily confirm it forever.
+
+Valid alternatives depend on the tool: compare against a *known* value, drive the signal
+from a controlled stimulus and check the expected response, or make the probe fail
+deliberately once to prove it can.
+
+## Re-check the results a broken method touched — do not reason about them
+
+Discovering that a foundational check never did what it claimed raises an obvious question:
+which conclusions were affected? The tempting move is to reason it out — *those results
+were safety properties, they would not have been changed by extra assertions* — and that
+reasoning happened to be correct here.
+
+It was still worth running. Six witnesses, six re-runs, six identical verdicts, and now the
+claim is measured instead of argued. The re-run also surfaced the precise condition under
+which it *would* have mattered: had any of the compiled-in properties been an `assume`
+rather than an `assert`, the probes would have explored a constrained state space and every
+verdict could have differed — a distinction the old setup could never have revealed.
+
+**When a method turns out to be mis-specified, the cheap and honest response is to re-run
+what it touched.** Reasoning about the blast radius produces a defensible answer; re-running
+produces a fact, and occasionally a surprise.
+
+## A property that is syntactically true has always been counted
+
+The same folding trap sits inside the property set itself: one long-standing "proved"
+property is literally `assert (bram_addr == bram_addr)`. It has been counted among the
+proved set for dozens of waves and has never tested anything.
+
+Vacuity checking as normally practised asks whether a property's *guard* is reachable. It
+does not ask whether the property's *body* is discharged by the optimiser. Both are ways a
+property can be free, and only one of them is usually gated.
+
+Worth a one-time sweep of any assertion set: look for bodies that mention a signal only on
+both sides of a comparison, tautological ranges (`x >= 0` on an unsigned), and conditions
+implied by their own guard.
+
+---
+
+## A vacuous check can inflate the metric designed to detect vacuity
+
+A verification suite gated itself on a count: *fail if fewer than N checks exist*, on the
+sound reasoning that a green run over an empty set proves nothing. Five properties in that
+set had bodies of the form `X == X`, folded by the optimiser to constant true — they proved
+unconditionally and tested nothing.
+
+They still emitted a check cell each. **The padding was counted by the very gate meant to
+catch an all-vacuous set.** Removing them dropped two suites below their thresholds, which
+is the correct signal arriving several years late.
+
+Two distinct notions of "free" are at play, and typically only one is gated:
+- the **guard** is unreachable — the usual vacuity check;
+- the **body** is discharged by the optimiser — almost never checked.
+
+Any count-based health metric deserves the same scrutiny: a test that always passes still
+increments the test count, a log line that always fires still satisfies "we have
+telemetry", a retry that never retries still appears in the resilience inventory.
+
+## When a change appears to break something, reproduce the failure without the change
+
+Removing a property made an unrelated suite refute. I attributed it to my edit, then to a
+subtle interaction, and built a plausible theory for each. Both were wrong. Re-running the
+**unchanged** file with the same command refuted identically: the failure predated the
+edit, and I had simply been invoking a mode the pipeline does not use.
+
+One run, before any theory. It separates "I broke it" from "it was already so", and the
+cost of skipping it is not a wasted run — it is a confident, documented, wrong explanation.
+
+The corollary: when your reproduction differs from the pipeline's, the difference is the
+first suspect. The pipeline's own comment had explained why it used a different mode, and I
+had read past it twice.
+
+## A detector that searches text will match prose
+
+Classifying pipeline steps by searching each step's text for a flag reported that two
+suites used an unbounded proof method. Only one did. The other step contained the flag name
+**inside a comment explaining why that method was not used there** — the detector matched
+the explanation of its own absence.
+
+That misclassification survived into a published proposition and a README claim.
+
+When scanning configuration or code for a feature, match on the **structure**, not the
+text: the parsed command line, the AST node, the actual key — never a substring of the
+whole blob. If only a text scan is available, strip comments first, and treat any hit
+inside prose as a negative.
+
+---
+
+## Mutation-test a gate on the day you write it, in the same step
+
+A new gate was written to catch a class of defect found by hand the wave before. The gate
+and its own control ship together, in one CI step:
+
+```
+scanned 67 assertion bodies; 0 discharged by syntax
+ok   gate flags self-comparison
+ok   gate flags nested self-comparison
+ok   gate flags unsigned >= 0
+ok   gate flags literal true
+ok   gate passes a real property      <- the control that matters most
+```
+
+The four positive cases prove it fires. The negative case proves it is not simply firing on
+everything — which is the failure mode that scores perfectly on positives alone.
+
+Doing this at authoring time costs minutes; retrofitting it later means auditing a gate you
+have already trusted for months. The rule generalises: **a check that is not itself checked
+is an assumption wearing a green tick.**
+
+## A detector that produces false positives is worse than no detector
+
+An attempt at a stronger, semantic version of the same gate compared cell counts before and
+after neutralising a property, on the theory that a free property adds no logic. It flagged
+six **real** properties — including ones that had caught genuine defects — because
+common-subexpression elimination lets a genuine property add zero net cells.
+
+That detector was withdrawn, not tuned. A gate that cries wolf on real work gets disabled by
+whoever hits it next, and takes the true positives with it.
+
+Three more attempts failed for unrelated reasons, and the honest response after the fourth
+was to ship the weaker, verified check and **write the dead ends into the module**:
+
+```python
+# A SEMANTIC layer was attempted and did not land. Recorded so the next attempt
+# starts from what was learned rather than repeating it:
+#   * cell counts are UNSOUND (CSE) -- flagged six real properties
+#   * `chformal -lower` needs `async2sync`, after which the guard folds into A
+#   * before lowering, every $check's A reads 1'1 for real and free alike
+#   * useful: after async2sync the cells are NAMED after their property labels
+```
+
+Four recorded dead ends are worth more to the next attempt than a broken tool in the
+pipeline, and cost nothing to carry.
+
+## Ship the smaller thing, and state what it does not do
+
+The gate that shipped catches the shapes that actually occurred. It does not decide whether
+an arbitrary property can ever fail, and its docstring says so in the same paragraph as its
+purpose.
+
+That sentence is what stops the next reader — often you — from citing the gate as broader
+evidence than it is. The pattern across this campaign: every overstated claim was
+overstated at the moment of writing, by someone who knew the limit and did not write it
+down.
+
+---
+
+## Two independent formulations of one claim is a working discriminator
+
+After two failed attempts to decide whether a failing check meant "the system is wrong" or
+"my check is wrong", what worked was writing the **same claim a second, structurally
+different way** and comparing:
+
+| formulation | verdict |
+|---|---|
+| bound: read address ≤ highest address ever written | fails |
+| exact: per-slot written bitmap | fails |
+
+Agreement exonerates the weaker formulation and implicates the system. Disagreement would
+have implicated the approximation. Either way the answer is attributable, which neither
+previous attempt achieved.
+
+This beats staring at a trace because it does not depend on reading the tool's output
+correctly — only on two checks agreeing or not. Applies wherever a measurement is in doubt:
+compute the metric a second way, from a different source, and compare.
+
+## Validate a new instrument against what it must *not* say
+
+Before believing the discriminator above, two checks confirmed it was alive:
+
+```
+the tracker is ever non-zero    -> must REFUTE   (it does)
+the tracker can reach all-ones  -> must REFUTE   (it does)
+```
+
+A tracker stuck at zero would make the property fail for a reason unrelated to the system,
+which is exactly how the two earlier attempts went wrong. **Assert the negation of what
+you expect and require a counterexample** — that proves the instrument can move, where
+asserting the expected value proves nothing.
+
+Two waves of wrong attribution were the price of skipping this; the checks themselves cost
+one run each.
+
+## A boolean is not a count, and "some" is not "enough"
+
+A defect was closed by tracking *whether* a buffer had been written. The finer defect
+underneath: nothing related **how many** slots a consumer would read to **how many** a
+producer had written. Buffer-written is not slot-written.
+
+That progression — flag, then count, then per-element — recurs whenever a resource is
+filled by one stage and consumed by another: a connection pool marked "initialised" but not
+sized, a cache marked "warm" with only some keys present, a buffer marked "ready" shorter
+than the reader's stride.
+
+When a guard answers *did anything happen*, ask what happens when **less than enough**
+happened. That is usually a distinct, live defect rather than a variation of the one just
+fixed.
+
+## `$past(x)[1:0]` is not legal Verilog
+
+Part-selecting a system function call is rejected by the parser, and the tool reports it as
+a generic error rather than a syntax hint. Register the value first:
+
+```verilog
+reg [11:0] fv_prev_rd;
+always @(posedge clk) fv_prev_rd <= buf_read_addr;
+... fv_bm_a[fv_prev_rd[1:0]] ...
+```
+
+Worth noting for what it nearly cost: under a harness that reads any nonzero exit as a
+verdict, this would have appeared as a **refuted property** and sent the investigation
+somewhere false. It appeared as a tool error only because that separation was already in
+place — a guard paying off two waves after it was written.
+
+---
+
+## Match the arity in time: a once-evaluated gate cannot enforce a per-cycle invariant
+
+A property said *at the moment of each read, the slot being read must already have been
+written*. The fix attempted was a gate at the start of the operation: count what was
+written, refuse to begin if the count is short.
+
+It could never work, and the reason is worth more than the attempt. A start-time check
+says nothing about what happens **during** the operation — here a producer filling one
+buffer while a consumer drained another, with nothing constraining their interleaving. The
+mismatch was not the threshold, the counter width, or an off-by-one. It was that a
+**per-cycle claim needs a per-cycle guarantee**.
+
+Before writing a guard, name when the claim must hold — once at entry, once per item, or
+on every cycle — and check that the guard is evaluated at the same rate. A guard evaluated
+less often than its claim is not a weak guard, it is the wrong shape, and no tuning
+converts one into the other.
+
+Everyday forms: a permission checked at session start for an action authorised per-request;
+a quota validated at job submission for a loop that allocates as it runs; a health check at
+startup for a dependency that can fail mid-flight.
+
+## Withdraw on two counts, not one
+
+The standing rule was *withdraw a fix that misses its target and costs something*. This
+attempt hit both halves in one run: the target property still refuted **and** the existing
+proved set broke. That made the decision immediate rather than a judgement call.
+
+Worth writing the two-part test explicitly, because the tempting failure is to keep a
+change that only fails one half — "it didn't fix the bug but it's harmless" or "it broke
+one test but it's the right direction". Both are how a codebase accumulates changes that
+nobody can justify individually.
+
+## Record the eliminated shape where the next attempt will read it
+
+The withdrawn interlock left one durable artifact: a comment above the code it would have
+replaced, naming the approach, why it cannot work, and the two shapes that remain. Not in a
+commit message, not only in a design document — **in the file the next attempt will
+open**.
+
+Three waves have gone into this one defect: two to attribute it, one to eliminate a fix
+shape. That is progress only if the eliminations are visible from the code, otherwise the
+fourth wave re-derives the second.
+
+---
+
+## Bisect a failing property with assumptions, not with theories
+
+Six waves went into one failing check. Trace reading was inconclusive twice, a discriminator
+proved invalid, and a fix attempt was withdrawn. What finally located it took three runs:
+
+```
+unconstrained                          -> REFUTED
+assume (neurons_per_layer != 0)        -> PROVED
+assume (neurons != 0 && chunks != 0)   -> PROVED
+```
+
+One assumption separated the failing configuration from every other. That is a **bisection
+of the input space**, and it is far more reliable than reading a counterexample: each run
+is a yes/no answer to a question you chose, rather than an exercise in interpreting a dump.
+
+The method generalises to any failing test with a large input space. Constrain a dimension,
+re-run, and see whether the failure survives. A handful of runs partitions the space into
+"fails here" and "holds everywhere else", which is usually the whole diagnosis.
+
+Do it *before* reading traces, not after. Traces answer "what happened in this one run";
+assumptions answer "which class of runs is affected".
+
+## A module-level guard does not travel to the paths that bypass it
+
+A sequencer was proved — in isolation, non-vacuously — to emit no work for a zero-sized
+job. That proof was correct and did not prevent the engine from performing a read for that
+same job: the read address came straight from a counter, and the consumer's valid came from
+pipeline skew registers. Neither path passed through the guard that had been proved.
+
+**Proving a guard at a module boundary says nothing about consumers that do not go through
+that boundary.** The integration properties are where this shows up, and only if they
+mention the bypassing path — which is why the read side sat unexamined for eight waves
+while the write side accumulated five defect findings.
+
+When a guard is proved locally, enumerate its consumers and check which of them actually
+read the guarded signal. Those that derive the same information independently — a parallel
+counter, a cached copy, a skewed replica — are exactly where the guard's guarantee stops.
+
+## Degenerate inputs deserve the same sweep on every side of a datapath
+
+Zero-sized requests were swept exhaustively on the write side and produced four defects
+across four modules. The read side was never asked, and the fifth member of the family was
+waiting there.
+
+A sweep is defined by two things: the property class, and the surface it covers. Recording
+"we swept zero-sized inputs" without recording *which surface* leaves the impression of
+completeness. The honest form is "zero-sized inputs, write paths only" — which makes the
+gap visible to the next reader instead of hiding it behind a finished-sounding claim.
+
+---
+
+## The weakest assumption that restores a proof is the diagnosis
+
+A failing check was fixed by `assume (count != 0)`, and the obvious conclusion — *the bug
+is the zero case* — was published. It was wrong. A **weaker** assumption also restored the
+proof:
+
+```
+assume (count != 0)                  -> PROVED
+assume (count == $past(count))       -> PROVED   <- weaker, and the real cause
+```
+
+A stable *zero* proves. The necessary condition was the count **changing**, not its value;
+excluding zero merely excluded the particular change the solver had reached for.
+
+**When one assumption makes a failure disappear, keep looking for a weaker one that also
+does.** Every assumption that restores a proof describes *a* sufficient condition; only the
+weakest describes the cause. The strong one is usually the first you think of, and it is
+usually a special case of the real thing.
+
+Beyond formal work: a bug that "only happens with an empty list" may really be "only
+happens when the list changes during iteration"; empty is just the easiest way to reach it.
+
+## Configuration read live by a running state machine is a defect class
+
+A sequencer compared its counter against a limit register every cycle, and the limit was
+wired straight to a host-writable register. A write mid-run moves the terminator underneath
+work already in flight.
+
+The fix is one register and a capture point: latch the configuration when the operation
+starts, and run from the latched copy. Cheap, local, and independently correct regardless
+of what else the investigation turns up.
+
+Worth looking for wherever an operation has a *duration*: batch sizes read per-iteration,
+timeouts consulted inside the loop they bound, feature flags evaluated per-item in a job
+that should be consistent end-to-end. **If a value can change while the thing it governs is
+running, decide explicitly whether it should — and usually it should not.**
+
+## Ship a fix that is right on its own terms, even if it does not close the case
+
+The latch did not make the failing property pass. The standing rule is to withdraw a fix
+that misses its target *and costs something*; this one cost nothing measurable and is
+defensible without reference to the investigation that produced it — a sequencer must not
+have its terminator moved mid-run.
+
+The test to apply: **would I write this having seen the code fresh, with no knowledge of
+the open bug?** If yes, keep it and say plainly that it does not close the case. If the
+only argument for it is the bug it failed to fix, withdraw it.
+
+That distinction keeps a codebase from accumulating speculative changes while still
+allowing genuine improvements found along the way.
+
+---
+
+## A rejected fix is rejected against a design, not for all time
+
+An interlock was tried, analysed, and withdrawn with a conclusion that read like a law:
+*a start-time count cannot enforce a per-cycle claim*. Three waves later the same interlock
+was re-applied unchanged and closed the defect.
+
+The conclusion was never wrong. It was **conditional on the design at that moment** — the
+quantity being checked could change mid-operation, so a check at the start said nothing
+about the rest. A separate fix later latched that quantity, and the condition the rejection
+depended on stopped holding.
+
+What made the re-attempt cheap was recording the **reason** beside the code, not just the
+verdict:
+
+```verilog
+// A COUNT version was attempted in Wave 594 and withdrawn: it neither closed
+// the property nor left the proved set intact. Why it cannot close it: the
+// property compares the read address at the moment of the read, while a
+// start-time gate says nothing about writes and reads interleaving WITHIN a
+// layer.
+```
+
+A verdict ("we tried this, it failed") closes the door. A reason ("it failed *because* X")
+leaves it open for the day X stops being true. **When you record a rejected approach,
+record the condition it failed under** — that is the part with a shelf life.
+
+## Some defects need several changes, none of which look like progress alone
+
+The defect took three changes across eight waves, and each one individually left the
+property still failing:
+
+1. per-instance written flags — closed a coarser version, left the fine one
+2. latching configuration at operation start — fixed a real race, did not close it
+3. carrying the fill extent across the handover — closed it
+
+Under a strict "withdraw anything that does not fix the target" rule, changes 1 and 2 would
+both have been reverted, and change 3 would never have worked. The rule that saved them was
+the refinement: **withdraw a fix that misses its target *and costs something*; keep one
+that is right on its own terms.**
+
+The test is: *would I write this having seen the code fresh, with no knowledge of the open
+bug?* Both survivors passed it — a state machine should not have its terminator moved
+mid-run, whatever else is broken.
+
+## Building the instrument is most of the work
+
+The defect was one line of missing state. Finding it took a trace reader (the tool's own
+JSON output was malformed), a free-property gate (five properties proved by syntax alone),
+and an assumption-bisection method — plus two wrong attributions published before the right
+one.
+
+That ratio is normal and worth planning for rather than apologising about. When a bug
+resists two honest attempts, the next move is usually not a third attempt at the bug but a
+first attempt at **seeing it**: what would make the failure legible, and is that thing
+trustworthy? Two of the three instruments here caught their own defects on first use.
+
+---
+
+## A sweep that finds nothing must demonstrate that it could have
+
+A clean sweep and a broken sweep produce the same report. Three properties were added over
+paths never previously checked, all three proved, and no defect was found — a result worth
+nothing until each property was shown capable of failing:
+
+```
+body replaced by assert(1'b0) under the same guard:
+  a_zero_chunks_no_mac          -> refutes   (guard reachable)
+  a_zero_chunks_no_weight_walk  -> refutes
+  a_zero_neurons_no_act_walk    -> refutes
+```
+
+The failure mode is properties whose guards are unreachable: they prove instantly, cost
+nothing, and report safety. Without the check, "we looked and saw nothing" is
+indistinguishable from "we did not look".
+
+Applies to every negative result. A test suite that passes on a feature nobody exercises, a
+scan with a pattern that matches nothing, a monitor whose alert has never fired — before
+reporting the absence of a problem, show the instrument reacting to one.
+
+## Derived state cannot drift; independent state does
+
+Across a long verification campaign the defect distribution was lopsided: four defects on
+the write paths, one on the read paths. That was not attention bias, and the reason
+generalises.
+
+The write paths each carried their **own counter** — one per stage, independently updated.
+Every defect found was two of those pieces disagreeing: an address advanced while its data
+did not, a pointer serving two roles, a strobe held while its address moved on.
+
+The read paths were **derived**: one pointer *was* another signal, another advanced only
+when a valid fired. Derived state has no opportunity to disagree with its source.
+
+The design rule that falls out: **when two registers track the same quantity, that is a
+defect site.** Prefer deriving to duplicating; when duplication is unavoidable, the
+relation between the copies is exactly the property worth asserting. It also predicts where
+to look next — a census of same-quantity register pairs is a target list, not a guess.
+
+## State the surface a sweep covered, not just the class
+
+"We swept zero-sized inputs" sounds complete and is not. The honest form names the surface:
+*zero-sized inputs, on the write paths*. That phrasing is what later made the read-side gap
+visible instead of hiding it behind a finished-sounding claim.
+
+Same for this wave's result: the read pointers **named here** were asked; two other read
+paths were not, because neither is indexed by a configurable count. Writing that sentence
+costs nothing and is the difference between a bounded result and an overclaim that someone
+— usually you — cites later as broader than it was.
+
+---
+
+## A stub measures what the optimiser can delete, not what the stubbed thing costs
+
+Replacing a module with a trivial stub made a proof 8× faster, and that number justified a
+refactor across six files — deferred four times as "the largest available gain". Measured
+directly, the refactor was worth **1.5×**.
+
+The 8× was real and measured something else. Stubbing the module removed its *instantiation*,
+which left its wide inputs unused, and the optimiser then deleted the whole datapath feeding
+it — memories, muxes, buses. **Removing a consumer removes its producers.**
+
+Two rules fall out:
+- Attribute a cost to a component only by changes that hold its neighbours fixed — shrink
+  it, don't delete it.
+- Before acting on a stub-derived number, make the change you actually intend on a small
+  scale and measure *that*. Here: narrowing the datapath from 27 lanes to 3 took two minutes
+  and killed a multi-day refactor.
+
+Same shape in profiling generally: deleting a call site removes everything it reached, so
+"function X is 80% of runtime" measured that way is usually "X and everything it pulls in".
+
+## Cell count, line count, and any static size are poor proxies for solving cost
+
+Two builds fourteen cells apart differed **eleven times** in solve time. Another build with
+290 *fewer* cells ran 0.2% faster; one with 161 fewer ran **slower**.
+
+Whatever makes a search hard is not counted by a size metric. For bounded model checking it
+is roughly the shape of the state dependencies across the unrolling; for other tools it will
+be something else — but in no case is it the thing that is easiest to count.
+
+When optimising a slow check, measure the check. Static size can suggest hypotheses; it
+cannot rank them.
+
+## Re-cost a deferred item before picking it up
+
+An item was deferred four times, each time with a good reason, and each time carrying
+forward its original estimate: *the largest available gain, ~8×*. When it finally reached
+the front of the queue, the estimate was four waves stale and wrong by a factor of five —
+and re-costing it took one wave and closed it permanently.
+
+**A deferred item should be re-costed, not just re-prioritised.** The world it was estimated
+in has changed, usually by the very work that kept deferring it. The re-cost is cheap
+compared to starting the work.
+
+## `git status` is part of the verification
+
+A file had been modified but never committed for roughly twenty waves. Every local
+verification ran against it; CI ran against a different version. It elaborated either way, so
+nothing went red — which is exactly why it survived.
+
+A result produced from the working tree is a result *about the working tree*. Before
+reporting that something passes, confirm the tree is clean, or say explicitly which
+uncommitted changes are in play. Found here by accident, while checking whether an
+experiment had touched the repo — the check that should have been routine was the one that
+caught it.
+
+---
+
+## Strengthening an assumption can silently disable the checks that would catch it
+
+A property refuted. The obvious fix was to constrain the environment more tightly — stop an
+input changing at a moment the design does not expect. It worked: the property proved.
+
+It also pinned that input to zero **forever**, because the added constraint referenced the
+value's own history from cycle zero. Two reachability witnesses stopped firing. Every
+property in the file still passed, the suite still reported success, and two of the checks
+that exist to detect exactly this over-constraint had gone quiet.
+
+> **An assumption is not a local edit.** It removes behaviours from every property in the
+> file, including the ones asserting that behaviours are reachable.
+
+Two habits follow. When a fix is *an added constraint* rather than a changed implementation,
+re-run the reachability checks, not just the property that motivated it. And prefer fixing
+the property over constraining the environment — the property is scoped to itself; the
+assumption is scoped to everything.
+
+This was caught only because the suite contains checks that must **fail**. A suite composed
+entirely of things that must pass cannot detect its own over-constraint: making the system
+do less makes every such check greener.
+
+## Turn an explanation into a target list
+
+An observation emerged from a long campaign: every defect found was two pieces of state
+tracking one quantity and disagreeing, while derived state never held a defect because it
+cannot drift from its source.
+
+That is an explanation, and explanations are cheap. Converting it into a **census** — every
+counter and every derived copy in the design, sorted into "independent" and "derived" —
+turned it into three named pairs to attack and a demonstration that the rest of the design
+cannot hold that defect class.
+
+The yield was modest: one new proved property, one honest non-result. But the census is
+reusable and the scope statement is now precise, which beats a rule of thumb that has to be
+re-derived by whoever reads the campaign next.
+
+**When a pattern explains your past findings, enumerate where else it applies before
+looking for the next instance by hand.**
+
+## A gate's own pattern list is where its false positives hide
+
+A documentation gate flagged a perfectly runnable `git status …` block as containing no
+command — `git` was simply missing from the list of recognised commands.
+
+Harmless here, and the general shape is not: a checker built from an allowlist reports
+violations that are really gaps in the list. Every such gate needs its own negative control
+— a known-good input that must pass — for the same reason the positive cases need one.
+Prop. 28's discipline applies to the gate's *recognition*, not only to its detection.
+
+---
+
+## Every place that can constrain behaviour needs a check that behaviour remains
+
+A campaign added reachability witnesses to its top-level integration suite and never to the
+module suites — because the top level was where interlocks were being added, and stalling
+was the visible risk there. Twenty-four waves later, an over-constraint appeared in a
+*module* file and was caught by a *top-level* witness. Coverage overlap, not design.
+
+The gap is structural, not an oversight: an assumption file with no reachability probe is a
+place where over-constraint is **invisible by construction**. Adding a constraint makes
+every property in that file easier to prove, so the symptom is everything getting greener.
+
+Rule: wherever behaviour can be constrained — assumptions, mocks, fixtures, test doubles,
+feature flags that disable paths — put a check that the constrained thing still happens.
+Twelve probes across five suites cost one wave and closed a gap that had existed since the
+suites were written.
+
+## A "no findings" sweep needs a control run, every time
+
+Twelve probes, twelve clean results. That is indistinguishable from twelve broken probes
+until you show one failing:
+
+```
+reinstate the known over-constraint
+  wp_props/bram_we          -> PROVES   <- the failure signal, as designed
+  wp_props/prefetch_active  -> PROVES
+```
+
+The control is cheap because a real instance was already in the campaign's history —
+reinstating a known-bad state is the least effort and the strongest evidence. Where no
+historical instance exists, inject one deliberately.
+
+This is the third wave in a row where the control mattered more than the result: a clean
+sweep is a claim about the instrument first and the subject second.
+
+## Scope a negative result by what it cannot see
+
+The probes here check that each module's *main activity* is still reachable. A constraint
+that removes a rare interleaving while leaving the main activity alone passes all twelve —
+and that sentence belongs in the result, not in a follow-up when someone finds the gap.
+
+The pattern from this campaign: every overstated claim was overstated at the moment of
+writing, by someone who knew the limit. Writing the limit in the same paragraph as the
+finding costs one sentence and is the difference between a bounded result and one that gets
+cited later as broader than it was.
+
+---
+
+## An item that has resisted three honest attempts is a decision, not a queue entry
+
+One invariant took three waves and never landed. Each attempt was reasonable, each produced
+a real measurement, and each ended one insight short — which is exactly the shape that keeps
+a task alive indefinitely.
+
+The fourth wave was not spent. Instead the item was closed, with the reasoning written down:
+the pair it would have constrained is already covered by two properties that *did* land, so
+the marginal value of a third was small against a cost already at three waves.
+
+**Carrying a "nearly done" item is not free.** It occupies the top of the queue, it
+justifies the next attempt by the sunk cost of the last, and it makes every plan slightly
+dishonest. Closing it explicitly — with a written reason someone can disagree with — is
+cheaper than a fourth attempt and strictly more useful than silence.
+
+The test: *if this were proposed fresh today, with no history, would it be worth doing?* If
+not, the history is the only thing keeping it alive.
+
+## Negative results are worth keeping only where the next attempt will look
+
+Three waves of failed attempts produced four concrete measurements. They live as a comment
+**in the file that would have to change**, above the properties that did land — not only in
+a commit message, an issue, or a design document.
+
+```
+// A CONSERVATION property was attempted across three waves and is ABANDONED:
+//   * against the live input: REFUTED (stability assumption misses the load cycle)
+//   * against a latched copy: REFUTED
+//   * strengthening the environment: proved it AND killed two vacuity witnesses
+//   * the load point at three offsets: all REFUTED -- not a fixed offset
+```
+
+That placement is the whole value. A negative result filed where nobody looks is
+indistinguishable from never having run it, and the next person will spend the same three
+waves.
+
+## Before believing a refutation, check your probe is not simply too strict
+
+Several probes refuted and looked like design defects. They were not: a status output
+cleared in a terminal state lags its state register by one cycle, so any property asserting
+the two move together fails on correct hardware.
+
+The tell is that the refutation appears immediately and for a structural reason rather than
+a specific input. Before reporting, ask what the *correct* implementation does at the exact
+cycle the probe examines — the answer is often "exactly this, and it is fine".
+
+Related to an earlier lesson in reverse: an unconstrained input makes a correct design look
+broken; an over-strict property does the same, and both cost a wave if reported as findings.
+
+---
+
+## Re-measure a published number when its subject has changed underneath it
+
+A scale ceiling was measured, published in a README, and gated in CI. Ten defect fixes and
+six new properties later it was re-measured: **three of six configurations that previously
+passed no longer complete**. The published claim had been false for some time, and nothing
+had reported it — the gate only re-checked the scales it was given, never whether those were
+still the right ones.
+
+The general shape: a measurement is a fact about a system at a moment. Every claim derived
+from one has an implicit "as of", and the things most likely to invalidate it are the very
+changes the team is proudest of.
+
+**Put the re-measurement on the same schedule as the changes, not the calendar.** A
+performance number, a coverage figure, a capacity estimate, a benchmark — after a run of
+substantive change, re-measure before citing.
+
+## Re-baselining is maintenance; say so, and distinguish it from weakening
+
+The gate demanded scales that no longer complete. Left alone it would have been a permanent
+red — the worst state for a gate, because people learn to skip its output and it stops
+protecting anything at all.
+
+It was re-baselined to the scales that hold, and the commit says explicitly *why*: the
+subject moved, so the claim moved with it, and both were re-verified. That sentence is what
+separates maintenance from quietly lowering a bar.
+
+The test to apply before relaxing any gate: **can I state what changed in the world that
+makes the old expectation wrong?** If yes, re-baseline and record it. If the honest answer
+is "nothing changed, it just fails now", that is a defect, not a stale baseline.
+
+## Measure your verification apparatus separately from your system
+
+At the same scale: the design alone proved in **5.5 s**; with its properties and their
+formal-only tracking state, **126.7 s**. The scaffolding cost **23×** the thing it verifies.
+
+That reframes every optimisation instinct. The slowdown blamed on new interlocks was mostly
+the properties added alongside them — so shrinking the design would have bought little,
+while separating the formal-only state costs nothing in the shipped artifact.
+
+Worth measuring once for any test harness that shares a build with its subject: fixtures,
+instrumentation, assertion state, mocks. When the harness dominates, optimise the harness —
+and know that before spending a wave on the subject.
+
+---
+
+## A small minority of checks often dominates the cost — measure before optimising the subject
+
+Twenty-six properties, and **four of them accounted for 75% of the proof time**. Those four
+needed ten pieces of dedicated tracking state; the other twenty-two needed none. Removing
+just the four took the verifiable depth from 40 back to 80 — the level the whole set had
+reached before a run of additions.
+
+The instinct when a check gets slow is to simplify the subject. The measurement said the
+subject was not the problem: **the apparatus was**, and inside the apparatus a small
+minority of it.
+
+Cheap to establish and worth doing before any optimisation: disable each check in turn (or
+in groups) and time the rest. A flat profile means the shared setup dominates; a spiked one
+names the few to isolate. Same shape as a slow test suite where three integration tests
+carry the whole runtime.
+
+## Splitting a check set is not weakening it — if every member stays gated
+
+Moving expensive checks behind their own flag looks like reducing coverage and is not, so
+long as both groups run and **the bound each is checked at rises or holds**. Here the cheap
+22 would run deeper than before and the expensive 4 exactly as deep as now.
+
+Distinguish this carefully from lowering a bar. The test: *after the split, is any property
+checked less thoroughly than before?* If no, it is a scheduling change. If yes, it is a
+reduction and must be argued as one.
+
+## Two failed attempts at the same edit are a signal about the edit's shape
+
+An edit failed twice: once because a guard boundary assumed a contiguous block that was not
+contiguous, then because a regex's greedy tail swallowed a closing delimiter and nested
+everything after it.
+
+Both failures had the same root — **the things to be wrapped are scattered, not adjacent**
+— and the second attempt is what established that. Persistence was not the missing
+ingredient; a different technique was.
+
+The rule that follows: when the same edit fails twice for related reasons, stop and
+characterise the *structure* you are editing before trying a third time. Here the answer was
+"six separate sites, hand-placed, guard depth verified in the output" — mechanical but not
+scriptable, and clearly not something to start at the end of a long session.
+
+---
+
+## For a conditional-compilation edit, verify the structure of the output — in every configuration
+
+An edit that adds `#ifdef`-style guards has a failure mode that compiling does not catch:
+the guard can land in the right place for the configuration you test and the wrong place
+for the one you don't. Here a guard closed *before* its block's closing `end`, which was
+invisible with the define set and would have orphaned two lines without it — the
+configuration CI runs most often.
+
+Three separate checks, and the second is what caught it:
+
+1. **every configuration elaborates** — none, core, and full
+2. **the partition is exactly what you intended** — per-item guard depth from the *output*,
+   not from the edit: 22 items at depth 1, 4 at depth 2
+3. **the guards balance** — depth returns to 0 at end of file
+
+Checking "it compiled" would have passed the broken version. Checking the structure of the
+generated artifact is what distinguishes an edit that happens to work from one that is
+right.
+
+## Scattered things look contiguous until you print their positions
+
+Two attempts at the same edit failed because four items and their ten dependencies were
+assumed to sit in one block. They form **four** regions — and one unrelated item sits inside
+what looks like a fifth.
+
+The third attempt began by printing every relevant line number and reading the region, which
+took a minute and made the shape obvious. That is the whole difference between the attempts:
+not more care in the edit, but **establishing the structure before editing at all**.
+
+When a batch edit fails on structure, stop editing and dump the structure. Line numbers,
+nesting depth, what sits between the things you meant to group. The map is cheap; two
+reverts are not.
+
+## Splitting work by cost, not by importance, can raise every bound at once
+
+Four checks needed dedicated state and cost 75% of the runtime; twenty-two needed none.
+Splitting them by *cost* — not by how much anyone cares about them — let the cheap group run
+four times deeper while the expensive group kept its old depth.
+
+The move only counts as free when **every item's coverage rises or holds**. Say that
+explicitly and check it, because the same restructuring done carelessly is how coverage
+quietly drops.
+
+Generalises to any suite where a minority dominates: split the fast majority into a
+frequent, deep run and let the slow minority keep a shallower one, rather than letting the
+slowest member set the depth for everything.
+
+
+## Wave 606 — probe the interleavings, not just the activities
+
+**A reachability probe per activity does not cover the reachability of their
+combinations.** Twelve probes each said "this module does its job." A constraint
+that removes a rare *interleaving* — two transfers back to back, both directions,
+two prefetches — leaves every one of those twelve refuting and is invisible. The
+limit was written down five waves before it was closed; writing it down is what
+made it a task instead of an assumption.
+
+**Choose the interleavings from defect history, not from combinatorics.** Two
+modules × a handful of events is a large space and enumerating it is not the
+point. The three that got written are the shapes this campaign's defects actually
+took: state carried across a completion boundary (that was a real defect), a
+field sampled once at start (pinning it deletes half the design), a per-layer
+operation (allowing only the first leaves every later one unverified).
+
+**Validate each probe by removing its own target, one at a time.** The rule "a
+sweep that finds nothing must demonstrate it could have" applies per-probe, not
+to the sweep as a whole. `assume (direction == 0)` must make the both-directions
+witness prove. If it does not, the witness is decoration.
+
+**A control that fails to remove the thing it targets tests nothing — and reads
+exactly like a blind probe.** The first attempt at the back-to-back-prefetch
+control did not actually forbid a second completion; the witness kept refuting,
+which looks identical to "this witness cannot detect anything." The difference is
+only visible by checking that the control does what it claims. Suspect the
+control before the probe.
+
+**`$past` inside `always @(posedge clk or negedge rst_n)` is rejected outright.**
+`ERROR: Async reset \rst_n yields non-constant value` from `async2sync`. Edge
+detection in a witness must be a synchronous block with an explicit
+previous-value register:
+
+```verilog
+reg [1:0] n; reg done_q;
+always @(posedge clk)
+    if (!rst_n) begin n <= 2'd0; done_q <= 1'b0; end
+    else begin
+        done_q <= done;
+        if (done && !done_q && n != 2'd3) n <= n + 2'd1;
+    end
+always @(posedge clk) if (rst_n) w: assert (n < 2'd2);
+```
+
+This is a **tool error, not a verdict** — worth nothing unless the harness
+already separates the two, which is why that distinction was built first.
+
+**Interleaving witnesses need more depth than activity witnesses.** Two
+completions in one trace costs roughly double: `seq 24` for DMA against 12 for
+its activity probes, `seq 30` for prefetch against 14. Budget for it or the
+witness times out and looks like a proof.
+
+## Wave 607 — an absence read as a pass
+
+Four instrument defects in one wave, all the same shape. Every one of them
+turned silence into a green result:
+
+| instrument | the silence | what it scored |
+|---|---|---|
+| shell verdict classifier | output truncated before the verdict line | "did not refute" |
+| mutation harness | yosys crashed instead of deciding | "mutant killed" |
+| free-property scan | zero files matched the glob | "0 problems" |
+| documentation gate | never wired into CI at all | claimed in the README |
+
+**When a probe returns an implausible answer, check the classifier before the
+subject.** A repetition witness said "two layer runs are unreachable" — which
+reads as a restart defect — and I went and read the RTL looking for one. Yosys
+had said `proof did fail`. Cost: one RTL read. The tell was that the answer was
+*surprising in a way the design made unlikely*; that is the moment to re-run the
+same check a different way, not to start debugging.
+
+**`echo "$captured_output" | grep` is not portable and can flip a verdict.**
+Yosys prints signal names backslash-prefixed (`\chunk_id`, `\rst_n`). A shell
+whose `echo` expands escapes reads `\c` as **stop output here**:
+
+```bash
+printf '%s\n' 'x \chunk_id' 'ERROR: proof did fail!' > /tmp/t
+out=$(cat /tmp/t)
+echo "$out"          | grep -c "proof did fail"   # zsh 0, bash 1
+printf '%s\n' "$out" | grep -c "proof did fail"   # 1 in both
+```
+
+31 966 bytes became 4 893. Always `printf '%s\n'`. And note the `%s`: writing
+the sample with `printf '...\chunk_id...'` truncates too — the demonstration
+destroyed by the escape it demonstrates.
+
+**`returncode != 0` is not a verdict.** It folds "the property was refuted"
+together with "the tool could not read the design". In a mutation harness that
+fold is not neutral — it scores an unparseable mutant as a *killed* one, so the
+suite reports every mutant killed while testing strictly fewer. Three outcomes,
+always: proved / refuted / no verdict, and the third fails loudly naming what
+was skipped.
+
+**Verify a fix against the shipped code, not a copy.** The control for that
+classifier extracts `yos()` out of the workflow YAML with `yaml.safe_load` and
+`exec`s it, then runs it on three inputs whose answers are known — proving
+script, refuting script, unparseable mutant. Retyping the function into the test
+would have tested the retyped version.
+
+**A scan that scans nothing must fail, not pass.** Anchor default globs to
+`pathlib.Path(__file__).resolve().parent.parent`, never to the caller's cwd, and
+add an explicit `if total == 0: return 1`. Both, not either — the anchor fixes
+today's bug, the counter catches the day the naming convention moves.
+
+**Check that every gate you cite actually exists.** The README described a
+documentation gate for many waves; nothing implemented it. The check for this is
+one grep for the gate's own error string across `.github/` — if the only place
+it appears is prose, it is prose. Then mutation-test it before believing it: my
+doc gate had to catch a removed `Gate:` line, a fence whose only verb is `echo`,
+a bare `t27c`, and a changed heading convention.
+
+**Suspect the control before the probe — second wave running.** A control
+guarding on a counter (`no start while runs != 0`) failed to bite because the
+counter increments on the *done edge*, in the same cycle the FSM returns to IDLE
+and can accept the next start. Guard on the event too (`done || runs != 0`).
+When a control does not bite, the first hypothesis is that the control is wrong,
+not that the probe is blind.
+
+## Wave 608 — measure the absence, don't look for it
+
+Six instrument defects across two waves, all the same shape. Four were found by
+*noticing*, which does not scale and does not finish. The mechanical version:
+
+**Take the subject away and run every check. Anything still green is measuring
+something else.** Empty the input directories, run each CI step verbatim, and
+require a nonzero exit. Twenty steps, eighteen correct, two not — and the sweep
+costs less than the suite it audits, because with no input the tool fails
+immediately. Ship it as a standing job, not a one-off audit.
+
+**`grep` inside an `if` condition escapes `set -e`.** This is the single highest
+-yield shell trap in a CI gate:
+
+```bash
+# if the file is missing, grep exits 1, the branch is skipped,
+# and the step prints ok and returns 0
+if grep -q "FORBIDDEN_MARKER" build/thing.sv; then
+  echo "::error::found it"; exit 1
+fi
+echo "ok  nothing forbidden"
+```
+
+`set -euo pipefail` does not reach into an `if` condition — that is what makes
+`if cmd; then` a legal idiom at all. Any gate shaped *"the bad thing is absent"*
+must assert its subject exists first, or be rewritten to enumerate files and
+fail on an empty list.
+
+**Grepping one file is a claim about one file.** That gate read
+`build/rtl/bitnet_engine_top.sv` while 22 other files could carry the same
+guard. Count what you scanned and print it — `23 files, 0 guards` is a claim;
+`ok` is not.
+
+**Parsing is not emitting.** A check that a generated artifact *parses* passes
+happily on an artifact containing nothing. Count what came out and compare it to
+what went in: *2 behaviours in, 2 assertions out*.
+
+**Exemptions must be argued in line and counted.** Both new instruments needed
+one — a step that legitimately doesn't read the input directories, a doc fence
+that quotes removed code. An exemption list is where a sweep quietly stops
+checking things, so: require a written reason next to each entry, and print the
+exemption count in the normal output so growth is visible without an audit.
+
+**If you write that something "was tested", ship the test.** Prop. 58e said the
+doc gate "was mutation-tested" — by a scratch script, run once, by hand. That is
+the identical defect to a gate claimed in the README and never wired into CI,
+committed one wave after diagnosing it. A claim in a document about a check is a
+claim that the check runs. `--self-test` subcommands make this cheap.
+
+**Expect your own new gate to catch you.** The doc gate rejected the
+proposition documenting the doc gate, because that text quotes the broken code
+it replaced. That is the gate working. Fix the rule to name the category
+honestly rather than reaching for the exemption.
+
+## Wave 609 — every fix opens the hole it was built to close
+
+**When an auditor must skip itself, skip it by CONTENT, not by name.** The
+absence sweep runs as a step of the workflow it audits, so it has to exclude
+itself. Excluding by step *name* means a rename silently reintroduces the
+recursion; excluding by "any step whose script invokes `absence_sweep.py`" does
+not. Report the skip and count it — a silent skip is the thing being audited.
+
+**Then test the hole the exclusion just made.** Self-exclusion is a fresh way to
+examine zero items and return success — the exact failure the sweep exists to
+catch, reintroduced by the mechanism added to catch it. The self-test's decisive
+case is *a workflow whose only step is the sweep*: it must FAIL, not pass having
+looked at nothing. Every mechanism that lets a checker skip something needs a
+case proving the skip cannot become total.
+
+**A gate that fails for the wrong reason is still a defect.** `Scale ceiling`
+printed `REFUTED -- a property fails at a larger bound` when yosys had simply
+been unable to read the design. It failed, which is the safe direction, so no
+gate was ever wrongly green — but a false diagnosis in CI sends someone hunting
+a property failure that does not exist. Audit the *message*, not just the exit
+code; "fails safely" is not the same as "reports truthfully".
+
+**Report what happened, not what is configured.** The sweep printed `1 exempt`
+on runs where nothing was exempted, because it printed `len(EXEMPT)` instead of
+the exemptions applied. Zero consequences, and worth fixing on principle: a
+counter that reports configuration rather than events is a small lie in exactly
+the place you go looking for big ones.
+
+**`gh issue create` uses the shell's cwd, and cwd survives between commands.**
+Filed a t27 issue into trinity-fpga because an earlier command in the same shell
+had `cd`-ed there. Always pass `--repo <owner>/<name>` explicitly — the flag
+costs nothing and removes an invisible dependency on command order. Same family
+as the `identity_scan` glob: anything resolved relative to cwd is resolved
+relative to whatever ran last.
+
+**State a boundary rather than letting it be discovered.** The sweep covers both
+formal workflows and not the docs/notebook/seal ones. Writing that down as scope
+turns "we never looked" into "we looked here and not there", which is the
+difference between a gap and a lie.
+
+## Wave 610 — measuring what a property suite actually constrains
+
+**Ask detection power, not "re-prove the rest".** Neutralising one property and
+re-proving the others tells you nothing: they are independent assertions about
+the same design, so removing one can never make another fail. The question with
+content is *for each way the design can break, which properties notice?* Run
+each property ALONE — every sibling neutralised to `assert (1'b1)` — against
+each mutant, and read off a property × mutant matrix.
+
+**Mutation operators must be masked to code, and chosen from the code.** Two
+separate mistakes, both mine, in one afternoon:
+
+1. The operators ran over the whole file. Every module here opens with a banner
+   of `=` characters, so `==` produced 75 mutants inside `// =========`. All 76
+   parsed, all proved, and "0 detected" was one step from being published as
+   evidence the suite was weak. It measured ASCII art. Mask comments first, and
+   assert it: *a fully-commented-out copy of a module must yield zero mutants.*
+2. After masking, the textbook operator list matched **nothing** — the module is
+   23 non-comment lines of `?:`, `|`, `{}` and sized literals. Operators are a
+   property of the code under test, not of the mutation literature. Read the RTL
+   and write operators for it.
+
+**An implausible zero is a gift — check it against something known.** The only
+reason the ASCII-art result got caught is that the shipped CI harness kills an
+`interrupt_controller` mutation, so "this suite detects nothing" contradicted a
+fact already in the repository. Keep one known-true result to test new
+measurements against.
+
+**"Undetected" is not "missed" until you rule out equivalent mutants.** Mutation
+testing's standing confound: an edit the design is insensitive to. Separate them
+with a bounded sequential equivalence miter (`miter -equiv -flatten
+-make_assert`, then `sat -seq N`) — and let yosys build the miter. Hand-writing
+the wrapper by parsing port lists broke on parameterised widths
+(`[C_ADDR_W-1:0]`) and again on a header the port regex misread. Note also that
+`prep` before `miter` picks its own top and discards the module you wanted to
+compare against.
+
+**Run the expensive measurement twice at different budgets.** 90 s and 20 s
+miter caps gave the same 133 real gaps; the only movement was two proofs that
+finished at 90 s and not at 20 s, correctly reported *undecided* rather than
+counted equivalent. Agreement across budgets is cheap evidence the number is
+real, and it only works if UNDECIDED is a first-class outcome.
+
+**Mutation adequacy and vacuity interact — this is the subtle one.** A property
+guarded in its `always` header (`if (rst_n && $past(wvalid) && !$past(wready))`)
+is not violated by a mutation that suppresses `wvalid`; the guard becomes
+unreachable and the property proves **vacuously**. In a detection matrix that is
+recorded identically to "this property is too weak to notice". Before calling a
+zero-detection property dead, probe its guard: assert the guard is impossible,
+and compare the verdict on the original against the mutant.
+
+**Report every subsumption claim with its denominator.** Four
+`interrupt_controller` properties had identical detection sets — over **six**
+mutants, which is what one expects from almost any pair. A subsumption claim is
+exactly as strong as the mutant set behind it, and someone will otherwise delete
+a property on six data points.
+
+## Wave 611 — a property can prove without reading the design
+
+**`dut.<signal>` inside a Yosys property module is not a hierarchical
+reference.** Yosys does not support them here and does not error. It implicitly
+declares a fresh **one-bit undriven wire** with that name, renames the real
+register around it (`word_index` → `word_index_1`), and proves your property
+against the phantom. Two warnings are printed and nothing reads them:
+
+```
+Warning: Identifier `\dut.word_index' is implicitly declared.
+Warning: Wire wp_props.\dut.word_index is used but has no driver.
+```
+
+A shipped property lived like this for four waves, counted in the property
+total and in every count-based gate.
+
+**Gate on those warnings — it is the cheapest gate in the whole suite.**
+Elaboration only, no proof: `read_verilog -sv -formal <dut> <props>; prep -top
+<wrapper> -flatten`, then fail on `implicitly declared` or `used but has no
+driver`. It covers the entire class — hierarchical references, misspelled
+signals, ports renamed out from under a property — not one instance. It caught
+my own replacement property within seconds of writing it (I used the DUT's port
+name where the wrapper's local wire had a different one).
+
+**A syntactic free-property scan cannot find this.** Checking for bodies the
+optimiser folds to constant true (`x == x`) is a check on the *shape*. Here the
+shape is a perfectly ordinary comparison and the **signal** is fake. Two
+different failure modes need two different instruments; do not assume the one
+you have covers the one you don't.
+
+**To test whether a property reads the design, change the design.** Not the
+property. Pick a mutation no correct form of the property could survive — make
+the counter it constrains advance by two instead of one — and if it still
+proves, it was never looking. Equivalent quick check: assert a hierarchical
+reference equals the port it is wired to (`dut.busy == busy`); that must prove,
+and if it refutes the reference is a phantom.
+
+**Four candidate properties rejected in a row is a signal about the harness, not
+the properties.** I wrote four, all four refuted on the unmutated design, and the
+temptation each time was to weaken the property. Reading one counterexample
+instead found the cause of all four — and a four-wave-old defect.
+
+**Remove rather than patch when the honest replacement needs new assumptions.**
+The property's intent was not expressible from its wrapper's ports without
+modelling an AXI slave, and adding an assumption to make a property prove is how
+an earlier wave silently killed two vacuity witnesses. Deleting it and writing
+down exactly why — including that the property count drops — beats shipping
+something that proves for the wrong reason. Then fix every comment elsewhere
+that cited the deleted property as coverage.
+
+## Wave 612 — three bars, and the property that restates its assumption
+
+**A property must clear three bars, not one.** "It proves" is the cheapest of
+the three and the only one most suites check:
+
+| bar | question | how |
+|---|---|---|
+| **TRUE** | does it hold on the real design? | prove it alone *and* with its suite |
+| **ALIVE** | did an assumption buy that by making the design idle? | every activity still reachable **with the assume active** |
+| **BITING** | does it detect anything? | run it against known behaviour-changing mutants |
+
+**The failure only the third bar catches: a property that restates its own
+assumption.** With `assume (fv_r_acc < fv_ar_acc)` in the environment, the
+property `assert (fv_r_acc <= fv_ar_acc)` proves instantly, reads like a real
+protocol claim, and detects **0 of 64** known-real mutants. It has a reachable
+guard, a non-free body, real signals, and proves at depth — it passes every
+cheap gate there is. Only measuring detection exposes it. This is the argument
+for paying for the expensive bar.
+
+**Write environment assumptions as counters plus one implication.** `rvalid` as
+a free input lets the solver return data for an address the DUT never issued —
+not a design behaviour, a testbench that cannot exist in silicon. Count accepted
+addresses and accepted beats, then `assume (!(rvalid && rready) || r_acc <
+ar_acc)`. Small, readable, and it constrains the *environment* rather than the
+design.
+
+**Gate the assumption, not just the property.** An environment that is safe
+today over-constrains after tomorrow's RTL change, silently. Put reachability
+probes for the signals the assume touches into the CI step that runs *inside*
+the property module — `assert (!(arvalid && arready))` must refute. Otherwise
+the next wave rediscovers the same failure from scratch.
+
+**Attribute detections to the property, not the environment.** If a property
+catches mutants, re-run with the property removed and the environment kept. Any
+mutant that still refutes was being caught by the assumption. Zero is the
+answer you want.
+
+**A refuting candidate is a finding, not an obstacle to route around.** My DMA
+shadow model of the request refuted; the temptation is to weaken the property
+until it passes. Recording "this shadow model is wrong, not shipped" is worth
+more than a property that proves because it was bent to.
+
+## Wave 613 — "detects nothing" has three causes, only one is a problem
+
+**Give every property a verdict, and classify the silent ones.** A detection
+matrix alone defames properties that are doing their job. Three outcomes, and
+the probe that separates them:
+
+| verdict | test |
+|---|---|
+| **BITES** | catches mutants, and not a subset of another property's set |
+| **INNOCENT** | catches nothing *because* mutations that could violate it make its **guard** unreachable — probe: assert the guard is impossible; it refutes on the original, proves on those mutants |
+| **SUBSUMED** | its detection set is contained in another's |
+| **DEAD** | guard reachable throughout, not subsumed, still catches nothing |
+
+Running this over 24 shipped properties gave 18 / 1 / 5 / **0**. Zero dead is
+worth measuring for: it is the difference between "the suite is large" and "the
+suite is lean", and nobody can assert it without the sweep.
+
+**Subsumed is not deletable.** All five subsumed properties were kept, because a
+suite is read as well as run: two state an AXI rule in the specification's own
+form, one is the *regression witness* for a defect that actually shipped.
+Deleting a regression witness because a newer property happens to cover it
+discards the record of what went wrong. **Write the verdict next to the
+property** — otherwise the next person to run a detection matrix deletes them
+thinking it is cleanup.
+
+**Symmetry does not predict detection power.** `a_awvalid_stable` bites
+uniquely, its read-side twin is subsumed, its write-data sibling is innocent —
+three properties of identical shape over three channels, three different
+verdicts. Never reason about a suite by analogy between channels; measure each.
+
+**When the disk fills, preserve the work before anything else.** Bash and Write
+both fail with ENOSPC — Bash cannot create its output file, Write cannot create
+its temp file, so *no* tool call succeeds. When space fluctuates back, spend the
+first successful calls on `git add` + `commit` + `push`, not on diagnosis. And
+do not delete to make room while unattended: on a shared APFS container `df /`
+can report a repo-sized number while the real consumer is another volume
+entirely, so the obvious cleanup target is usually the wrong one. *Confirmed the
+next wave:* the space returned on its own and the repo's `target/` was 565 MB —
+never the consumer. The cleanup I had proposed would have cost a rebuild and
+freed nothing.
+
+## Wave 614 — properties that are supposed to refute
+
+**Some properties are expected refutations, and a sweep that assumes otherwise
+mislabels them.** Four `*_never_completes` properties here refute on the real
+design *by design*: they record that a zero-sized job does report done, which is
+safe only because a sibling proves it emitted no work. My sweep called all four
+"isolation broken".
+
+**The generalisation is one line: measure the expected verdict, then define
+detection as "the verdict differs from the expected one".** For an inverted
+property that means a mutant made it **prove** — the mutation removed the
+behaviour being recorded. A harness that hard-codes *detection = refutation*
+cannot measure an inverted property at all; it can only get it wrong.
+
+**A property whose value is the record it leaves does not have to earn its place
+by detection.** The campaign's first DEAD verdict landed on an expected
+refutation that pins a deliberate design decision. Keeping it is not timidity —
+detection power and documentary value are different currencies, and a suite is
+read as well as run. Write the verdict beside it either way.
+
+**Report a DEAD verdict with its denominator, loudly.** Twelve mutants of a
+23-line module is a weak basis for calling anything dead. The denominator is not
+a footnote; it is most of the claim.
+
+**A predictable result is calibration, not waste.** Both max-size subsumptions
+were derivable on paper (strictly-increasing is implied by increases-by-one).
+Measuring them anyway is what makes the *surprising* verdicts — a property
+biting uniquely while its mirror-image twin is subsumed — credible rather than
+noise.
+
+**Never let two runs share an output path.** I launched a corrected sweep while
+the original was still running, both redirecting to the same file. The merged
+result was internally inconsistent — a summary line disagreeing with the rows
+above it — and looked enough like data to be read. Check `pgrep` before
+relaunching, and give every run its own output file.
+
+## Wave 615 — mutating the properties, and a limit that does not lift
+
+**If the design file also contains its properties, a mutation generator will
+mutate them.** RTL that carries inline assertions behind `` `ifdef FORMAL ``
+guards is mostly *not design*: 68% of the engine top here is comment or
+formal-only text, and two of eight sampled mutants changed assertion text rather
+than logic. **A property suite that "detects" a mutation of itself measures
+nothing.** Mask three things, not one: comments, formal-guarded regions
+(nesting-aware), and any labelled `assert`/`assume` line. Then re-check the
+hand-written mutations against the same mask — they are generated by different
+code and get the same disease.
+
+**This is the second costume of the same bug.** Wave 610's operators ran over
+banner comments; these ran over property text. The general rule is worth stating
+once: *a mutation operator needs an explicit model of what counts as the subject*,
+and that model has to be tested (a fully-commented-out module must yield zero
+mutants; a property line must never be the changed line).
+
+**Sample by subsystem, not at random, and say which you did.** Seven mutants
+against a 212-mutant population is a sample either way — but one mutation per
+subsystem *where defects have actually occurred* supports a different sentence
+than seven random ones. Report the sampling rule, not just the sample size.
+
+**Validate the equivalence check on a mutant you already know is different.**
+The engine-scale miter said `EQUIVALENT` at `seq 6` for a mutation the property
+suite refutes at `seq 40` — too shallow to mean anything — and `UNDECIDED` at
+`seq 12` after 420 s. Without that validation I would have published six
+"equivalent" mutants and called the suite adequate.
+
+**When a technique does not scale, say so and stop, rather than reporting its
+output anyway.** At module scale a bounded miter separates real gaps from
+equivalent mutants. At engine scale it cannot, so the six undetected mutations
+are recorded as *undetected* and explicitly **not** as gaps, and the headline
+number is labelled a floor rather than a coverage percentage. A measurement with
+a stated limit is worth more than a bigger number with a hidden one.
+
+## Wave 616 — a coverage number is a claim about which gates you ran
+
+**Name the gates, not just the mutants.** I reported "1 of 7 detected" after
+running the safety properties. The design's gate set was safety **∪ liveness**,
+and the liveness half caught one more on its own. The count was not wrong
+arithmetic — it was *a complete count of an incomplete question*. Any coverage
+figure needs a scope line naming which gates were executed.
+
+**Liveness probes that ask "can X happen at all" are blind to phase-specific
+stalls.** A fault that kills an activity in one ping-pong phase leaves it
+happening in the other, so a global reachability probe still refutes and the
+build stays green. Condition the probe on the phase:
+`!(mac_valid_q && !use_buffer_a)`. Same technique applies to any design with
+alternating modes, banks, or channels.
+
+**A probe run at too shallow a depth does not answer "unknown" — it answers
+wrong.** At `seq 22` my new probe *proved*, i.e. reported the activity
+unreachable; at `seq 40` it refuted. The shallow answer is the one that looks
+like a passing gate, which is the worst possible direction for the error. Give
+probes per-probe depths and record why each one needs its own.
+
+**Only the `proves` direction is depth-fragile — check those, trust the others.**
+A refutation found at depth N is a real counterexample at any depth. So audit
+exactly the probes whose expected verdict is *proves*: mine held at 22 / 40 / 60
+for 5 s / 11 s / 20 s, which is cheap enough that there was no excuse for
+assuming it.
+
+**Watch for the degenerate configuration when a probe fails to bite.**
+`!(input_ready && !use_buffer_a)` refuted on the mutant too — because
+`filled >= neurons_per_layer` is satisfiable with `neurons_per_layer == 0` and
+the solver simply picks that. A probe over a parameterised design is only as
+sharp as the configurations it excludes.
+
+## Wave 617 — audit the bounds; and write predictions down so they can be wrong
+
+**Re-prove every bounded claim at 2× and 4× its bound.** Only the *proves*
+direction can be depth-fragile, so that is exactly the audit surface. Four
+wrappers, no flips — and the strongest datum was `dma_controller` surviving to
+`seq 320` against a CI bound of 80, which retroactively justifies the 12 → 80
+raise an earlier wave made for tractability rather than principle.
+
+**"Undecided" is a result; do not retry until it yields a number.** One wrapper
+went undecided at 4×. That is not a flip and not a failure — it is the honest
+boundary, and rerunning with a longer timeout until something prints would have
+converted an honest boundary into a fabricated one.
+
+**Audit partially and say which parts.** Four of twelve wrappers, because each
+4× run costs real time. A partial audit reported as partial beats a complete one
+reported without its cost — and the alternative on offer was to keep the wave
+open indefinitely.
+
+**Write predictions into the report so the next wave can refute them.** I ended
+a wave predicting, in writing, that phase-conditioning would generalise to the
+other probes. It does not: five candidates, none bites, because the fault it
+caught *stalls a phase* and the remaining ones do not stall anything. Because
+the prediction was recorded, refuting it took one measurement instead of being
+quietly forgotten or quietly assumed.
+
+**When a class of probe cannot work, say what would.** The four remaining
+mutations change *values* while leaving every activity reachable — a latch reset
+to the wrong constant, an accumulator decrementing, a status word with a stray
+bit. No reachability probe of any phase sees those. Naming the required shape
+(safety claims about data, where the existing suite is about control) is what
+stops the next attempt beginning with another probe.
+
+**When a measuring tool says it cannot find something, first suppose it is
+absent.** My bound audit printed *no bound found in the workflow* for six
+wrappers and I wrote that off as a bug in my extraction, reporting them as
+"unaudited for cost". Four of them had **no CI step at all** — eight properties
+counted in the README as proved, run by no job in the repository. The tool's
+failure was the finding.
+
+**An ungated property that happens to hold is indistinguishable from a gated
+one.** All eight held, which is exactly why nobody noticed for many waves.
+Counting properties tells you nothing; count the **steps that run them**. One
+`grep` for each property file across `.github/` would have caught it at any
+point.
+
+**Awkward-to-gate is how something ends up ungated.** Half that suite consists
+of *expected refutations*, so the obvious "everything must prove" step cannot
+gate it — and so no step was written. Whenever a suite needs a per-item expected
+verdict rather than a uniform one, treat that as a marker that it is *more*
+likely to be missing its gate, not less.
+
+**An audit must reproduce the gate's method, not just its bound.** CI proves one
+suite's properties *one at a time*; my audit ran them together at the same bound
+and got "undecided", which I nearly reported as a property of the suite. Read
+how the gate invokes the tool, not only which numbers it passes.
+
+## Wave 618 — orphaned work costs more than stale files
+
+**Ship the accidental catch as a gate.** Finding ungated properties by luck twice
+is a signal to automate: cross-reference every property file against every
+workflow, error when nothing runs it, and *warn* when only a scheduled workflow
+does — a defect in a weekly-only file is invisible on a pull request. Weekly is a
+legitimate choice for expensive harnesses; silence is not.
+
+**An orphan is not a stale file, it is a solved problem waiting to be solved
+again worse.** The scan's first run found a complete, well-documented AXI4
+read-slave model that nothing referenced — and an earlier wave had hit exactly
+that need, failed to state a property without an environment, and written a
+thinner version inline. Before building an environment, model, or harness, grep
+`formal/` for one: the repository is older than your memory of it.
+
+**A model that asserts its own precondition is worth more than one that assumes
+it.** That file assumed only what AXI4 requires of a slave, and *asserted*
+"the master issues one burst at a time" — so if the master ever violated it, the
+model would fail loudly instead of quietly hiding the defect it exists to expose.
+Copy that pattern: every environment model has preconditions, and each one is a
+choice between an assertion and a lie of omission.
+
+**Adding a submodule to a property wrapper breaks every harness that reads only
+DUT + props.** Three did here — the liveness step, the weekly mutation harness,
+and the phantom scan. Expect that, and expect to add an explicit extra-sources
+field to each. The reason it was survivable is that all three reported *an
+elaboration error* rather than "unreachable", "mutant killed", or a clean bill of
+health. **That is the return on the tool-error/verdict distinction: it pays out
+on changes nobody anticipated, in harnesses nobody was thinking about.**
+
+## Wave 619 — when a property refutes, ask which of the two is wrong
+
+**A refuting property is a claim about the design that might itself be false.**
+Mine said "every DMA write consumes eight owed bytes". The trace showed a
+12-byte request writing a second word with four bytes owed — correct, because
+twelve bytes occupy two words of a word-addressed memory. *The property was
+wrong about the design's contract, not the design wrong about the property.*
+Restating it in words instead of bytes made it prove. Read the counterexample
+before touching either side; the trace tells you which one is lying.
+
+**Shadow models must arm on the observable the FSM actually uses.** A first
+attempt armed on `start && !busy`, and `start` is high in states where no
+transfer begins. The FSM triggers on `IDLE: if (start)`, so the faithful
+observable is the **rising edge of `busy`** — and any value the FSM latched at
+that moment must be read as `$past(x)`, because it changed on the same edge.
+
+**A new property can make its own gate stop terminating.** `-prove-asserts`
+solves every assertion in one SAT instance, superlinearly harder than the parts:
+adding one property took a batch from ~10 s to over 11 minutes. **Split
+one-per-invocation.** Six properties then kept a bound of 80 that the batch would
+have cost entirely, while the expensive newcomer runs at 20 — and stating the
+two bounds separately is more honest than lowering everything to the slowest.
+
+**Measure the bound; do not adopt the one next door.** The new property proves at
+`seq 20` in 16 s and is *undecided at 30*. Had I copied the suite's 80, the step
+would hang; had I guessed 40, it would hang. One ladder run settles it.
+
+**A check-cell floor set below the true count is slack, not safety.** Ours sat at
+8 against a real 12 — three properties could have vanished before the gate that
+exists to detect vanishing properties noticed. Set it to what you measured.
+
+## Wave 620 — a gap count is a claim about a set of properties
+
+**Name the property set, or the number is wrong.** I measured "64 gaps in
+`dma_controller`" against one wrapper, while **three** wrappers constrain that
+module. Running the residue through the siblings: 8 of them were never gaps.
+"64 gaps in module X" reads as a fact about X and was a fact about one harness.
+The form that survives contact with a second wrapper is *"N mutations of X are
+detected by none of its K suites"* — longer, and true.
+
+**Re-measure what a new property was supposed to close, rather than subtracting
+on paper.** The property's own bite count came out the same on an independent
+run, which is the cheap confirmation that the earlier figure was not an artifact
+of that day's harness state.
+
+**A flat residue means the method is spent, and that is a result.** Cluster the
+undetected mutations by source line: when the top cluster was 8 and 9 on two
+subsystems, a property was there to be written. When 33 of 42 lines have exactly
+one mutation each, there is no class left — only reset values, state encodings
+and one-off arithmetic. Continuing at that point means one property per mutation,
+which is a restatement of the RTL rather than a specification of it.
+
+**Shipping nothing is sometimes the honest wave.** This one produced a
+correction to a published number and a stopping criterion, and no new property.
+Inventing one to have an artifact would have inverted everything the preceding
+waves were for.
+
+## Wave 621 — the instrument told the truth; the caption lied
+
+**The whole-campaign version of the per-suite error.** Correcting every
+multi-suite module moved the headline from *45/202 detected (22%), 133 real
+gaps* to **74/202 (36%), 104 gaps**. One mislabelled measurement, repeated
+across five modules and quoted for twelve waves.
+
+**A second suite makes an overcount possible, not certain.** One module had two
+suites and needed no correction at all. Do not assume the shape of an error
+before measuring it — the correction is per-module, not a blanket adjustment.
+
+**Expect measurement error in the flattering direction; be more suspicious when
+it runs the other way.** This one understated its own subject, which is exactly
+why nobody caught it: there was no incentive anywhere in the loop to double-check
+a number that made the work look worse. *Bias in the unflattering direction
+survives longest.*
+
+**Audit labels, not only instruments.** Twenty waves went into checking whether
+harnesses lie — truncated output, crashes read as verdicts, scans over empty
+file lists, gates that never ran. This error involved none of that. The matrix
+measured exactly what it was told to measure; the sentence describing it named a
+*module* where the data described a *wrapper*. **A correct instrument with a
+wrong caption produces a wrong claim, and no amount of instrument auditing finds
+it.** Read every published number back as "this is a claim about X" and check
+that X is what the code actually ranged over.
+
+**Recompute headline figures from stored data, not by hand.** Every number in
+that correction came out of the recorded JSON through a script. Re-deriving by
+arithmetic in prose is how the next drift starts.
+
+## Wave 622 — gate the numbers in the prose, not only the tools
+
+**Build a checker that re-derives every countable claim from the tree.** All the
+other gates ask whether a tool lies. This asks whether the *documentation* does —
+and found a proposition count 15 behind, an integration-property count 2 behind,
+and two CI **step names** quoting numbers the steps had long outgrown. Nobody
+re-counts propositions by hand, which is exactly why that number drifts.
+
+**Police the current-state document; never rewrite dated records.** A
+proposition saying "22 of the 26 prove at seq 80" was true when measured.
+Correcting it in place destroys the record. Corrections belong in a *later*
+entry, and the gate should exempt the archive and hold only the README-style
+"here is what is true now" document to the tree.
+
+**A checker comparing two numbers must first establish both range over the same
+set.** Mine counted assertions in a file and compared against a documented
+figure — twice getting a different answer (28 by whole-text, 26 by line) and
+nearly publishing each. The resolution was neither: **two assertions wrapped the
+label and `assert` onto separate lines**, so per-line undercounts, and the real
+split needed a guard-aware count over the text. I committed Prop. 73's exact
+failure inside the tool built to prevent it. *Before reporting a mismatch,
+establish what each side is counting.*
+
+**A gate that fails on its own author's next edit is the good kind.** Writing the
+proposition that documented this gate incremented the count it polices, and the
+gate went red immediately. That is the cheapest possible evidence the check is
+load-bearing — and if a number only ever changes when someone writes prose, then
+prose is exactly where it will rot.
+
+## Wave 623 — resolve the mismatch before you gate it
+
+**Leave a discrepancy unexplained rather than resolving it in the wrong
+direction.** My checker said 39 module properties, the README said 43, and the
+tempting move was to "fix" the README. The README was right: an entire module's
+properties are emitted **inline into the RTL** and have no file in `formal/` at
+all, so a `formal/`-only count omits them. Gating the wrong number would have
+produced a correct-looking gate enforcing a false claim — the exact shape of the
+two preceding waves' findings, made permanent.
+
+**Find out where each artifact actually lives before counting it.** Properties
+here live in two places — hand-written files and emitted RTL — and nothing in the
+directory layout says so. `grep -c` across one directory reads like a total and
+is a subset. The same blind spot silently limits any scan keyed on that
+directory: the orphan checker cannot ask "is this run by anything?" about
+properties that have no file.
+
+**Write the inclusion boundary next to the code, not in your head.** Deciding
+that a prover self-check and an environment model's precondition are *not*
+module properties is a judgement, and an unrecorded judgement is indistinguish-
+able from an oversight the next time someone counts. Two lines of comment turn
+"39 vs 43" from a contradiction into two well-defined numbers.
+
+**A number that lives only in a workflow file will drift.** The engine probe
+count existed nowhere a reader would look, so it could not be wrong and could not
+be right. Putting it in the current-state document is what makes it gateable.
+
+**A wave that ends "there was no discrepancy" is a successful wave.** The output
+was one comment block, two gated claims, and a structural fact nobody had written
+down. Chasing an artifact instead would have meant changing a correct document.
+
+## Wave 624 — one file is not one module
+
+**Never key a coverage map on filenames.** My first classifier used the file
+stem as the module name. One file defined **eleven** modules, so the map invented
+one entry that did not exist and omitted eleven that did — and those eleven fell
+into three different coverage classes, which the file-level view showed as a
+single row. Parse `^module (\w+)` and classify per module.
+
+**Follow instantiation transitively, or "unused" is wrong.** One primitive is
+reached from the top only through an intermediate module. A one-hop check calls
+it unreachable; a transitive walk finds it. The difference decides whether you
+report a library as dead.
+
+**Coverage has more than two states.** *Has properties* / *doesn't* hides the
+useful distinction: a module with no properties that the top-level instantiates
+is constrained **at one remove**, and one that nothing instantiates is
+constrained by nothing at all while still being compiled into every proof. Those
+deserve different words and different severities.
+
+**Report library findings; don't fail on them.** Six unexercised primitives are
+not a build error, and a permanently red gate is one everyone learns to ignore.
+Keep errors for the unambiguous case and make everything else a counted warning —
+*silence* is the thing that is not allowed, not imperfection.
+
+**The most useful output of a coverage map is the embarrassing row.** Here it was
+that the module implementing the subsystem responsible for the campaign's
+longest-running defect — three fixes across eight waves — has never had a
+property of its own. Every fix was made at the level where the bug was
+*observable*, and nobody went back to constrain the thing that produced it. A map
+is worth building mostly to surface that one line.
+
+## Wave 625 — a bite measurement needs a proving baseline, or it fabricates
+
+**Check the suite proves on the unmutated design before measuring detection.**
+One of my four properties refuted on the real design, so the *whole suite*
+refuted, so every mutant refuted too — and the first measurement read **4 of 4
+detected**. The honest figure was 2 of 4. A harness that measures "does this
+mutant refute?" against a suite that already refutes is measuring nothing and
+reporting a perfect score. Make the baseline an abort condition, not a note.
+
+**That is the baseline gate, from the other side.** An existing gate asserts the
+unprobed design proves so a *probe* verdict means something. The same requirement
+applies to a *bite* verdict and I had not connected them. When you build a second
+kind of measurement, check which existing preconditions transfer.
+
+**`-set-init-zero` breaks reset properties in a way that looks like a design
+bug.** `rst_n && !$past(rst_n)` reads as "the cycle after reset released", but
+with all registers initialised to zero, `$past(rst_n)` is 0 at time zero whether
+or not a reset happened — so the guard fires on an artifact of the convention.
+Gate it with a register that is 0 only at time zero:
+
+```verilog
+reg fv_started;
+always @(posedge clk) fv_started <= 1'b1;
+```
+
+**Fix the module where the defect lives, not only where it shows.** Three
+separate fixes for one subsystem all landed at the level where the symptom was
+observable, and the 33-line module that produced it stayed unconstrained for
+eight waves. After fixing a bug at an integration level, ask whether the unit
+that caused it can now state the invariant directly — the module-level property
+here catches the harness's own mutation that previously only the engine caught.
+
+**Adding a property suite is four edits.** The prove step, the
+assumption-liveness probes, the phantom-signal scan's suite list, and the count
+in the current-state document. Miss the third and the new suite is silently
+exempt from a gate; miss the fourth and the claims gate fails immediately —
+which is the better failure, and an argument for having both.
+
+## Wave 626 — one symbolic address beats a hundred concrete ones
+
+**State the memory axiom over a SYMBOLIC address.** "A read returns the last
+value written to *this arbitrary address*" — a free input pinned by
+`assume (addr == $past(addr))` — is one property that also proves
+**non-interference**, because a write to any other location would make the
+shadow disagree. The same property over a fixed address proves almost nothing.
+This generalises past memories: whenever a claim is "for all X", make X symbolic
+and constant rather than picking one.
+
+**Get the collision semantics right or the property refutes on correct RTL.**
+With non-blocking assignments on both ports, a read concurrent with a write to
+the same address returns the **old** value — so the shadow must be compared as of
+the read cycle, *before* that cycle's write (`$past(shadow)`, not `shadow`).
+
+**An assumption added to a scaled-down proof must be vacuous at full scale.**
+Scaling `DEPTH` from 4096 to 4 while the address port stays 12 bits lets the
+solver write to address 2048 of a four-entry array — and the property refutes for
+that reason alone. The in-range assumption that fixes it constrains *nothing* at
+the real depth, where every representable address is legal. That is the test for
+whether a scaling assumption is honest: **would it be a no-op at full size?** If
+not, it is hiding design behaviour, not scaling artifacts.
+
+**"0 of N mutants detected" can be a fact about the mutants.** A 28-line memory
+yields three mechanical mutants, all width-expression edits that widen a port
+without producing a memory fault. Reporting 0/3 alone reads as a weak property.
+Run the faults the component can *actually* have — read the wrong address, ignore
+the write enable, write to the read address, off-by-one — and report both
+numbers. Four of four caught says what 0/3 does not.
+
+## Wave 627 — check the logic around a component without trusting the component
+
+**Instantiate the sub-block a second time as a shadow.** To constrain an
+accumulator that wraps a dot-product primitive, drive a second copy of that
+primitive with the same inputs and compare against it. This assumes *nothing*
+about whether the primitive is correct — it states what the surrounding logic
+must do with whatever the primitive returns, and leaves the primitive's own
+correctness as a separate, explicitly unmade claim. Far cleaner than either
+trusting the sub-block or reimplementing its function in the property.
+
+**Adding a property can corrupt the map that measures properties, and the
+corruption reads as progress.** My coverage map defined "covered" as *some suite
+instantiates this module* — and the shadow instance made a primitive look
+directly verified when nothing says anything about it. **An auxiliary instance is
+not coverage.** Key the map on the instance under test (a `dut` naming
+convention works), and re-check the map whenever you add a wrapper that
+instantiates more than one thing.
+
+**Write the pair of properties that distinguish restart from accumulate.** "A
+first chunk restarts the sum" and "every later chunk adds exactly its own
+contribution" are two claims, and a datapath that confuses them satisfies neither
+by accident. Both mechanical operator swaps that produce that confusion —
+`+`→`-` and ternary-arm exchange — were caught by exactly these.
+
+**Add the "held while idle" property.** A datapath that recomputes on idle cycles
+satisfies both of the above and still corrupts results between chunks. The
+absence property is the cheap one to forget and the one that pins the pipeline.
+
+## Wave 628 — combinational logic is decidable; prove it exhaustively
+
+**On stateless logic, `sat -seq 1` quantifies over every input.** No bound, no
+induction, no depth caveat, and nothing to re-audit later. If a module is purely
+combinational, this is the cheapest strong result available anywhere in a formal
+campaign — and it had been sitting unused for the whole of mine.
+
+**Width comments are where the defect hides in plain sight.** The adder tree's
+own comment read `range [-9, +9] -> signed [3:0]` — the correct range stated
+directly above a declaration that spans [−8,+7]. **Whenever RTL documents a
+range next to a width, check that the width holds the range**; it is a two-second
+read and it found a defect that had survived since the module was written.
+
+**A test can protect a bug.** The unit test asserted `wire signed [3:0] l2` —
+the buggy width, verbatim. The defect was not untested; it was *pinned* by a
+passing assertion. **A test that asserts a width without checking the range it
+must cover locks in whatever the generator first emitted.** Assert the property,
+not the text.
+
+**A stale build artifact can stand in for a missing build step indefinitely.**
+One source file was not in the bundle the CI emit step produces, yet every
+top-level proof listed it. Locally an old generator run had left it on disk, so
+everything passed for months. Test what a *clean checkout* produces, with the
+exact source list the gate uses — not a glob, and not your working tree.
+
+**Two harness errors nearly turned that into a false claim.** A `*.sv` glob
+picked up a file the tool cannot parse at all, and an exit status read through
+`grep` missed the error line. Both pointed at the tree; both were the test. When
+a finding is about infrastructure, the infrastructure that finds it deserves the
+same suspicion as the thing under test.
+
+## Wave 629 — re-run everything the defect sat underneath
+
+**After fixing a defect, re-establish every result that depended on the broken
+component.** Not because you expect movement — because "I expect nothing moved"
+is a prediction, and the whole point of the exercise is that predictions get
+checked. Six engine-level steps, twelve minutes of compute, and a documented
+before/after.
+
+**A "nothing moved" result is worth publishing when it says what was *not*
+being checked.** The integration suite proved identically before and after a
+genuine arithmetic defect in a module it transitively depends on. That is not a
+failure of those properties — it is a sharp statement of their scope: they
+constrain **control** (handshakes, phase, contiguity, readiness) and the defect
+was in **data**. A null result that draws that boundary is more useful than a
+green tick.
+
+**Note which instrument actually caught it.** Not the mutation harness, not a
+witness, not an integration property. The chain was: map coverage → notice a
+module constrained only at one remove → prove it directly. When a defect is
+found, write down the shortest path that found it — that path is the thing worth
+repeating, and it is rarely the most expensive instrument you own.
+
+**Re-time the expensive proofs while you are there.** The same bound that cost
+238 s for 22 properties now costs 422 s for 24. The ceiling had not moved but
+the headroom had, and nobody would have noticed until a future property pushed
+it over.
+
+## Wave 630 — the defect that was written down next to itself
+
+**When a defect is found, ask whether it was legible before you found it.** The
+Wave 628 arithmetic bug had its own correct range stated in a comment on the
+line above the declaration that could not hold it, from Wave 33 to Wave 628.
+Nothing mechanical compared the two numbers and no human read them as numbers.
+A defect that was *documented and still shipped* is not a testing gap — it is a
+missing comparison, and comparisons are cheap to automate. Before writing the
+next property, check whether the last defect was already written down somewhere
+in the tree.
+
+**A test can protect a defect, not just miss it.** The unit test asserted the
+buggy width verbatim (`assert!(body.contains("wire signed [3:0] l2"))`). Any
+fix would have failed the suite. Tests that pin an emitter's exact output are
+regression locks pointed in whichever direction the output happened to face
+when they were written — when a test asserts a *value*, ask what would happen if
+that value were wrong.
+
+**The obvious static check can be unsound in your own domain.** Worst-case
+arithmetic over declared widths is the textbook overflow check, and here it
+fails a *correct* design: a trit needs three values, two bits carry four, so
+reasoning from bit-width over-approximates by exactly the encoding's slack.
+Level 1 would have been reported as overflowing when it does not. Where an
+encoding is narrower in value than in bits, propagate documented ranges instead
+— and where the domain has that shape, expect every generic analysis to need
+the same correction.
+
+**Comment conventions the emitter writes consistently are a machine-checkable
+specification.** `range [-N, +M] -> signed [W:0]` was prose to every reader for
+595 waves and a checkable claim the moment someone parsed it. Look at what your
+generators already write by habit; some of it is a spec nobody has run.
+
+**My own new gate reproduced the campaign's signature failure on its first
+run.** It reported zero findings on the shipped tree *and* zero on an injected
+defect. Two independent causes: an eight-line comment block outran a three-line
+lookahead, and a `+` inside an array index (`val[i*3+1]`) made an operand count
+disagree with a term count, so the check silently declined to run on the very
+tree it was written for. It printed a clean result either way. **A new
+instrument's first duty is to fail on a defect you plant in it**, and the fix
+is a coverage counter in the output — "3 reductions checked" makes silence
+measurable where "0 findings" does not.
+
+**Assert that your injected defect actually landed.** The first self-test
+replaced a two-line string that did not exist in the file (the lines were eight
+apart), so every mutation case graded the scan on *unmodified* source. A
+mutation test whose mutation silently no-ops reports a pass. Compare the text
+before and after injecting, and fail if nothing moved.
+
+**Two independent counters of the same thing will drift.** The README claimed
+the absence sweep runs 22 checking steps; it ran 32. Nothing malfunctioned —
+steps were added across ~20 waves and nobody recounted. The fix is not a
+corrected number but a derived one: `claims_check` now *imports*
+`absence_sweep.collect` rather than re-implementing the count. When prose states
+a number the tree already knows, derive it from the same code the tree uses.
+
+**Adding a gate is a good moment to audit adjacent claims.** The stale count was
+found only because the new step changed a total. Whenever you add to a set
+something else counts, re-run the counter.
+
+## Wave 631 — a width is only safe relative to a contract
+
+**Ask what bounds an accumulator, and then ask where that bound is written.** A
+16-bit accumulator summing values of range [-27,+27] overflows after 1214 terms.
+It was safe — but only because a *different module* walks its chunk counter over
+an 8-bit port. Nothing in the accumulating module knew that: no chunk counter,
+no `num_chunks` input, no comment. A width is never "wide enough" on its own,
+only wide enough for a bound, and if the bound lives in another file the safety
+is an accident that the next ordinary change deletes.
+
+**An equation in N bits cannot detect an N-bit overflow.** The property
+`result == $past(result) + $past(dot)` looks like it pins the arithmetic
+completely, and it holds *modulo 2^N* — a wrapping accumulator satisfies it
+exactly. If you want to catch a wrap, state the claim in a wider type than the
+signal you are checking. This generalises past hardware: any assertion written
+in the same type as the value it checks is blind to that type's overflow.
+
+**When the counterexample is thousands of cycles away, bounded proof is worse
+than no proof.** Every feasible depth returns "proves", which reads as a passing
+build and means nothing. That is the shape to watch for: a property whose
+violation requires a long run. Reach for induction there — an inductive
+invariant is checked one step at a time and carries no depth caveat, so it says
+something true about run 10,000 that no bounded run can.
+
+**Prove the facts your proof depends on, separately and unconditionally.** The
+accumulator bound needs |dot| <= 27. An existing property gave the dot product's
+exact value but only under a validity assumption about input encodings. The
+*bound* needs no such assumption. Had it been taken from the conditional
+property, the accumulator proof would have silently inherited an assumption
+about memory contents that nothing enforces. Assumptions inherited through a
+cone are invisible; assumptions stated at the top of a file are not.
+
+**Deleting one instance from a wrapper was 800x.** The same properties in a
+wrapper carrying a shadow copy of a 27-input adder tree did not finish in 18
+minutes; without it, 1.3 seconds. Before optimising a slow proof, look at what
+is in its cone that the properties do not actually reference.
+
+**I folded a tool error into a verdict — in the wave whose own notes cite that
+trap.** Two runs exited 1 and were nearly recorded as "refuted, so the
+assumption is load-bearing". They were `ERROR: File not found`: an earlier `cd`
+in a chained command had moved the shell. Knowing a failure mode is not
+protection from it. Use absolute paths in verification commands, and when a run
+exits nonzero, read *what it printed* before naming the verdict.
+
+**A check whose pattern stops matching reports nothing and is counted as
+passing.** The claims gate compared documentation numbers against the tree by
+regex. Reword the sentence and the regex matches nothing — no output, no error,
+and the summary still says the claim is covered. Every pattern-driven gate needs
+a "matched zero times" failure, not just a "matched and disagreed" failure. It
+fired on its own first run, on a sentence I had just reworded.
+
+**An assertion that must fail is not a proved property.** Non-vacuity oracles
+assert something false so that a refutation proves an assumption admits inputs.
+Counting them alongside real properties inflates the headline by exactly the
+number of assumptions being audited. Separate the two, and correct the published
+figure forward rather than rewriting the old one.
+
+**Adding to a set is the moment to re-derive everything that counts it.** One
+new CI step moved a swept-step total; a module-coverage split had drifted from
+"8 direct, 8 indirect" to "16 and 0" across four waves while the prose sat
+still. Both had gone stale silently. If prose states a number the tree knows,
+derive it by importing the code the tree uses — never by recounting.
+
+## Wave 632 — turn a finding into a sweep, then check the sweep against the finding
+
+**When a defect has a shape, sweep for the shape.** Prop. 83's accumulator was
+one instance of "a register safe only relative to a bound written elsewhere".
+Asking that question of every growing register in the tree took one scan and
+turned a single finding into a map: 4 bounded locally, 4 by an input port, 7 by
+nothing inside their own module. One incident is an anecdote; the same question
+asked fifteen times is a property of the codebase.
+
+**A gate can demand an argument rather than a proof.** Requiring every
+externally-bounded register to carry a `// BOUND: <name> <reason>` note proves
+nothing safe — it makes a *missing* argument visible. That is much cheaper than
+proof and catches the failure mode that actually occurred, where nobody had
+asked the question at all. Writing the fifteen notes was the real work, because
+each had to be traced to a limit that genuinely exists.
+
+**Check a new instrument against the one case whose answer you already know.**
+The scan's first draft classified the Prop. 83 accumulator — bounded by nothing,
+established by k-induction the wave before — as bounded by a contract. The cause:
+it read `<=` as a comparison, when at statement level in Verilog that is the
+nonblocking **assignment**. Every LOCAL verdict came from a reset `X <= 0` read
+as a bound; the whole table measured assignments. Nothing about the output
+looked wrong. Only the known answer exposed it. Build the acid test into the
+self-test so it stays exposed.
+
+**Prefer over-reporting in the direction that asks for an argument.** Dropping
+the ambiguous `<=`/`>=` loses genuine `if (c <= limit)` bounds, which then read
+as unbounded and demand a note. That is the right way to be wrong: the failure
+mode is a human writing one extra sentence, not an instrument inventing a bound
+that does not exist.
+
+**Read the declaration, not the use.** A first draft of a finding said the DMA's
+address registers were 32-bit and could wrap a real memory map. They are 64-bit;
+the emitter says so. The grep that suggested otherwise showed assignment lines,
+which carry no width. The finding was real but belonged to a different module,
+and the difference changed what it means. Widths, types and signedness live in
+declarations — go there before writing a claim about range.
+
+**Annotate the generator, not the generated file.** These notes belong in the
+Rust emitters; writing them into `build/rtl/` would have survived exactly until
+the next regeneration. Then verify by regenerating and confirming the emitted
+output changed only where intended.
+
+**A `git diff` of an untracked path is blank, and blank looks like clean.**
+Checking "did my change touch anything but comments" with `git diff build/rtl/`
+returned nothing — because that directory is generated and untracked, so the
+check examined zero files. The sound version diffed the *tracked emitter*
+sources and confirmed every added line emits a comment. Before trusting an empty
+diff, confirm the path is actually under version control.
+
+## Wave 633 — sweep the mirror direction, and put the property where the signal is
+
+**Every sweep has a mirror.** Counting up has overflow; counting down has
+underflow, and it is the sharper risk: an overflowed counter is wrong by one
+wrap, while an underflowed countdown *does not stop* — it runs another 2^N steps
+past whatever it was metering. After sweeping incrementing registers, the
+decrementing ones were three lines of regex away and turned out to be the
+registers enforcing the previous sweep's tightest bounds. When you finish a
+sweep, ask what its opposite would find.
+
+**Load-bearing means "something else's correctness rests on it".** Two 12-bit
+indices were sized at exactly their limit, and neither was bounded by any
+comparison on itself — a separate countdown enforced both. That makes the
+countdown the real safety argument, and it was the thing nobody had checked.
+Follow a bound to whatever actually enforces it before believing it.
+
+**Put the property where the signal is, even if that is not the property file.**
+An internal register cannot be constrained from a wrapper's ports, and in this
+flow a hierarchical reference does not error — it silently declares an undriven
+one-bit wire and proves against it. The choices were: prove a weaker observable
+consequence to a bounded depth, or state the property *inline in the module*
+behind a formal-only guard and get an unbounded induction result. The second was
+right. A property file is a convention, not a requirement.
+
+**"An existing property already covers it" deserves the depth question.** The
+underflow's observable consequence — writing past the request — was genuinely
+covered by an existing property. But only to that step's bound, and the
+terminator that would trigger the underflow sits far beyond it for a large
+request. Coverage at depth N is not coverage.
+
+**When you add an inline property, find out what else compiles it.** These
+properties are guarded, and the engine's integration steps pass that same guard
+— so two module-level assertions silently joined the engine's proof obligation
+set. That is more coverage, but it is also a runtime and verdict change to a
+step you did not think you were touching. Check the `$check` cell count before
+and after.
+
+**Separate two reasons that look like one.** The first draft said an underflowed
+value was safe because "every consumer reads the pre-decrement value". Half true:
+the exit test is in the same always block and does sample pre-decrement, but the
+other consumer is a *continuous* assignment that tracks the wrapped value
+immediately — it is safe for an entirely different reason, that it is only read
+in states the FSM no longer enters. Two mechanisms, one sentence, and the
+sentence would have justified a change that broke one of them.
+
+**Record an environment dependency as a dependency, not as a proof.** The DMA's
+countdown underflows by design and stays harmless only while the AXI slave
+honours the burst length it was issued. That is a claim about the environment,
+so it is written down as a protocol dependency rather than dressed up as a
+verified property. Knowing which of your safety arguments rest on someone else's
+compliance is worth more than a green tick that hides them.
+
+### Wave 633 addendum — a timing figure is a claim about a machine state
+
+**I published a 4× cost that was 1.58×.** Two inline properties were reported as
+taking an engine proof from 183 s to 723 s. Both figures were measured while
+three other provers were competing for the machine — a condition I neither
+controlled nor recorded — and the number went into a proposition, the README, a
+commit message and a filed issue before anything checked it.
+
+What exposed it was re-measuring the *baseline*, not the change: the
+no-properties case came back at 153 s, **faster** than the 183 s it was
+supposedly a regression against. A "regression" that makes the control faster
+than its own historical baseline is not a regression, it is a broken
+measurement. When a before/after surprises you, re-run the *before* on the
+current machine before believing the delta.
+
+**Record the machine state or do not publish the number.** Correctness results
+are reproducible — a proof either discharges or it does not. Timings are not:
+they are claims about contention, thermal state and what else was running. They
+need the same provenance discipline as any other measurement, and they rarely
+get it because they look like observations rather than claims.
+
+**`cmd | tail; echo $?` reports the pipe's status, not the command's.** A
+"successful" 0.05 s proof run was yosys failing instantly on a wrong working
+directory, with `tail` returning 0 over the top of it. Capture the tool's own
+exit code — redirect to a file and check `$?` directly, or use `PIPESTATUS`.
+Auditing the CI workflow for the same shape found it clean (no prover is piped,
+and 26 of 35 steps set `pipefail`), so the bug was purely in ad-hoc commands —
+which is exactly where measurements get made.
+
+**Three cwd-related tool errors in one session, all in background commands.** A
+`cd` in an earlier chained command changes where later background jobs run. Use
+absolute paths in anything whose result you intend to write down.
+
+**Correct forward, in public, with the mechanism.** The fix was a new
+sub-proposition recording what was measured, what was wrong, and how it was
+caught — plus a comment on the issue that carried the bad number — rather than
+quietly editing the figure. The two most-quoted corrections in this campaign
+were both captions on instruments that worked correctly; this is a third.
+
+## Wave 634 — code with no callers may be a specification nobody wrote down
+
+**"Dead or missing plumbing" can be a false dichotomy.** Six primitives sat
+UNREACHED for five waves under exactly that question. The third answer was that
+they are an **algebra** — min, max, negation, product, balanced addition — and an
+algebra can be stated as theorems and proved outright. Before deleting
+unreferenced code, ask whether it is a specification of something the rest of the
+system assumes.
+
+**State theorems before coding properties.** Writing T1–T5 as mathematics first
+— "and = min and or = max, so the triple is a De Morgan algebra" — produced
+properties phrased as the order-theoretic *definitions* rather than as a
+restatement of the RTL's case split. A property that restates the implementation
+proves only that the implementation equals itself.
+
+**Separate theorems that are about the mathematics from theorems that are about
+your implementation.** Four of the five would survive any faithful
+implementation. One — comparison — is correct only because the bit encoding
+happens to be monotone in the value it encodes. That distinction is where the
+risk lives, and it is invisible unless you ask which of your proofs would break
+under a refactor that changes nothing semantic.
+
+**Test the dependency by breaking it, and expect the experiment to surprise
+you.** Permuting the encoding was supposed to refute one theorem. It refuted
+two. The second was a primitive with the encoding baked in as literals while
+every sibling — including its own sub-instances — used named constants, so any
+renumbering would move them and leave it behind silently. The experiment found a
+real defect I had not predicted; had I only reasoned about it, I would have
+written the note about T4 and shipped.
+
+**A fix found by an experiment should be verified by re-running that
+experiment.** Not by re-reading the code, and not by a fresh proof of the fixed
+version alone — by the exact procedure that exposed it, now producing the
+predicted result and only the predicted result.
+
+**Two modules in one file answering the same question differently is a defect
+even when unreachable.** One adder mapped the reserved code to 0, its sibling to
+−1. Unreachable today because of who feeds whom. That is how a later change
+picks the wrong answer.
+
+**Give timings the provenance you give proofs.** A proof discharges or it does
+not, regardless of what else runs. A timing is a claim about contention, cores
+and thermal state. Run both arms alternating in one invocation, record the
+machine, repeat, and **refuse to print a ratio** when the arms' observed ranges
+overlap — if some run of the slower arm beat some run of the faster one, no
+ordering is supportable.
+
+**An implausible measurement is evidence about the instrument.** The new harness
+reported that adding two properties made a proof *faster*. That was not a
+discovery; it was the harness saying it was not measuring what its labels
+claimed — the RTL had been regenerated a third of the way through the run. A
+benchmark whose **inputs** move mid-run is exactly as broken as one whose machine
+is contended, and neither shows up in the seconds. Fingerprint the files under
+test, not just the machine.
+
+**When search is unavailable, prove instead of citing — and say which you did.**
+This wave could not fetch external literature, so no citations were added to a
+section explicitly labelled *verified* citations. The theorems were stated and
+exhaustively machine-checked instead, and the report says so plainly. An
+unverifiable citation is worse than none.
+
+## Wave 635 — a refuting property is not yet evidence of a defect
+
+**Check which of the design and the specification is wrong, every time.** A
+lemma about a full adder's carry refuted on first run. The adder was fine; the
+assertion used `(x+1 - (x+1) % 3) / 3`, and Verilog's `%` takes the sign of its
+dividend, so it gave 0 where the carry was −1. Isolating the assertion proved
+the design clean in seconds. Earlier waves found real RTL defects exactly this
+way, which is precisely why a refutation cannot be read as one without the
+check — the same signal means both things.
+
+**Lemmas buy localisation, not just confidence.** An exhaustive proof of an
+assembled tree tells you the tree is right and nothing about where a future
+failure would be. Proving the half adder and full adder underneath it means a
+later refutation separates "the arithmetic is wrong" from "the wiring is wrong"
+without any new work. Compose proofs downward even when the top-level one
+already passes.
+
+**Redundant and wrong are independent.** The discarded assertion was redundant —
+conservation plus validity already determined the carry uniquely — *and* it was
+incorrect. Only the incorrectness surfaced it. A redundant-but-correct property
+would have sat there indefinitely looking like coverage.
+
+**An experiment with a good hit rate should become a gate.** Permuting the trit
+encoding found a real defect on its first run. Once is an anecdote; wired into
+CI it is a standing check that no primitive acquires a hidden dependency on a
+literal encoding.
+
+**A gate that only asserts "nothing broke" passes when its perturbation becomes
+a no-op.** So declare which things are *supposed* to break and require them to.
+The encoding gate asserts that the one encoding-dependent theorem still refutes;
+without that, a permutation that stopped permuting — a renamed constant, an
+edited macro — would report a clean sweep while testing nothing.
+
+**A perturbation must be semantics-preserving to be informative.** Permuting the
+encoding on only one side breaks every theorem trivially and proves nothing
+about any of them. What makes a surviving theorem evidence of independence is
+that the change was a genuine relabelling.
+
+**Turn a new instrument on your own published claims first.** Building a
+timing harness because one figure was wrong immediately raised: what else rests
+on numbers measured the same way? Two published figures came back 16% and 27%
+high, and an inference built on one of them had to be **withdrawn rather than
+restated with a smaller coefficient** — because its other endpoint described a
+configuration that no longer exists and could not be re-measured at all. An
+inference is only as reproducible as its least reproducible endpoint.
+
+**Withdraw, don't deflate.** The tempting move was to keep the "headroom is
+narrowing" conclusion with corrected numbers. But the corrected comparison rests
+on one figure nobody can reproduce, so the honest outcome is no conclusion plus
+a defensible baseline — which is worth more to the next wave than a weakened
+claim it would have to re-litigate.
+
+**My own scripted doc edit broke two claim patterns, and last wave's guard
+caught it.** A README rewrite moved `**` emphasis markers so two claims-check
+regexes matched nothing. The UNMET check added one wave earlier fired; without
+it both claims would have silently left the gate while the summary still counted
+them as covered. Guards you build for the codebase apply to your own edits too.
+
+## Wave 636b — bars you choose yourself test what you thought of
+
+**The single highest-value thing this campaign has done is have someone else
+attack a result.** A proposition was published, committed and pushed after
+clearing three bars I designed and named — it proves, its oracle refutes, it
+depends on its assumption. An adversarial review found the theorem sound and
+**four of the claims around it false or defeatable**, and every one of them lay
+outside the checks I had built. Self-designed bars test the failure modes you
+already imagined. Budget for an independent attempt to break the result, and
+instruct it to attack rather than confirm.
+
+**A vacuity oracle can be defeated while staying green.** "Assert something
+false and require a refutation" only witnesses that the assumptions admit
+*something*, for *some* input, in whatever instance the oracle looks at. It says
+nothing about per-input emptiness in the structure the proof actually uses. A
+one-clause strengthening collapsed a theorem's domain to 6% while the oracle
+kept refuting and the proof kept proving. **The guard that works has no free
+variables** — assert the real component satisfies what the abstraction assumes,
+so there is nothing left for the solver to choose.
+
+**Share the constraint, don't copy it.** My first replacement guard hand-copied
+the constraint it was supposed to police, so an injection into the original left
+the copy untouched and it kept passing. Write the shared claim once as a macro,
+assume it in one place and assert it in the other. A guard that can drift from
+its subject is a guard for a past version of it.
+
+**An incomplete perturbation is not semantics-preserving, and cannot distinguish
+"real dependency" from "broken experiment".** A permutation gate substituted over
+the RTL and one macro, but not over constants declared inside property files —
+so a new theorem refuted, correctly-looking, for a reason that was the
+experiment's fault. Before believing a perturbation's verdict, check that it
+reached every declaration of the thing being perturbed.
+
+**Check whether your gate reads the design or a claim about the design.** A
+scan looking for "a comparison bounding this register" matched assertions inside
+`ifdef T27_FORMAL. An assertion is a claim *about* the design, not a mechanism
+that constrains it, and reading one as a bound inverts the gate's purpose — here
+on three of the four positive verdicts in the entire codebase. Preprocess out
+formal-only regions before analysing design logic. The same mistake in a
+different counter, found the same day: a counter matching `label: assert`
+without stripping comments invented a property out of a comment *quoting* an
+assertion.
+
+**A file gaining a module can silently redirect another module's checks.** A CI
+step injected its probe before the *last* `endmodule` in a file. A wave that
+added two modules to that file therefore sent all four of an earlier suite's
+probes into the wrong module, where elaboration pruned them — and the step began
+failing with a message naming the wrong cause. Target things by name, never by
+position, and make "name not found" an error rather than a fallback.
+
+**When a gate fails, check that its message names the real cause.** The step
+above said "UNREACHABLE — an assumption removed it". The truth was "the probe
+was never compiled in". A misleading red is worse than a red, because it sends
+the next person to the wrong file.
+
+**Publish, then review — but budget the review as part of the work.** Everything
+above was found *after* the proposition shipped. That is survivable when the
+review actually happens and the corrections are recorded forward; it is not a
+substitute for the review happening at all.
+
+## Wave 637 — a flag's description can be wrong for a hundred waves
+
+**Check what your tool flags actually mean, not what the comment says they
+mean.** `-set-init-zero` was described throughout this campaign — since the
+proposition that chose it — as "starting from a reachable state". It starts from
+the ZERO state. Those coincide only if every register resets to zero, and nine
+here did not. The description was written once, was approximately true, and was
+quoted for a hundred waves without anyone asking.
+
+**Distinguish unsound from fragile, precisely, and say which you found.** Extra
+unreachable states in the initial set can only produce spurious *refutations*,
+never spurious proofs. So nothing verified was weakened — the finding is that a
+pure relabelling would break two proofs and the failure would read as a design
+defect. Getting this distinction right is the difference between "your proofs are
+wrong" (alarming and false) and "your setup is fragile in a way that will waste a
+future day" (true and actionable).
+
+**When you find a local workaround, ask how many other instances exist.** One
+property in one suite carried a guard whose comment described this exact problem
+and its exact cause. It was fixed there, correctly, and never generalised. A
+comment explaining *why* a workaround is needed is a description of a class —
+go count the class.
+
+**A repair that does not work is worth recording, with the reason.** The obvious
+fix was to copy the existing guard to the two affected properties. It fails,
+because the bad state persists indefinitely rather than only at time zero, so a
+one-cycle guard changes nothing. Writing that down stops the next person
+spending the same hour, and the reasoning is more useful than the fix would have
+been.
+
+**Prefer a gate that lists over a gate that forbids.** Non-zero resets are not a
+defect — an AXI slave that comes up not-ready is worse than one that does. The
+gate requires each to carry a reason, which converts an invisible modelling gap
+into a written one without pretending the design should change.
+
+**Measure the blast radius before designing the fix.** Running each property
+individually under the perturbation showed exactly one property per suite was
+affected, out of ten. That turned "two suites are fragile" into two named
+properties, and it made clear the fix belonged in the verification setup rather
+than in the design.
+
+**Confirm a perturbation is semantics-preserving by counting, not by
+believing.** Before drawing any conclusion from an FSM relabelling, count the
+references to the state signal by name versus by literal: 16/0 and 9/0. If any
+had been by literal, the relabelling would have changed behaviour and a
+refutation would have been correct rather than informative.
+
+## Wave 637b — a define is read as a category
+
+**A conditional-compilation flag is a taxonomy claim, and its members must share
+a precondition.** A guard was created for properties that hold unconditionally.
+A later wave added one that is true only under an environment model, without
+noticing the categories differed. Nothing complained: both were "drain
+properties". The flag then silently meant "these, one of which is false unless
+you also supply an AXI slave model", and compiling it anywhere lacking that model
+produced a refutation that reads as a design defect. Put the precondition in the
+name.
+
+**A property that is true only under an environment model is a different KIND of
+property.** Group by what a property needs, not by what it is about. Two
+properties about the same register, one unconditional and one needing a slave
+model, belong behind different guards even though every naming instinct says
+otherwise.
+
+**A re-measurement that fails to produce a number can be more valuable than one
+that succeeds.** The goal was to reproduce a published ratio. What came back was
+an 11-second refutation, which located a latent trap that had been live for three
+waves and would have surfaced as a mysterious engine failure for whoever next
+enabled that define.
+
+**"Unreproducible" is a distinct verdict from "wrong", and worth stating.** The
+ratio was never shown incorrect. Its configuration ceased to exist, so it cannot
+be checked at all — and when the decision it justified rests independently on a
+stronger argument (here: the properties prove *unbounded* at module level), say
+that too. Retire the evidence without retiring the conclusion, and be explicit
+that you are doing so.
+
+**Honour your own instrument's refusals.** The timing harness has now declined
+three times in three waves — a failing command, inputs that moved mid-run, and a
+contended machine — and each time the number it refused to print would have been
+wrong. The temptation to override "just this once, the machine is only a bit
+busy" is exactly what the guard exists to resist. Record the measurement as not
+made.
+
+**Don't run a benchmark and a fan-out at the same time.** The contention that
+blocked the third measurement was my own concurrent workflow. Sequence work that
+competes for the machine, or the harness will correctly refuse and the wall-clock
+spent is wasted.
+
+## Wave 637c — a self-test written by a gate's author tests what its author imagined
+
+**Four gates, four instances of matching a form rather than a fact.** A
+warning's phrasing, an identifier's name, a comment's position, a width standing
+in for a range. Every one of them passed its own self-test. Ask of any gate: what
+is the *fact* here, and am I matching the fact or a shape that usually
+accompanies it?
+
+**Check whether your tool's output wording varies with the case.** A gate
+existed for exactly one defect — an undriven wire a property proved against —
+and matched `Wire <name> is used but has no driver`. Yosys prints that form for
+one-bit wires and `Wire <name> [3] is used…` for wider ones, so the gate caught
+its own reason for existing only at width 1. Enumerate the tool's output forms
+empirically rather than pattern-matching the one example you saw.
+
+**A self-test's cases are the author's imagination, so vary the dimension the
+author held fixed.** All four injections in that gate's self-test were
+identifiers yosys declares as a single bit. Nothing about them was wrong; they
+simply all sat at the same point on the axis that mattered. When writing
+injections, ask what parameter every case shares — width, position, sign,
+nesting — and add one that differs.
+
+**A dedup key that is also a coverage counter reports the wrong number twice.**
+Deduplicating reductions by target name silently dropped 40% of the subject, and
+because the same set was returned as "reductions checked", the summary read as
+full coverage while examining less than half. Deduplicate the *output*, never
+the *work*, and count the work.
+
+**A guarded fallback is a decision, and it can silently be the rule you already
+banned.** For an unannotated operand a gate fell back to worst-case-by-width —
+the exact reasoning the same file's docstring calls unsound for this domain — and
+so produced a false finding against correct RTL. When a check cannot be made,
+prefer "uncheckable, and here is the count" over a weaker rule applied quietly.
+
+**Being accidentally right is not a form of being right.** A measurement was
+rejected as implausible because its inputs moved mid-run; the clean re-run landed
+within a few percent of the rejected value. The rejection was still correct — a
+number produced by a broken procedure carries no evidence regardless of where it
+lands. Do not retroactively credit a discarded result because it turned out
+close.
+
+**Notice when a decision's stated justification evaporates but the decision
+survives.** A guard split was justified by a measured cost; the cost is now
+negative. The split remains right for a second reason given at the time. That is
+worth writing down, because the next such decision might have rested on the
+justification that vanished.
+
+## Wave 638 — a summary of an adversarial review is not the review
+
+**Read the full result before acting on it.** A workflow notification arrived
+truncated at ~90 KB with the untruncated text on disk and the path printed in the
+diagnostics line. I read four findings off the summary, fixed them, wrote a
+proposition, filed an issue and pushed. The full report held **six** for that one
+gate. The two I missed were verified, and both survived my fixes. Acting on the
+part that was easy to see is exactly the failure an adversarial review exists to
+prevent — so the review's own output deserves the same suspicion as the code.
+
+**Re-test the findings you did not fix before assuming a fix covered them.** It
+would have been natural to suppose the reduction-loop rewrite happened to catch
+the other two. It did not. Both were still missed, and one command established
+that in under a minute.
+
+**"Declining to check" must be counted, never silent.** Two whole expression
+forms — a constant addend, and any subtraction — fell out of a gate's matcher and
+`continue`d, while the coverage counter still reported full. Declining is a
+legitimate choice; declining invisibly is the campaign's recurring defect. Count
+every decline and print it, so the number of things you did not check is as
+visible as the number you did.
+
+**A guard that trips at exactly zero is a guard against nothing happening, not
+against something going missing.** Three separate defects hid behind `if count ==
+0`. Losing one of three annotations, or dropping a declaration out of the
+parser's view, left a summary indistinguishable from a healthy one. Set a floor
+at the tree's actual numbers and require a deliberate raise.
+
+**When a claim you published turns out incomplete, say "true and incomplete"
+rather than restating it.** Prop. 98 said four defects were found and fixed. That
+was accurate at the time and wrong as a summary of the review. Recording the
+sequence — four claimed, six found, six fixed — is more useful to the next reader
+than silently correcting the number.
+
+## Wave 639 — report what you did not check, as prominently as what you did
+
+**Sweep a defect's mechanism, not just its instance.** One gate declined two
+expression forms in silence. Rather than fix that gate and move on, every bare
+`continue` in all ten gates was asked a single question: does this mean "not my
+subject", or "my subject, which I could not check"? Two more instances fell out
+immediately, in gates nobody suspected.
+
+**Record the negative result.** Eight of the ten were clean, and writing that
+down is worth as much as the two fixes — it stops the same sweep being repeated
+next wave, and it says which gates are *known* total rather than merely
+untested.
+
+**"0 problems" over an unstated number of declines reads exactly like "0
+problems" over none.** That is the whole defect class, in one sentence. Any gate
+whose summary reports only findings is one silent `continue` away from reporting
+nothing at all. Print the skip counts beside the finding counts.
+
+**A gate can commit the exact error its own comments warn against, one category
+over.** One sweep's code carried a careful note explaining why it reports
+*applied* exemptions rather than the size of the exemption list — "reporting the
+list size says '1 exempt' on a run where nothing was exempted, a small lie of
+exactly the kind this file exists to find" — while a second exclusion class,
+six steps wide, went entirely uncounted a few lines above. Having articulated a
+principle is not the same as having applied it everywhere it holds.
+
+**A deliberate import creates an invisible coupling.** One gate imports another's
+enumeration function so the two cannot drift — a good decision, from an earlier
+wave. It also means changing that function's signature breaks a gate in a
+different file, and neither file mentions the other at the call site. When you
+change a shared helper, grep for its importers before assuming the blast radius
+is local.
+
+## Wave 639b — the taxonomy, and what it predicts
+
+**Every gate defect found in this campaign fits five shapes.** Enough instances
+have accumulated to state it as a class rather than a list, with counts of
+confirmed, independently reproduced cases:
+
+  1. **Matching a form, not a fact** (9) — a warning's phrasing, an identifier's
+     name where its value was meant, a literal's digits without its base.
+  2. **A decline that is not counted** (4) — a matcher `continue`s while the
+     coverage figure still reads full.
+  3. **Reading a claim as the design** (3) — assertions inside a formal guard
+     credited as design logic; assertion labels counted inside comments.
+  4. **Targeting by position, not by name** (2) — the last `endmodule`, the next
+     declaration.
+  5. **A guard that trips only at zero** (3) — losing 1 of 3 leaves a summary
+     identical to a healthy one.
+
+Use it as a checklist when writing any gate, and as the first hypothesis when
+one behaves oddly.
+
+**The self-test never catches these.** Not once, across every instance. A
+self-test is written by the gate's author from the same mental model that
+produced the defect, so its cases all sit at one point on whichever axis
+matters — every undriven-wire injection was one bit wide, every reduction a bare
+identifier sum. This is the argument for adversarial review by someone (or
+something) instructed to *refute*: it is not that the author is careless, it is
+that the author cannot vary the axis they did not know was an axis.
+
+**Defects cluster in the newest code.** Of 25 findings in one audit, the three
+confirmed were all in code less than 48 hours old, while gates that had survived
+twenty waves were comparatively clean. Audit what you just changed, in
+preference to what has been running for months.
+
+**Fixing an instance is not fixing the pattern — grep for it.** A
+comment-counting defect was fixed in one gate; the identical regex in a sibling
+file had the identical defect and survived another wave, because nobody searched
+for other copies. After any fix, search the tree for the same shape.
+
+**State a falsifiable prediction before the next audit.** If the five shapes are
+exhaustive, the next audit finds only these categories, mostly in recently
+modified gates. A sixth shape means the taxonomy is wrong and needs correcting
+rather than defending. Writing the prediction down first is what makes the next
+result informative instead of confirmatory.
+
+**Record the findings that did NOT reproduce.** One reported defect was real-
+sounding, specific, and false. Writing "reported as verified; not reproducible,
+here is the counter-check" costs three lines and stops the next wave
+re-litigating it.
+
+## Wave 640 — a gate can spend twenty waves asking the wrong question
+
+**Compare a gate's stated purpose against the predicate it actually evaluates.**
+One was written to answer "is this property file run by CI" and evaluated "does
+this filename appear anywhere in the workflow file". Those coincide right up
+until they don't: a `#` comment, a step with `if: false`, a `grep` that reads the
+file and proves nothing, and a workflow triggered `on: [release]` all satisfied
+the second and none satisfied the first. Read the docstring, then read the
+condition, and ask whether they are the same sentence.
+
+**The most dangerous version of this is a gate whose own history supplies the
+camouflage.** The workflow already carried retrospective comments naming the
+file whose absence the gate was built to catch. Deleting its executable
+references left a byte-identical healthy summary — the comments *narrating* the
+old defect would have concealed its return. When a gate matches text, every
+comment about that gate becomes a potential false positive for it.
+
+**Prefer "is it an argument to the thing that does the work" over "is it
+mentioned".** Searching runnable steps was better than searching the whole file,
+and still credited a `grep`. Requiring the file to appear alongside an invocation
+that could actually prove or load it is the predicate that matches the intent.
+
+**A repair that is wrong should fail at the top of its voice.** The first
+delimiter fix excluded the path separator, so every `formal/<name>.sv` reference
+stopped matching and the gate declared all fifteen files orphaned. That is the
+correct failure mode — loud, immediate, unmistakable — and far better than a fix
+that quietly drifts by one.
+
+**When you fix a defect, grep the tree for the same shape before moving on.**
+Twice now the identical defect on the identical regex has been fixed in one file
+and left standing in a sibling for another wave. The cost of the grep is
+seconds; the cost of not doing it has been two waves running.
+
+## Wave 640b — grep for the shape immediately, audit for new shapes later
+
+**A known defect shape has a textual signature. Grep for it the moment you fix
+one.** Waiting for the next review to notice the next sibling had already cost
+two waves. A minute of grep found a third instance of a comment-counting defect
+and a latent instance of a position-targeting one — both in files the expensive
+audits had not reached.
+
+**Audits and greps do different jobs.** An audit discovers shapes you had not
+thought of; a grep propagates shapes you already know. Two audits here cost
+roughly four million subagent tokens and five hours for about a dozen confirmed
+findings. The grep cost a minute. Run the cheap one after every fix and reserve
+the expensive one for finding genuinely new failure modes.
+
+**Report a grep's yield honestly: it is a lead generator, not a verdict.** Six
+signatures over fifteen files produced 33 candidate hits and exactly two real
+defects. Most "guard trips only at zero" matches are ordinary `if not x:`
+idioms. Saying "33 hits" as though it meant 33 problems would be the same
+overclaim this campaign keeps catching elsewhere.
+
+**"It works today" is the signature of a latent position-targeting defect.** A
+self-test injected before the last `endmodule` in a file, and worked — because
+that file happens to contain one module right now. The identical construct broke
+four probes in another file the moment a wave appended a module. When a check
+depends on a file's current shape rather than on a name, it is not correct, it is
+merely unexercised.
+
+**No gate stands above a self-test.** The defect here was *in* the self-test —
+the thing whose whole job is to establish the gate works. A self-test that
+silently begins testing the wrong object stops being evidence, and nothing else
+in the system will notice.
+
+## Wave 641 — a prediction is only worth what its falsification costs
+
+**State the boundary before you look, and mean it.** A taxonomy of five defect
+shapes was fitted to the data that produced it, so confirming it would have
+proved nothing. What made it evidence was the sentence attached: *a sixth shape
+means this is wrong*. One audit later, two sixth shapes. The falsification is the
+whole return on having written the prediction down.
+
+**Instruct a reviewer that overturning you is the more valuable outcome.** The
+agents were told explicitly that finding a new shape beat confirming the old
+ones. A review asked to confirm will confirm. This is the same reason a
+self-test never catches its author's blind spot, applied one level up.
+
+**Then be strict about what counts as new.** Seven novelties were claimed and
+five were not new — two were an already-recorded finding, one was an existing
+shape's enumeration form. A taxonomy that absorbs every finding predicts nothing;
+admitting every claimed novelty is as useless as admitting none.
+
+**Shape 6: sampling a time-varying property at its boundaries.** A guard that
+measures contention before and after a run is blind to contention *inside* it. A
+fingerprint taken around a sequence cannot see a file that changes and reverts
+within it. The check observes the right thing, in the right units, at a correct
+threshold — and is blind only to the interval between observations. Whenever a
+property varies over the window you are checking, sample the window, not its
+ends.
+
+**Shape 7: over-detection.** Every earlier shape describes a gate failing to fire
+when it should. A gate that fails a *correct* artifact is the mirror image, and a
+taxonomy built entirely from silence has no box for noise. This shape already had
+an instance and it had been mis-filed for three waves — a reminder that a
+classification scheme quietly shapes what you are able to notice.
+
+**When your own instrument turns out to have the defect you are cataloguing, say
+so in the catalogue.** Both shape-6 instances were in the timing harness I built
+two waves earlier, verifiable by reading five lines of my own code. That is the
+most useful possible place to find them, and the least comfortable.
+
+## Wave 641b — the rule a document is built on may never have been checked
+
+**Ask what a gate actually opens.** A documentation gate enforcing "every claim
+names the CI step that keeps it true" checked only that a line was *present*. It
+never opened the workflow directory. A quarter of the citations named steps that
+had been renamed or deleted — including, in one case, the citation belonging to
+that gate's own proposition. The rule the whole document is built on had never
+been checked once.
+
+**Resolve a citation, do not merely detect one.** "A reference exists" and "the
+reference resolves" differ exactly when something is renamed, which is the case
+you care about. If a document names an artifact — a step, a file, a function —
+the gate should look the artifact up.
+
+**Writing a check for one failure mode is an excellent way to commit its
+opposite.** Adding a check for *reading a claim as the design* introduced two
+**over-detection** defects in a row: reading bold text as a step name, then
+treating parentheticals and ellipses as step names. Both failed correct
+artifacts. After adding any new check, run it against a known-good tree before
+believing its first red.
+
+**The guard on the guard needs an anchor that does not move.** A "this check
+would pass on nothing" guard resolved paths relative to the *document under
+test*. Under the self-test, which copies that document to a temp directory, it
+found nothing and correctly failed the unmutated case. Anchor auxiliary lookups
+to the tool's own location, not to whatever it is currently pointed at.
+
+**Fix the citations in the same change as the check.** Adding resolution without
+repointing the 25 stale lines would have landed CI red, and a gate that lands red
+on arrival gets disabled rather than obeyed.
+
+## Wave 642 — "I cannot compare these" is not "these agree"
+
+**An empty comparison is not a passing comparison.** A structural checker
+extracted named port connections and compared the two maps. Positional
+instantiation — ordinary Verilog — yields an *empty* map on both sides, and empty
+equals empty, so the gate reported "0 disagreements" having read nothing. Any
+check that compares two derived collections must first assert those collections
+are non-empty, or it certifies its own blindness as agreement.
+
+**A fix for "names instead of values" can leave a name one indirection out.** A
+resolver was added specifically so two files defining the same constant
+differently would stop comparing equal. It resolved exactly one level, so
+`X = Y` left the string `"Y"` — the very defect it existed to remove, moved by
+one hop. Resolve to a fixed point, with a bound so a cycle terminates.
+
+**Test the function you fixed, not the pipeline around it.** A regression for the
+resolver was first written as a full end-to-end injection, and failed for a
+reason belonging to the injection's anchor text rather than to the code under
+test. Calling the resolver directly with a two-line input proved the actual
+property in one line. End-to-end tests are for integration; a unit fix wants a
+unit test.
+
+**Record the reported defects that do not reproduce, with the counter-evidence.**
+One of three criticals here was wrong — block-comment instances were already
+excluded, demonstrated with a two-instance input where only the live one was
+found. Three lines of negative result prevent the same claim being investigated
+again next wave.
+
+## Wave 643 — starve the subject, never the instrument
+
+**When a harness removes something to prove a check depends on it, remove only
+the SUBJECT.** A sweep that certifies every CI step fails when the design is
+absent moved the whole directory aside — including the ten gate scripts. Every
+python step then failed with "No such file: <gate>.py" and was recorded as
+failing correctly. For a quarter of the steps, the sweep proved only that
+deleting a script breaks the step that runs it. Ask, of any deletion-based
+control: could the observed failure have any cause other than the one being
+tested?
+
+**A negative control needs its positive arm.** "It fails when starved" and "it
+works when fed" are two claims, and a harness that only checks the first can
+certify a permanently broken step. If a control has two arms, run both.
+
+**Fixing a circular test makes the honest number smaller.** Swept steps went
+39 → 37 and exemptions 1 → 3. The larger number described a test that proved
+nothing; the smaller one describes a real guarantee. Expect this trade whenever
+a check starts asking the right question, and report the drop rather than
+absorbing it.
+
+**Not every step's subject is the design.** The sweep silently assumed it. A
+documentation gate and a self-test have subjects of their own, and requiring them
+to fail when the RTL vanishes would be over-detection. When exempting, write the
+reason AND name the internal absence case that replaces the external one.
+
+**An audit's "new shape" claim needs the same scrutiny as its defect claims.**
+This one was filed as a new taxonomy entry — "only the negative arm of a two-arm
+control" — a true and useful observation whose *mechanism* was an existing shape:
+a decline (between two causes of failure) that was never counted. Accepting it
+would have inflated the taxonomy with a description rather than a mechanism.
+
+**The gate you added last wave will catch you this wave.** A citation-resolution
+check added one wave earlier failed the build on this wave's own new
+proposition, which named a CI step that does not exist. That is the entire
+return on building it.
+
+## Wave 644 — sound, complete, faithful: three ways a check is wrong
+
+**A gate is a decision procedure, so name which of three things is broken.** Let
+`P` be the property it is documented to enforce.
+
+  - **Unsound** — it passes an artifact that violates `P`. (False green.)
+  - **Incomplete** — it fails an artifact that satisfies `P`. (False red.)
+  - **Unfaithful** — it soundly and completely decides some *other* property
+    `P′`, while its documentation claims `P`.
+
+These are independent, and every defect found in ten days of auditing is a
+failure of exactly one.
+
+**A taxonomy of defect shapes describes how you looked, not what exists.** Five
+shapes had accumulated — matching a form not a fact, an uncounted decline,
+reading a claim as the design, targeting by position, a guard tripping only at
+zero. All five turn out to be *unsoundness* mechanisms, because every audit had
+been instructed to find gates that pass when they should fail. The taxonomy was
+complete for the question being asked and silent about the rest of the field.
+When a catalogue looks exhaustive, check whether it is exhausting the subject or
+exhausting your search.
+
+**The unfaithful category is invisible to adversarial testing.** In every
+instance the instrument answered *correctly* — it decided its own `P′` soundly
+and completely — and only the sentence describing it was wrong. Injecting
+defects into the subject finds nothing, because the gate is right every time.
+These are found by reading the claim against the implementation, and nothing
+else has ever found one here. One stood twelve waves with the harness green
+throughout.
+
+**Know what kind of instrument you are running.** Adversarial agent review is a
+*soundness* instrument. It is extremely effective — roughly 28 defects in ten
+days — and it will drive false greens toward zero while leaving every caption
+untouched. If the only technique in use is adversarial review, the unfaithful
+category grows silently, because nothing in the loop is pointed at it.
+
+**Prefer a framing that makes a prediction over a list that summarises.** A list
+of five shapes says what has been seen. "Sound, complete, faithful are
+exhaustive over *the answer is wrong* and *the question is wrong*" says what a
+counterexample would have to look like — and that is checkable.
+
+## Wave 645 — instrument the category, then measure what the instrument misses
+
+**Faithfulness is undecidable; a projection of it is not.** You cannot
+mechanically compare "what the docstring means" with "what the code does". You
+can compare one concrete thing each asserts — which paths the code MUTATES
+against which paths the prose names. Pick a projection narrow enough to decide
+and consequential enough to matter, and say in the gate which projection it is.
+
+**Check what a program CHANGES, not what it reads.** A first version demanded
+that every path a gate *reads* appear verbatim in its docstring, and produced 24
+findings on a clean tree — prose says "reads the emitted RTL" where code says
+`build/rtl`, and prose is not a path literal. Reads are ubiquitous and described
+in words; mutations are rare, consequential, and worth naming exactly.
+
+**Write the retroactive test, and believe it when it says no.** The gate's own
+docstring claimed it would have caught the defect that motivated it. The
+retroactive test said otherwise — after an intermediate version appeared to pass
+only because the reconstruction had mangled the docstring it was supposed to
+preserve. A test that reconstructs an old version must be checked for having
+reconstructed it faithfully, or it grades the wrong artifact.
+
+**Declaring a path is not understanding it.** The motivating defect moved a
+directory aside that its docstring *did* name. The path was declared; the
+consequence — that the directory also held the instruments — was not. No
+path-level check sees that, and saying so plainly is more useful than a gate
+whose stated scope quietly exceeds its reach.
+
+**An instrument aimed at a new category will meet over-detection repeatedly.**
+Three times in one file in one wave here. Each was fixed by narrowing rather than
+by adding exceptions: mutations only, self-tests exempt, paths closed under
+parent prefixes. If a new check fires on a clean tree, the first hypothesis
+should be that its question is too broad, not that the tree is dirty.
+
+**A new gate needs its own absence case when the standard one cannot apply.**
+This one's subject is the gate scripts, which the absence sweep deliberately
+preserves — so starving the design cannot make it fail. It gets an exemption
+with a written reason plus an internal floor, rather than being wired into a
+sweep whose premise does not hold for it.
+
+**Say "instrumented, not covered".** The category has four members; this
+addresses the path projection of one. Naming the gap in the same breath as the
+tool stops the tool from being read as the solution.
+
+## Wave 646 — a gated claim and its ungated synonym
+
+**A gate that matches one phrasing sees only that phrasing.** The same document
+carried "all 37 checking steps" (gated, kept correct through four count changes)
+and, four hundred words later, "all forty CI steps" (ungated, wrong). Both
+described the same quantity. Whenever you register a claim by pattern, ask what
+else in the document says the same thing in different words — that is where the
+drift goes, precisely because the gated spelling is maintained.
+
+**Registering the synonym is usually the wrong fix.** A pattern that must MATCH
+forbids ever rephrasing the sentence, and the maintenance burden grows with every
+paraphrase. The inverse is better: for a quantity the tree already knows, blank
+out the registered spelling and fail on any OTHER numeric claim about it. That
+permits rewriting the prose freely and still forbids drift.
+
+**Let your own guards rule out designs.** Removing the numeric wording tripped an
+UNMET guard added fifteen waves earlier — "the claim is unchecked, not clean" —
+which is exactly what killed the register-the-synonym approach before it shipped.
+A guard that constrains your next design decision is worth more than one that
+only reports.
+
+**Abandon a check that would have nothing to check, and record why.** The first
+design for this projection compared counts stated in gate docstrings against
+runtime counts. No gate docstring states a count, so it would have been a gate
+that checks nothing — the exact failure the campaign exists to prevent. Writing
+down the abandoned design costs three lines and stops the next wave rebuilding
+it.
+
+**A new instrument meets over-detection first. Plan for it.** Three consecutive
+waves, three different checks, each firing on a clean tree on its first run: a
+docstring-vs-path check (24 findings), a function-scope widening (11), and a
+numeric-claim scan (1, on a different subject entirely that happened to share a
+noun). In every case the fix was to NARROW the question, not to add exceptions.
+If a new check fires on a clean tree, the first hypothesis is that its question
+is too broad.
+
+## Wave 647 — a retraction is worthless where the claim isn't
+
+**Put the correction where the claim is, not where the correction happened.** A
+document asserted a figure and, three thousand words later, superseded it with a
+better-measured one — and even said it was doing so. A reader meeting the first
+sentence still gets a retracted number with no warning. Corrections belong
+inline, at the site of the original claim, with a forward pointer. Twice now this
+campaign has recorded a withdrawal hundreds of lines from what it withdraws.
+
+**Use a document's own convention to make a fuzzy rule decidable.** "Is this
+timing trustworthy?" is not checkable. But if propositions are dated records and
+the README is the current-state document, then a duration in the README is a
+LIVE claim and must be traceable — carrying either the conditions it was
+measured under or a citation leading to them. The rule fell out of a convention
+that already existed; no new discipline had to be invented.
+
+**Audit for a class before building the gate for it.** The audit found the live
+defect first; the gate then encoded what the audit had established. Building the
+gate first would have produced something that passed on a tree that was already
+wrong, and the finding would have been invisible.
+
+**A gate will fire on the documentation of its own fix.** The check added one
+wave earlier flagged a bad phrase that exists in the document only because the
+narrative quotes it as the example of what was fixed. This has now happened
+twice — once with an assertion quoted in a comment, once with a phrase quoted in
+prose. Any gate matching text must exclude quoted text, because writing about a
+defect requires reproducing it.
+
+**Say which members of a class remain uninstrumented.** Three projections of a
+four-member category now have checks; the fourth is a noun-phrase mismatch with
+no countable projection. Naming the gap beside the tools stops the tools reading
+as coverage — and it explains why that member survived twelve waves while the
+others were caught in three.
+
+## Wave 648 — a negative control licenses nothing on its own
+
+**"Fails when starved" and "works when fed" are two claims.** A harness that
+only asks the first cannot distinguish a check that depends on its subject from
+a check that is simply broken — both fail when starved, and both get recorded as
+correct. Two live CI steps had been broken for days behind exactly this gap: one
+raised `ValueError` on a stray tuple element, the other mutated emitter text that
+a refactor had rewritten three days earlier. Run the positive arm, even if it
+costs what the real pipeline costs.
+
+**Ask which failures your control cannot distinguish.** That is the general form.
+Any deletion-based or perturbation-based control has a set of causes it cannot
+tell apart, and the interesting question is always what else lives in that set.
+
+**A defect can restore the exact condition a proposition was written to fix.**
+Half the zero-size properties went back to being unrun — the same suite whose
+unrun properties motivated the gate — by one stray character. Fixing a class does
+not immunise against re-entering it, so the gate that detects the class has to
+keep working, and that gate needs its own positive arm.
+
+**Over-detection is the default state of a check, not an occasional slip.** A
+census of ten gates found all ten fail some semantics-preserving change: a
+comment spliced into a body, an equivalent literal spelling, a signed zero, a
+`.yaml` extension, an indented marker. Unsoundness was in six of ten after ten
+days of hunting; incompleteness was in ten of ten after one pass — because nobody
+had asked. Budget for it when you write a gate, and probe from both directions.
+
+**A gate that cries wolf becomes an unsound gate with extra steps.** People
+disable checks that fail correct work. So incompleteness is not the milder
+failure mode; it is the slower path to the same place.
+
+**Your catalogue of failure shapes is a catalogue of your search.** Five shapes
+had accumulated and every one was an unsoundness mechanism, because every audit
+had been pointed at unsoundness. When a taxonomy looks complete, ask what
+question produced it before concluding anything about the field.
+
+## Wave 649 — an exit code is not a diagnosis
+
+**"It failed" and "it noticed" are different facts.** A harness that reads only
+the sign of an exit code cannot tell a check that detected its subject was
+missing from one that crashed on an unrelated error, ran a binary that does not
+exist, or hung. All three look identical. Require positive evidence — a
+diagnostic line naming the absence — before recording that a check behaved
+correctly.
+
+**Measure the split before deciding what to enforce.** Classifying what each
+step actually emitted turned "0 passing on nothing" into "9 diagnosed, 28 merely
+crashed". The headline claim had been true and nearly vacuous. That measurement
+is worth more than the fix, because it converts an assumption into a number that
+can be tracked.
+
+**Ship a ratchet when the honest threshold would disable the gate.** Twenty-eight
+steps cannot be fixed in one wave, and failing them all would take the check out
+of service — which is how an incomplete gate turns into an unsound one. Publish
+the count, cap it at today's value, and let it only fall. Progress becomes
+visible without the gate becoming an obstacle.
+
+**Check that an exemption did any work.** A list-membership test counted a step
+as exempt even when it failed, so the summary was identical whether the
+exemption suppressed anything or not. An exemption is a claim that a green
+verdict needed suppressing; count it only when it actually did.
+
+**A comment can describe behaviour the code never had.** The exemption counter
+carried a comment saying it reported "exemptions actually used" — written in the
+same wave as the code that did not do that. When you write what a function does,
+re-read the function.
+
+## Wave 650 — a wrong gate fails loudly, a wrong measurement propagates
+
+**Check a classifier against cases whose answer you already know, before
+publishing its output.** A verdict classifier reported "9 diagnosed, 28 merely
+crashed", and that number went into a proposition, a README and a filed issue.
+All 28 were in fact naming the exact missing file — in the *tool's* words, not
+the repository's house style. The classifier had been written to recognise one
+project convention and scored yosys's and Python's perfectly clear diagnostics
+as silence.
+
+**Do not encode house style where you mean a fact.** The question was "did this
+step notice its subject was gone?" and the test asked "does the output match our
+`::error::` convention?". Those coincide only inside code we wrote. The corrected
+test asks whether the failure names a starved path — which is the actual
+distinction, and holds regardless of who emitted the message.
+
+**Derive the criterion from the failure you are trying to separate.** The
+distinction that mattered was "starved" versus "already broken", so the test
+should ask what only a starved run can say. Working backwards from the two
+defects that hid gave a criterion that catches both — and a seven-case check,
+including those two, that keeps it honest.
+
+**A fixture that fails silently may be modelling something your tree does not
+contain.** The self-test's "honest step" was a bare `test -f`. No real step
+behaved that way, so the fixture was exercising a case that only existed in the
+test — and it blocked tightening a threshold that the real tree already met.
+
+**When a measurement is corrected, correct it where it was published.** The
+proposition, the README sentence and the filed issue each carried the wrong
+figure, and each needed the correction attached to it — not a new document
+saying so elsewhere. This is the second time a published number has been wrong
+here; both times the fix was to annotate at the site, not to quietly restate.
+
+**Over-detection applies to measurements, not just to gates.** Four consecutive
+waves have now seen a new instrument fire wrongly on first use. A gate that
+over-detects announces itself by failing correct work. A *measurement* that
+over-detects produces a plausible number that then gets quoted — which is
+strictly worse, and argues for treating every new figure as unverified until an
+injection confirms the instrument.
+
+## Wave 651 — a gate fails hardest on its author's own idioms
+
+**The inputs a check rejects wrongly are the ones its author never pictured —
+which means the house style.** Six over-detections, and all six rejected
+conventions used throughout the very repository the gate guards: a signed
+literal `16'sd0`, a backticked identifier in a comment the gate itself parses, a
+markdown line indented two spaces, a re-aligned column, an explanatory comment
+inside an assertion. Nothing exotic. When writing a gate, go and read how the
+codebase actually writes the thing you are matching, rather than how you would
+write it.
+
+**"Matching inside comments" has now cost five separate fixes across four
+files.** Each was found on its own, wave after wave, because nobody grepped for
+the pattern after the first. If a defect has a textual signature, search the
+whole tree for that signature the same hour you fix it — the search costs
+seconds and this one has cost five waves.
+
+**A one-line regex is a specification, and specifications need their negative
+cases.** Widening a zero-literal pattern to accept `16'sd0` risks accepting
+`16'sd1`. Check both directions explicitly and keep both in the test; a fix
+verified only on the case that was failing is half-verified.
+
+**Record the fixes you did not make, with the reason.** Four of the ten needed
+more than a character — an exact-text permutation table, a structural comparison
+that uses net names, a floor too brittle for reformatting, a glob that misses an
+extension. Naming them keeps the count honest and stops a future wave reporting
+"all fixed" from a memory of the easy six.
+
+**A proved equivalence turns a complaint into a finding.** Every census entry
+came with a yosys `miter -equiv` or a rendered-HTML comparison showing the change
+was semantics-preserving. Without that, "the gate fired on my edit" is an
+argument; with it, the gate is simply wrong. Make the equivalence the price of
+admission for an over-detection report.
+
+## Wave 652 — a defect with a textual signature should be swept, not met again
+
+**Five fixes, four files, one shape, all found separately.** A regex applied to
+raw source, matching inside a comment. Each instance was discovered by whatever
+it broke, wave after wave, while the shape had a grep-able signature the entire
+time. When a defect recurs even twice, stop fixing instances and write the sweep.
+
+**"Strip it, or declare why you don't" beats "strip it".** Several gates read
+comments deliberately — one parses range annotations, one matches tool output
+where comments cannot occur, one reads Python rather than Verilog. A blanket rule
+would have been wrong for all of them. A rule with a written exemption marker
+gets the same coverage and forces each exception to be justified once, in the
+file, where a reader can check it.
+
+**The exemption list is where the knowledge lives.** Writing those four
+declarations surfaced facts nobody had recorded: which gates depend on comments
+being present, and why. That is worth more than the check itself, and it exists
+only because the gate demanded a sentence rather than accepting silence.
+
+**Recognise helpers by name, and expect to miss one.** The new gate flagged a
+file whose comment-stripper is called `code_mask` — it does the right thing under
+an unfamiliar name. Fifth consecutive wave in which a new instrument over-detected
+on first run. Assume your list of "acceptable ways to do this" is incomplete and
+check the flagged cases before believing them.
+
+**The value of closing a class is the instance you never see.** Five fixes were
+already made; the sweep does not recover them. What it buys is the sixth
+occurrence failing the build instead of being found by whatever it breaks — and
+that is the only return, so say so plainly rather than implying the sweep
+repaired anything.
+
+## Wave 653 — a property can protect a defect as effectively as a test
+
+**When something asserts the buggy behaviour, the bug is not merely untested —
+it is defended.** A requantizer emits a packed word only when full, silently
+dropping a layer's last partial word, and the module carries a formal property
+*proving* it never emits a partial word. Any fix fails the suite. This is the
+second instance of the shape here; the first was a unit test pinning a wrong
+width. When you meet a surprising behaviour, check whether anything asserts it
+before assuming it is unintended — and if something does, that assertion is part
+of the defect.
+
+**Two statements about the design, one file apart, disagreeing.** An annotation
+said a counter advances `ceil(n/27)` times; the RTL does `floor`. The
+safety argument built on it survived, because floor ≤ ceil — so nothing broke and
+nothing complained. But the discrepancy was pointing straight at the functional
+gap, and the `ceil` version was what the design was *intended* to do. A
+documentation error that is harmless for the stated purpose can still be the
+clearest available evidence of a real defect.
+
+**Ask what the annotation's author believed.** The `ceil` reading is only
+explicable if they thought a partial word gets flushed. Reading a wrong comment
+as a record of intent — rather than as a thing to correct and move past — is what
+turned a documentation fix into a design finding.
+
+**Control properties do not see data loss.** Dropping a layer's last twenty-six
+results leaves every handshake, phase and readiness signal correct. The engine
+runs, the buffers fill, and the answer is wrong. A suite that constrains control
+will report perfect health through this class of defect, in both directions:
+earlier a wrong arithmetic value disturbed nothing, and here a missing value does
+the same.
+
+**Fix the documentation; do not unilaterally fix the hardware.** Whether to add a
+flush, require a multiple-of-27 contract, or tolerate a partial final word is a
+design decision that changes emitted hardware. Correcting the false annotation
+and recording the defect is complete work; silently changing behaviour is not.
+
+## Wave 654 — twelve days on instruments, one day on the design
+
+**A catalogue of failure shapes is a catalogue of the questions asked.** Twelve
+consecutive waves audited the verification tooling and found real defects in it
+every single time — which felt like evidence the approach was working. One wave
+pointed at the design instead found five confirmed defects, including one where
+multi-layer inference does not terminate. Nothing was wrong with the instrument
+work; it simply could not answer a question it never asked. When a line of
+investigation keeps succeeding, that is not evidence it is the right line.
+
+**A control suite reports perfect health through data defects.** Twenty-eight
+integration properties prove while the machine computes the wrong answer and
+deadlocks past one layer. Handshakes, buffer phase, address contiguity and
+readiness were all correct. If a suite constrains control, its greenness says
+nothing whatever about the values flowing through — and that had been recorded
+in writing two dozen waves earlier without changing where anyone looked.
+
+**Reproduce through the real interface when you can.** The strongest of the five
+findings came from a testbench driving the assembled engine only through its CSR
+aperture with a compliant bus model. A module-level counterexample invites the
+question "is that reachable?"; a port-level one does not.
+
+**Look for the shared line.** Two of five defects traced to a single assignment
+using the wrong index variable. Reporting five separate defects would have
+implied five separate fixes; finding the common root changes both the estimate
+and the order of work.
+
+**A defect protected by an assertion makes its own repair fail CI.** The fix for
+the missing flush must retire the property that proves the flush is absent, in
+the same change. Say this explicitly in the report — otherwise whoever picks it
+up hits a red suite and reasonably concludes their fix is wrong.
+
+**Report defects; do not silently change the subject.** Five fixes were proposed
+by the agents that found them, all touching emitted hardware and interacting with
+one another. Recording them precisely, with reproductions and root causes, is
+complete work. Choosing between architectural repairs is not the reviewer's call.
+
+## Wave 655 — report what was proved clean, and don't inherit a root cause
+
+**A report listing only failures misrepresents the subject.** One module yielded
+five defects and four proved-correct behaviours — a quantiser checked exhaustively
+against an independent reference including its one overflow corner, a packing
+order matching its documentation exactly, an invalid encoding shown unreachable
+in all 27 fields rather than the one an existing property guards. Record the
+clean results with the same care as the broken ones: they bound what still needs
+looking at, and they are the difference between "this module is broken" and
+"these five things in this module are broken".
+
+**Do not inherit a root cause from one agent's judgement.** A refuting agent
+named a specific line as the root of two defects; I repeated that as settled.
+The hunting agent had explicitly declined to adjudicate, writing that the fix
+might belong on either side of the interface. When two investigators disagree
+about *why*, the finding still stands and the attribution does not — say so
+rather than picking the more confident phrasing.
+
+**Two components disagreeing about units is a defect even when neither is
+wrong.** A register serving as both a neuron count and a byte-count DMA length
+is a contract violation visible only by reading one module's header against
+another's call site. No property covers it, because each side is internally
+consistent. Grep for parameters that cross a module boundary and check the units
+on both ends.
+
+**"Confirmed by reading" is a real strength, and a lower one than "reproduced".**
+The sixth defect was established by comparing a documented contract with a call
+site — sound, but not simulated. Recording it at that strength keeps the next
+reader from treating it as equivalent to the five that have counterexamples, and
+tells them exactly what work remains to promote it.
+
+## Wave 656 — a floor on a total says nothing about coverage
+
+**Check that a new gate parses the specific artifact it was built for.** A units
+checker written to catch one known connection never parsed that connection at
+all: a non-greedy body capture stopped at the first `);` and could not survive a
+nested parenthesis in the port list. Eleven instantiations were read, the one
+that mattered was absent, and the tree reported clean. Before believing a new
+gate, print what it actually parsed and look for your subject by name.
+
+**A coverage floor on a total is not a coverage floor.** `compared > 0` passed
+happily on twenty *other* connections while the only interesting one was
+missing. If a gate exists for a particular case, assert that the particular case
+was examined — not that some examining happened.
+
+**A false positive can name the right thing and hide a parse error.** A control
+keyword parsed as a module name produced a finding that cited exactly the two
+signals of the real defect. The gate looked like it worked, so nobody checked
+whether it had read the actual instantiation. When output matches expectation,
+that is the moment to verify the mechanism, not the moment to stop.
+
+**A vocabulary encodes distinctions; check they are the design's.** Separating
+"chunk" from "word" produced two false findings because in this design a chunk
+IS a 54-bit word. When a check reasons from names, its word-families are a claim
+about the domain and need the same scrutiny as any other claim.
+
+**Declare a known-open defect rather than silencing or fixing it.** A real defect
+whose repair is a design decision belongs in an explicit table with its reason
+and its issue, reported as a warning, with everything not on the list failing.
+That keeps the gate useful today, keeps the defect visible, and makes removing
+the entry without fixing it turn the build red.
+
+## Wave 657 — a gate should name the thing it exists for
+
+**Give every gate a witness: the specific, named artifact whose absence must be
+loud.** Coverage floors count totals, and a total stays healthy while the one
+interesting case goes missing. Naming the subject — this instantiation, this
+declaration, this register — turns "something was examined" into "the thing this
+gate was written for was examined". Verify it by renaming that subject and
+confirming the gate fails.
+
+**Check your own framing before quoting a coverage ratio.** "The vocabulary
+covers 14% of connections" implied most quantities were unchecked. Enumerating
+the other 86% showed they were clocks, resets, data buses and handshakes — not
+quantities at all. A denominator that includes everything makes any checker look
+negligent. State what the denominator actually contains before drawing a
+conclusion from the ratio.
+
+**When a witness looks silent, suspect the test first.** Two appeared not to fire
+this wave. One was caught by a different guard that ran earlier, so the gate
+failed correctly and only the expected message differed. The other was never
+exercised, because the mutation renamed a declaration while the gate reads
+assignments. Both times the instrument was right and the check of it was wrong.
+
+**Assert that your edit landed — again.** A witness was inserted with
+`str.replace()` on an anchor that did not match, with no count assertion, so the
+variable it populated stayed empty and the new check ran against nothing. This
+rule is written in three separate places in this campaign's notes and was broken
+in the wave that cites them. Knowing a rule and applying it under time pressure
+are different skills; make the assertion mechanical, not remembered.
+
+**A negative result with a corrected framing is a full result.** Most of this
+wave's vocabulary work found nothing to add, and saying so — with the reason the
+earlier estimate was wrong — is more useful than the one family that did need
+adding.
+
+## Wave 658 — a defect list can be complete about symptoms and wrong about causes
+
+**Test each candidate root cause ALONE before believing any of them.** Three
+candidates were enumerated from static reading and adversarial proof. Applied one
+at a time to the assembled system: the first was byte-identical to stock across
+every configuration — it changed nothing at all — the second changed nothing for
+any interesting input, and the third unblocked one stage while leaving the system
+just as dead. The true root was a fourth reading nobody had listed. An
+explanation that has never been applied in isolation is a hypothesis.
+
+**Symptoms cluster; causes do not.** Five separately-found defects turned out to
+be four faces of a single units confusion, and one of the five was not a defect
+at all — it was correct under the right reading. Finding many independent
+problems in one area is weak evidence they are independent.
+
+**Only the whole system can adjudicate between module-level explanations.** Every
+candidate was defensible from the module it lived in. Sweeping the assembled
+machine across its real parameter space, driven through its actual host
+interface, is what separated "changes nothing" from "changes everything", and no
+amount of further module-level proof would have.
+
+**A repaired variant is the strongest confirmation available.** Building the
+coherent fix and showing the system completes for exactly the configurations
+theory predicts — and fails, correctly, for exactly the ones it predicts should —
+turns a diagnosis into a demonstration. Predicted and measured patterns matching
+with no exceptions is a much stronger claim than any single counterexample.
+
+**When your published root cause is refuted, say which claim died.** Prop. 121a
+named a line as the root of two defects; it changes nothing whatsoever. The
+symptoms it described are still real and still reproduced. Separating "the
+finding stands" from "the attribution is wrong" is what lets the next reader keep
+the useful half.
+
+## Wave 659 — applying a fix is where the assertions come due
+
+**A verified variant is not a verified patch.** The repair had been demonstrated
+on a hand-patched copy; porting it into the emitters is a separate piece of work
+with its own failure modes. Fifteen edits, each asserted against its anchor, then
+a check that the regenerated RTL carries every one of the fifteen changes the
+verified tree had. Neither step is optional, and the second is what turns "I made
+the edits" into "the artifact has the fix".
+
+**Retire the property that asserts the defect, in the same change.** A formal
+property proved the packer never emits a partial word — the exact behaviour being
+repaired. Left in place it would have failed the build and looked like the fix
+was wrong. Replace it with the contract the repaired design actually has, rather
+than deleting it: "a word is emitted on a full accumulation or on the flush, and
+never spontaneously" is the claim that survives.
+
+**Simulation evidence and formal evidence can disagree, and both belong in the
+report.** The sweep showed multi-layer inference working across the parameter
+space; the integration suite refuted. Whether that is a property encoding the old
+defect or a genuine regression was not yet established. Letting the stronger
+result stand for the whole picture is exactly the caption error this campaign
+keeps finding, so the commit says both.
+
+**Commit an incomplete verification with the gap named in the message, not
+hidden.** Fifteen hardware edits are worse lost than committed, and worse
+committed silently than committed with "the integration properties refute and I
+do not yet know why" written into the record. A future reader needs to know
+which half of the evidence was missing.
+
+**A tooling adapter is not a design change, and must be provably so.** Icarus
+needed declare-before-use ordering the emitter does not produce. Hoisting every
+declaration mechanically — and splitting an initialised wire into a declaration
+plus an assign left in place — keeps the logic identical, where hand-editing the
+few names the error mentions invites exactly the doubt you cannot afford when
+the simulation is your main evidence.
+
+## Wave 659b — a suite grown alongside a defect contains properties that ARE the defect
+
+**When a repair makes properties refute, run the before/after control first.**
+Three engine properties failed on the fixed RTL. Testing each against the
+*pre-fix* tree showed all three PROVED before — so the fix changed them, and the
+only remaining question was whether they described the design or the bug. Without
+that control the natural reading is "my fix broke something", and the natural
+response is to undo a correct repair.
+
+**Four properties have now been found asserting a defect rather than a
+contract.** One proved a packer never emits a partial word (the defect). One
+asserted a ping-pong flips one cycle after a strobe — which was precisely the
+too-early flip being repaired. Two tracked a signal the repair disconnected from
+the memory they describe. A verification suite that grew alongside a bug will
+encode that bug, so a repair must retire or re-point those properties **in the
+same change** or it reads as a regression. Budget for it when estimating.
+
+**Re-point, don't weaken.** Each property kept its claim and named the signal
+that now carries the meaning it was written about: alternation still asserted,
+just relative to the strobe that actually flips the buffer; the read-extent claim
+still asserted, just about the address that actually reaches the memory. Deleting
+them would have been faster and would have removed real coverage.
+
+**Two kinds of evidence, both reported, neither standing for the other.**
+Simulation showed the engine running across the parameter space while the formal
+suite refuted. Publishing only the stronger result is the caption error this
+campaign keeps finding; publishing both is what made the disagreement
+investigable rather than embarrassing.
+
+**Say what still is not established, at the end.** The sweep covers the
+configurations swept; the proofs are bounded at seq 40. "The engine runs and its
+properties hold" is a much narrower claim than "the design is correct", and the
+difference is exactly what a reader needs.
+
+## Wave 660 — check the value, not just the handshake
+
+**A harness that feeds a constant can only ever check control flow.** The sweep
+testbench served the same word to both memory ports, so it could establish that
+the engine starts, runs and terminates — and nothing whatever about what it
+computed. Six defects passed through it. If a harness's stimulus carries no
+information, its verdict carries none about data.
+
+**Look for two independent ports before assuming a value check is impossible.**
+Here the DMA reads activations on one interface and the prefetcher reads weights
+on another, so a testbench can drive a known input against known weights and
+compute the expected answer itself. That structural fact is what made an
+end-to-end reference check a morning's work rather than a project.
+
+**Choose a reference value that is wrong under the failure you fear.** Nine
+(+1), nine (0) and nine (−1) against all-(+1) weights sums to exactly zero, and
+almost any mis-addressed read picks up a different mixture and a different sum.
+A test vector of all-ones would have agreed with a badly broken engine.
+
+**Report the part that worked and the part that did not, at their true
+strengths.** The MAC matched the reference exactly — a first for this campaign.
+The emitted trit came out `X`. Whether that X is a real defect, a sampling
+artifact, or an error in the new harness is not established, and writing
+"undefined value reaches an output" would have been a much bigger claim than the
+evidence supports. An observation recorded as an observation stays useful; one
+inflated to a finding has to be retracted.
+
+**Check the harness into the repository.** The only artifact that can answer
+"does this compute the right number" belongs beside the design, not in /tmp. Its
+absence is precisely what let the defects through, and a scratch copy would
+recreate that absence next week.
+
+## Wave 661 — a reference chosen to discriminate against the design can be indiscriminate against the harness
+
+**Pick a reference value that no uninitialised variable could produce.** The test
+vector was designed so the expected accumulator would be exactly 0, because zero
+is wrong under almost any indexing error — a mis-addressed read picks up a
+different mixture. That reasoning was sound about the design and blind about the
+instrument: zero is also what an unwritten counter reads, and the "agreement"
+reported was a variable that had never been assigned. Choose a reference that is
+discriminating against BOTH, or assert separately that the observation actually
+happened.
+
+**Assert that the capture fired, not just that the value matches.** A testbench
+variable assigned under a condition needs a companion flag proving the condition
+occurred. Comparing an initial value against a reference is not a measurement,
+and it will look exactly like a passing test.
+
+**A wait for a signal that your own action triggers is a deadlock.** Waiting for
+`prefetch_done` before starting inference hung forever, because the prefetch is
+started BY the inference. The output — "done=0 after 5000 cycles" — reads like a
+design finding and was entirely self-inflicted. Before reporting that something
+never completes, check whether anything was ever asked to start it.
+
+**Do not start on a fixed delay when an observable condition exists.** The
+original harness began inference 200 cycles after the DMA, which is a guess
+dressed as a sequence. Every value it then produced was conditional on that guess
+being right, and it was not.
+
+**"Instrument built, not measurement taken" is a real status worth reporting.**
+The harness exists, is checked in, and its sequencing errors are now documented.
+That is genuine progress, and it is much less than the headline the previous wave
+published. Saying which of the two you have is the whole difference.
+
+## Wave 662 — wrong answer, no answer, named missing precondition
+
+**Track which of the three a failing check is giving you.** A harness that
+reports a *wrong answer* is dangerous. One that reports *no answer* is useless.
+One that reports a *named missing precondition* — "no weight ever reaches the
+memory the MAC reads" — is a foundation. Three consecutive waves moved through
+exactly that sequence, and only the last is progress worth reporting as such.
+
+**Probe the preconditions, not just the result.** Comparing an output against a
+reference tells you nothing when an input never arrived. A two-line counter on
+the weight-write path turned an unexplained mismatch into a specific, actionable
+statement, and it cost less than the paragraph speculating about the mismatch
+would have.
+
+**Choose reference values outside the range of every degenerate reading.** Zero
+is what an unwritten register, an unassigned variable and a stuck bus all
+produce. A reference of 27 and a trit of `TRIT_P` cannot be manufactured by any
+of them. When picking a test vector, ask what your instrument would show if it
+were completely broken, and pick something else.
+
+**Pair every conditional capture with a flag that it happened.** `x` assigned
+under `if (cond)` needs `saw_x` set in the same branch. Without it, a comparison
+against `x` is a comparison against its initial value whenever `cond` never
+fires — and that reads as a pass.
+
+**Say which hypothesis your evidence points at, and that it is a lead.** The
+prefetch may be undriven by this harness or unstarted by the design. Another
+harness raised a prefetch IRQ, which points at mine first. Recording that as a
+direction rather than a conclusion is what stops the next wave inheriting a
+guess as a fact.
+
+## Wave 663 — the answer was in a column nobody read
+
+**A control signal that is zero everywhere is a different finding from a stalled
+one.** The weight path showed `start_prefetch`, `mem_rd_en`, `mem_rd_valid`,
+`prefetch_done` and `bram_we` all at zero. That rules out handshakes, parameters
+and timing in one observation, and points straight at "nothing ever asked for
+this to happen". Probe the whole chain, not the last stage: the shape of the
+zeros localises the cause.
+
+**Re-read old measurement tables against new questions.** A sweep committed five
+waves earlier had a prefetch-IRQ column reading zero for every configuration —
+the exact evidence for this defect, sitting in the repository, interpreted at the
+time as an uninteresting column. Data collected for one purpose answers questions
+nobody had yet. When a new hypothesis forms, grep the tables you already have
+before generating more.
+
+**"Only for the next one" is a smell in any initialise-then-iterate design.**
+The prefetcher exists to fetch the *following* layer's weights, which is correct
+and complete for every layer but the first. Whenever a mechanism is defined
+relative to a predecessor, ask what plays that role at the boundary — and check
+that something does, rather than assuming the general case covers it.
+
+**Memory CONTENTS are invisible to control properties.** Three separate defects
+in this campaign now share that shape. A suite that constrains handshakes, phase
+and readiness will pass an engine reading an entirely unwritten memory: it runs,
+completes and raises done. If a design has memories, at least one property must
+say something about what is in them.
+
+## Wave 664 — a gate's error message is a promise it has to keep
+
+**An error message that offers an alternative must implement it.** One gate had
+said "fix the defect or document it in FORMAL_FOUNDATIONS.md" since the day it
+was written, and had no mechanism whatever for accepting documentation. That is
+an unfaithful gate — sound and complete for the property it decides, wrong about
+the property it advertises — and the failure lives in a string rather than in
+logic, so no amount of testing the checker would find it. Read your gates' error
+text as claims.
+
+**Apply an existing property pattern to every memory it fits, at the time you
+write it.** A written-bitmap property guarded one memory for thirty waves while
+the memory beside it had none, and the defect that cost was found by simulation
+three waves ago. When a property turns out to be worth having, grep for the other
+places its subject appears before moving on.
+
+**Encode a defect you are not fixing as a failing property, not just prose.** A
+proposition describing a gap is checked when someone reads it. A gated expected
+refutation is checked every run, and it makes a silent repair impossible: the fix
+cannot land without someone deliberately moving the property out of its guard.
+
+**Check the column index before quoting a table.** A corroboration was drawn from
+column 15 when the header put the subject at 16. The conclusion survived and the
+stated evidence did not — and the correct column was better evidence than the one
+claimed. Print the header alongside the data whenever you cite a position.
+
+**A count of "properties proved" must exclude properties expected to fail.**
+Adding a known-refuting property inflated an integration figure by exactly the
+number of known-open defects, which inverts what that number is for. The tree
+already excluded non-vacuity oracles for the same reason; the new category needed
+the same treatment, and the claims gate caught it.
+
+## Wave 665 — when the simulator and the solver disagree, you have one result, not two
+
+The layer-0 weight load landed. Simulation went from every weight-path signal
+reading zero to `bram_we=1` and an emitted trit matching the reference — the
+first agreement between an engine output and a computed expectation in the
+campaign. The formal property written last wave for exactly this defect still
+refutes.
+
+**A repair is not confirmed by the evidence that likes it.** The temptation was
+to report the simulation and mention the formal result as a footnote about bounds.
+That gets it backwards: the property was added *specifically* to detect this gap,
+and it still fires. Either the bound is too short or something remains. Both are
+open questions, and a proposition that picks the flattering one is not a
+measurement — it is advocacy with a gate line attached.
+
+**A designed-in expected refutation is worth its cost precisely here.** Prop. 130
+gated the property behind `T27_FORMAL_OPEN` so a fix could not land silently.
+One wave later it did its job: it refused to flip on a change that the
+simulation applauded. A gate you can turn green by fixing the thing is worth more
+than a gate that was green all along.
+
+**Report the contradiction you cannot explain, in the same breath as the win.**
+The harness read `acc=0` while the design emitted `TRIT_P` at threshold 3 — an
+impossible pair. Saying "the trit matches" and omitting that is technically true
+and materially false. Name the impossibility and mark it unestablished; the next
+wave needs to know the harness is suspect, not that the engine is fixed.
+
+## Wave 666 — an assumption that makes your property pass may have deleted every trace
+
+The single most important lesson of this campaign so far, and it is about the
+instrument, not the design.
+
+**Under `-set-init-zero`, `assume (R == k)` on a reset-to-zero register is
+unsatisfiable.** Every register is zero at t=0. An always-assumption that one is
+nonzero contradicts itself at the first cycle reset holds. No trace satisfies the
+assumption set — and yosys then reports **"proof succeeded"** for every property
+in the run, with no diagnostic and exit code 0. `assert (1'b0)` proves too.
+
+I hit this twice in one session and wrote "root cause confirmed" the first time.
+
+**The check costs one solver call: inject `assert (1'b0)` and require it to
+REFUTE.** A refutation exhibits a satisfying trace, which is exactly
+satisfiability of the assumption set. If a literally false assertion proves, every
+result from that configuration is meaningless. Always run it with a control —
+"proves with the assumption, refutes without" is the finding; either half alone
+is not.
+
+**A tool that answers a question you did not ask, and answers it soundly, is the
+hardest failure to see.** This is the `unfaithful` category — sound about `P′`
+while claiming `P` — pointed at the method rather than the artifact. The
+taxonomy generalises further than it was written for.
+
+**Provable is not simulable.** Yosys resolves declare-after-use; Icarus rejects
+it. A generated design can pass every formal gate while never having compiled in
+a simulator — which means its control is checked and its arithmetic never has
+been. Check that the artifact your value-measurements run on is the artifact your
+proofs run on; if it will not build, a previously published measurement from it
+is **unreproduced**, and unreproduced obliges the same correction as refuted.
+
+**When your own new gate fails a sibling gate, that is the system working.**
+Three of this wave's defects were in the gate I wrote this wave — an unstripped
+comment regex, a decline that exited 0, and a crash where a diagnosis belonged.
+All three are shapes I had already catalogued. Writing the catalogue does not
+exempt you from it. Record the one you cannot fix as failing; do not raise its
+ceiling or exclude it from the sweep.
+
+## Wave 667 — a probe that fails to land reports the opposite of the truth
+
+**Injected-probe audits invert on failure; they do not degrade to silence.** I
+built a sweep that injects `assert(1'b0)` into each proof step and requires a
+refutation. Its first run said twelve steps were vacuous. All twelve were false:
+the workflow writes relative paths, my substitution keyed on absolute ones, so
+the probed copies were written and never read. An *unprobed* suite proves — so
+the missing probe produced the failing verdict for every step. Not "no data": the
+wrong data, stated confidently.
+
+The only reason I caught it was that a sibling tool had measured one of those
+same steps live minutes earlier. **Build the contradiction in on purpose** —
+overlapping tools that must agree are cheaper than a trace dump.
+
+**Assert delivery, not construction.** The gate I wrote one wave earlier asserts
+its probe anchor matches exactly once, with the comment "a probe that does not
+land tests nothing". The sweep, same hand, one wave later, omitted it. Writing
+the catalogue does not exempt you from the catalogue.
+
+**Sanitise or index — never both on different strings.** Adding a comment
+stripper introduced a fresh false positive within one command: detection ran on
+stripped text while the insertion offset indexed the original. Stripping shifts
+every index after the first comment. If you clean text and then edit by position,
+one of those two steps is wrong.
+
+**A value check needs three bars, and the middle one is the one people skip.**
+TRUE (the numbers agree), ALIVE (the capture demonstrably fired, against a
+reference value no default could hold), BITING (perturb the *reference alone* and
+watch it fail). My first control zeroed the weights — engine and reference moved
+together, which proves responsiveness and not detection. Only desynchronising the
+two establishes that the harness compares anything.
+
+**Provable is not simulable, and the gap hides in declaration order.** Yosys
+resolves declare-after-use; Icarus rejects it. Four forward-referenced nets kept
+this design from ever compiling in a simulator while every formal gate stayed
+green — control fully checked, arithmetic never checked once.
+
+## Wave 668 — check that the question is well-posed before believing the answer
+
+**A sweep found six failures with a beautiful pattern, and the pattern was
+mine.** Every `C>=2, L=2` configuration emitted one activation word where two
+were owed, while every `C=1` passed. Both layers demonstrably ran, so compute
+happened and only emission was lost — the exact signature of a defect class this
+project had already fixed twice. I was one command from publishing the eighth
+design defect.
+
+The networks were ill-posed. A multi-layer net needs layer 0 to produce what
+layer 1 consumes (`N = C*27`); the grid asked layer 1 to read 27–81 trits from a
+layer producing 1–3. At well-formed points the same configurations pass.
+
+**Before reporting that a sweep found a defect, verify the failing
+configurations are ones the artifact was ever obliged to handle.** Systematic
+variation across an invalid region is the most convincing possible presentation
+of nothing — and the `C=1` rows, equally invalid but passing, manufactured a
+fake mechanism to explain it.
+
+**Breadth in a sweep is not independence.** Eighteen configurations, and the
+observable depended on one axis only — three facts wearing eighteen hats. Before
+claiming a grid covers something, ask which parameters the *observable* can
+actually see. The fix is another observable, not a bigger grid.
+
+**A check whose name suggests coverage it lacks is worse than no check.**
+`mirror_check.py` sounds like it catches properties that restate their RTL; it
+compares an algebra abstraction instead. Nobody asked the restatement question
+for 139 propositions because the name implied someone had.
+
+**A global canary hides the absence of a per-item one.** This repo has checked
+"are assumptions live in this job" for many waves. That cannot see one wrapper
+whose own assumptions are contradictory. Having the coarse check is precisely why
+nobody built the fine one.
+
+**Editing a property and its RTL line in the same commit is bookkeeping, not
+verification.** If the assertion is the assignment's right-hand side copied, it
+can only fail on an inconsistent edit. Keep it if it guards wiring rather than
+formula — but say so in a comment, so the choice is countable.
+
+## Wave 669 — a suite whose expected output is constant is testing one thing
+
+**Sweeping shape does not enlarge the input set.** For 139 propositions every
+vector was all-(+1) inputs against all-(+1) weights. The accumulator is then
+always `27C` and the trit always `TRIT_P` — so a sign error, a lane
+transposition, a wrong trit decode and an inverted comparison all survive, in
+every configuration. A twelve-point grid replicating one input is one test with
+twelve names. **Ask which parameters the OBSERVABLE can see, and whether the
+expected output ever changes.** If it doesn't, the suite size is decoration.
+
+**A boundary disagreement is visible only from the boundary.** Randomised trits
+found it in two seeds: at `acc = -threshold` exactly, the design emitted TRIT_N
+and my independently written reference said TRIT_Z. Nothing else in the range
+disagreed. The all-(+1) vector produced `acc >= 27` — never within 24 of the
+threshold — so it was structurally incapable of reaching the one point where the
+two implementations differed.
+
+**When two implementations disagree and no spec exists, say which way the
+evidence pointed, not just who won.** The design's convention was stated twice
+(RTL chain plus its own inline properties) and mine agreed with neither, so mine
+was wrong. But write down that had the intended semantics been the other way,
+the same evidence would have condemned the design. "The design is the design"
+is not a reason.
+
+**An ill-posed configuration is not a conservative one.** A published figure
+here — "20 of 28 configurations terminate" — counted twelve points outside the
+design's contract. That does not make a pass-rate pessimistic; it makes it
+uninterpretable, because undefined behaviour can fall either way (and in the
+previous wave, the analogous points did both). Replaced with 16 of 16 over the
+well-formed subset — smaller, and it measures correctness rather than
+termination.
+
+**Retroactive checks that CLEAR a prior claim are worth running too.** The same
+audit that condemned "20 of 28" confirmed the one-in-81 headline untouched,
+because that sweep was all single-layer, where the well-formedness predicate is
+vacuous. Report both halves.
+
+**Two exemptions can look identical and be opposite.** One step was vacuous *by
+design* (a canary: it proves only when assumptions are live). Another was
+*immune* — its pass condition is a refutation, which vacuity makes impossible, so
+the hazard cannot reach it. Granting the second an exemption-by-argument would
+have hidden that it never needed one. Enforce both: a canary that stops being
+vacuous, and an immunity claim naming a step that no longer exists, are each a
+silent loss of coverage.
+
+## Wave 670 — "the spec parses" did not mean the parser read the spec
+
+**A resilient parser with silent recovery always reports success.**
+`parse_module_body` here recovers from a failed declaration by skipping to the
+next one and continuing — correct behaviour — and throws the error away. Result:
+497 specs exit 0 while **3292 constant declarations never reach any AST**. The
+flagship spec captures 3 of its 14. "496/496 specs parse" has always meant "the
+parser did not abort", and nothing in the exit code could ever have said
+otherwise.
+
+**Found by writing a spec and reading its AST.** The new file parsed to 16 nodes
+containing none of its identifiers. The instinct is "my syntax is wrong"; the
+control — parse a known-good spec and count — is what moved it from my file to
+the corpus. Run the control before concluding anything about your own input.
+
+**Fix the visibility, not the parser, late in a session.** A counter, a
+reporting entry point, and a stderr line with the first five messages and their
+line numbers. That converts an invisible loss into a precise defect list, costs
+four lines, and does not risk a compiler rewrite at hour eleven.
+
+**Then I mislabelled the counter, in the wave that catalogues mislabelling.**
+Shipped as `discarded-declarations`; it counts *recovery events*, and one
+recovery can swallow several declarations. A planted three-constant regression
+left the total unchanged at 1741 — so the gate built to catch regressions
+reported none — while constants-lost moved 15→18. **Plant a regression before
+believing a ratchet**, and if the number doesn't move, suspect the label before
+the gate.
+
+**Two derivations of one path is a defect even when both "work".** A pre-commit
+hook derived a seal path by basename while the compiler derives it from the
+path. The tracked hook had been fixed; the *installed* one hadn't, because hooks
+are local-only and a stale copy survives indefinitely. When a script and a tool
+must agree on a derived path, the script should ask the tool.
+
+**When a hook blocks you, fix the hook rather than passing `--no-verify`.** The
+block was correct in spirit and wrong in mechanism. Bypassing would have left
+the trap armed for the next agent, and a gate that is always bypassed is not a
+gate.
+
+**`git add -A <dir>` stages deletions you never made.** It staged removals of
+files an earlier regeneration had dropped. Read `git diff --cached --name-only`
+before every commit that used `-A`, and stage intended paths explicitly.
+
+## Wave 671 — a defect that generates errors is invisible behind one that discards them
+
+**Two defects concealed each other exactly, for the life of the repository.** A
+commit corrupted 154 specs; the parser silently swallowed every resulting error.
+Neither was observable while the other stood, and "497/497 specs parse" held
+throughout. **Fix the discarding defect first** — removing it reveals the other
+at full magnitude, while removing the generating defect alone reveals nothing.
+That asymmetry tells you the order to work in.
+
+**"Replace all Unicode with ASCII" substituted each character's running index.**
+`fcf80027d` turned `→` (U+2192) into ` 12 `, and `═` into consecutive digits —
+which is why a spec carries comment lines reading `123456789101112...`. 162167
+occurrences, 112 distinct characters, 154 files. Verified at byte level with
+`git show fcf80027d^:file | od -c`, and `git log -S` for the ASCII form finding
+nothing is what proved the arrow was *never* `->`.
+
+**A partial-success defect is the hardest to see.** The parser's `= value`
+branch never consumed the trailing `;`, while the sibling bracket branch did. If
+it had dropped *every* constant it would have been fixed on day one; dropping
+69% of them survived indefinitely, because every spot check finds one that
+parsed. Suspect the code paths that work *sometimes*.
+
+**Build the counter before the fix, so the fix has a score.** One line took
+recovery events 1741→556 and constants lost 3292→2339 — measured by the same
+ratchet that will catch its regression. "I fixed a parser bug" is a claim; those
+numbers are a measurement, and they exist only because the previous wave shipped
+the instrument first.
+
+**Reconstruct a repair from the pre-image, never from a pattern.** For each
+corrupted line the pre-corruption version says exactly where the character was;
+the repair then has an oracle — the result must equal the pre-image with the
+character transliterated, or the line is left untouched. Guessing from
+`) <digits> <type>` would have been plausible and unverifiable.
+
+**Scope a repair to what is mechanical and report the rest as a decision.** 677
+arrows are functional and were repaired. The other 161490 characters are Greek
+letters and box drawing in prose — restoring those is a transliteration choice,
+not a repair, and doing it silently would have been rewriting the source of
+truth on my own authority.
+
+**`git add -A <dir>` after a scripted edit is how you commit someone else's
+mess.** Classify every modified file as *provably my edit* or *not*, and stage
+only the first set. Here 62 specs carried pre-existing uncommitted edits that
+made their repairs inseparable — so they were left out and named, which finally
+attached a cost to a dirty tree that had been an abstract question for 40 waves.
+
+## Wave 672 — a metric that needs the artifact it audits is not an external check
+
+**Withdrew my own headline number, from two published propositions.** A gate
+ratcheted on "constants written minus constants reaching the AST". Its regex
+required `const` at line start — so it **missed every `pub const`** (the real
+module-level declarations) and instead counted `const bit = ...`, function-local
+bindings that were never meant to be module nodes. Wrong in both directions
+simultaneously, which is why the number looked plausible.
+
+**Three formulations, three answers — that is the tell.** `^\s*const` → 2339
+lost; brace-depth ≤ 1 → 2444 (array literals `[32]u16{` open braces, so depth
+drifts); `^\s*pub\s+const` → **118%**, more AST nodes than source markers. When
+successive refinements of a measurement disagree by more than noise, the quantity
+is not well defined, not merely mismeasured.
+
+**The general rule: `const` is legal at module scope AND inside a function, so
+separating them requires parsing — the thing being measured.** Any external
+metric that would need the artifact it audits in order to be computed is not an
+external check. Have the tool report it, or don't ratchet on it.
+
+**Third mislabel in one instrument.** The gate was built to catch a compiler
+reporting success while reading 31% of its input, and shipped with two labels
+that didn't describe what they counted. *The failure being audited and the
+failure of the audit were the same shape* — which is not irony, it's a warning
+that building an instrument for a defect class does not immunise the instrument.
+
+**A truncated sample of errors is not a census of causes.** `t27c parse` prints
+the first five messages per file. I clustered those and reported "57 of this
+kind" — a fix that should have removed 57 removed 8. Before ranking causes by
+frequency, check whether the tool truncated its own output.
+
+**Scope a mechanical repair by an oracle, and skip what the oracle can't
+decide.** 162167 corrupted characters, a 148-entry transliteration table
+covering 99%: every line reconstructed from git's pre-image and accepted only
+when it equals the pre-image transliterated. The 44 Coptic and Cyrillic
+occurrences had no defensible mapping, so 17 lines were **skipped, not guessed**.
+A repair with a per-item oracle can be run autonomously; one without cannot.
+
+**A deletion that is never committed is invisible from both sides.** 61 Coq
+proof files are removed on disk and present in HEAD. Every check reading the
+committed tree sees them; every check reading the working tree doesn't. Each view
+is internally consistent, so nothing reports a problem. `git status` is the only
+instrument that sees it — which is why it belongs in a periodic audit, not just
+before a commit.
+
+## Wave 673 — a predicate that is conservative for one caller is incomplete for another
+
+**The defect was documented in its own comment and still cost the corpus.**
+`is_top_level_start()` says it "deliberately excludes const/var, which can appear
+inside keyword-style test/invariant/bench blocks". True and correct — for those
+callers. Shared with error recovery, it meant recovery skipped past **every**
+module-level `const` until it hit a `fn` or `pub`. That is exactly why
+`pub const` survived (`KwPub` stops the skip) and bare `const` did not.
+
+**Theorem: if a predicate is conservative for caller A and exact for caller B,
+sharing it makes B silently incomplete on precisely the inputs where A needs the
+conservatism.** The failure is invisible because the predicate is correct. The
+repair is never to change the predicate — parameterise it at the call site. The
+tell is a caller whose correctness argument differs from the predicate's comment.
+
+**A counter placed before its own exit test measures its terminator.** My first
+version of "declarations swallowed" recorded the keyword the loop *stops* at, and
+reported 28 on a file with zero errors. Count what is passed over, not what is
+arrived at.
+
+**Exclude by construction, not by heuristic.** The sound metric works because
+tokens inside brace groups are consumed by a different function and never reach
+the counting loop — so function-local bindings are excluded structurally. The
+withdrawn regex tried to achieve the same thing by pattern and could not, because
+that separation *is* parsing.
+
+**A withdrawal can be vindicated later, and it is worth checking.** `gf16.t27`
+was ranked worst in the corpus by the withdrawn metric — "640 constants lost".
+Measured properly: 20 `pub const`, 20 AST nodes, 0 events, 0 swallowed. Parsed
+perfectly. All 669 bare `const` were function locals. The single most alarming
+number in two waves described nothing at all.
+
+**Aggregate by a compound key, illustrate by a component of it, and the
+illustration will eventually contradict the aggregate.** I reported "61 deleted
+Coq proofs" because a counter keyed on `(state, class)` shared an example dict
+keyed on `class`. They were generated Verilog under `specs/fpga/`. Print examples
+from the same bucket you counted.
+
+**Before committing a deletion, prove each file is recoverable.** All 61 had both
+a source `.t27` beside them and a regenerated copy in `gen/verilog/`. "It looks
+generated" is a guess; "every one has a source and a live copy" is a check, and
+it is what made deleting 15143 lines a safe autonomous action rather than a risk.
+
+**An unreviewed-changes pile shrinks when you can prove which parts you wrote.**
+16 of 72 blocked specs were provably mine under the pre-image oracle. The
+remaining 56 need a human, and saying "56" instead of "72" is the difference
+between a decision and a chore.
+
+## Wave 674 — a count cited as evidence must range over what its gate checks
+
+**"546 Qed. across 41 files" is exactly right and means less than it reads.**
+69 of those 546, in 7 files, are in no `_CoqProject` — so `coq_makefile` never
+generates a rule for them, `make` never compiles them, and no CI job type-checks
+them. Two carry headers saying in capitals they do not compile. Across all three
+proof trees: **560 Qed inside a build, 123 outside one.**
+
+**`grep -c 'Qed\.'` measures proof terminators in text; only membership in a
+build measures proofs.** Fourth instance in this campaign of an accurate count
+over a wider denominator than the check supporting it.
+
+**Corollary worth applying to any evidence claim: compare the citation's glob
+against the gate's input set.** Where the citation's domain strictly contains the
+gate's, the excess is presented as evidence and supported by nothing — and it is
+invisible precisely *because* the count is correct.
+
+**Do not commit someone's half-finished proof inside a wave about honesty.**
+`PhiAttractor.v` had uncommitted changes too — but they *remove* four
+proof-bearing lines and add a TODO. That is mid-work weakening a file, not an
+annotation. Committing it under a banner of "adding honesty headers" would have
+quietly reduced verified content. Leave it and name it.
+
+**Third filter mismatch, all mine, all invisible for the same reason.** "15 files
+in HEAD vs 11 on disk" was `git ls-tree` (all entries) against `find -name
+'*.v'` (proof files only). Earlier: a regex over `const` against AST nodes; a
+counter keyed on `(state, class)` against examples keyed on `class`. **Both sides
+are always computed correctly — that is why none of them look wrong.** State the
+set each side ranges over *before* subtracting.
+
+**When a file mixes your mechanical repair with someone's unfinished edit, split
+it at the line level and stage into the INDEX.** `git hash-object -w` plus
+`git update-index --cacheinfo` commits your lines while leaving their work
+untouched in the working tree. Overwriting the file would have destroyed
+uncommitted work; skipping it leaves the repair permanently blocked. This only
+works where line counts match — where lines were added or removed, no positional
+oracle applies and a human is required. 2 of 56 qualified; saying which is the
+deliverable.
+
+**A ratchet is the right shape when the fix requires a judgement you cannot
+make.** Whether an unbuilt proof file *should* be added to a build is
+mathematics, not scanning. The gate records the set and fails when it grows.
+
+## Wave 675 — a counter inside a recovery routine measures what the routine skips, not what was lost
+
+**Fourth metric correction in the same instrument, and the first that made the
+number smaller.** The swallowed-declaration counter recorded every declaration
+keyword the recovery skip passed over — 788. But inside a keyword-style
+`test name given ... when ...` block, which has **no terminator**, those are
+test-local `var` bindings the skip is *entitled* to discard. Restricting the
+count to declarations at or shallower than the block header's column: **161**.
+
+**Theorem: a counter inside a recovery routine measures a superset of the loss,
+exceeding it by exactly the elements the routine was entitled to skip.** Sound
+counting requires the counter to share the routine's scope rule — and where the
+routine has no scope rule, neither can the counter.
+
+**Measure a heuristic before relying on it.** Before keying anything on
+indentation I counted: of 469 `const`/`var` occurrences following a keyword-style
+header, 466 are strictly more indented (genuinely inside) and 3 sit at header
+depth. That 466:3 split is what justified the rule — not the intuition that
+indentation "usually" tracks nesting.
+
+**Look for the single feature behind the residue.** After correcting the count,
+**133 of the remaining 161 (83%) had one cause**: generic const parameters,
+`pub const ArrayView(T) = struct {...}`, unimplemented, so `(` was an unexpected
+top-level token and the whole declaration was discarded. One bounded feature took
+161 → 67. Cluster the residue before writing more checks — a long tail is often
+one item.
+
+**An error count rising can be the correct direction.** Recovery events went
+523 → 530 while losses fell. Declarations that now parse far enough to fail on
+their *own* content produce their own errors instead of vanishing silently inside
+someone else's. A ratchet on "errors" alone would have called that a regression.
+
+**"Orphan" is a sharper status than "unbuilt", and cheap to compute.** 16 of 17
+unbuilt proof files are `Require`d by nothing anywhere. An unbuilt file that
+something imports has an obvious repair; one that nothing compiles *and* nothing
+imports is disconnected in both directions, and the decision about it is
+genuinely open rather than merely deferred.
+
+**When a decision is not yours, ship the artifact that makes it cheap.**
+`docs/BLOCKED_SPECS.md` lists each blocked spec with how much of its diff is the
+mechanical repair versus someone's edit. That converts "56 files need review"
+into a sorted list where the top rows are almost entirely mechanical.
+
+## Wave 676 — a discovery matrix looks general and covers only what it matches
+
+**1213 tests existed and no job ran them.** Four parser changes made `cargo test`
+the obvious check; one test had been red for ten waves, asserting an RTL line
+from before a change I made in Wave 666. The inline test in `src/` was updated in
+that commit; the integration test in `tests/` was not, and nothing executed it.
+
+The pre-commit hook's Gate 3/4 is `cargo check` — compiles, does not run. The one
+workflow calling `cargo test` discovers `ring-*-rust` crates **by matrix** and
+never matches the compiler crate.
+
+**Third mechanism for gated-looking evidence nothing runs**, after a step never
+wired into a workflow and a property file no step reads. **The matrix is the
+worst of the three**, because it reads as parameterised and general — nothing
+about it suggests your crate is outside its reach. *For every test tree, name the
+job that executes it; if the answer is a matrix, evaluate the matrix. Its
+coverage is its output, not its intent.*
+
+**Run the test suite after changing a parser.** Four changes to a shared code
+path is exactly when a suite earns its cost, and it is how this was found at all.
+
+**My own gate had the defect it was written to catch.** The Coq scan measured
+"is this file in a `_CoqProject`" while claiming "is this file type-checked" —
+and a workflow compiles 13 files by explicit `coqc` with no `_CoqProject`. So 6
+files CI checks on every push were reported as built by nothing. Published
+560/123/17; true 608/75/11. **Writing the rule down does not exempt the writer**,
+and this is the second time the exemption failed inside an instrument built for
+the class.
+
+**A compile harness must separate its own misconfiguration from the subject's
+defects.** My first run used the wrong `-R` logical name, so six load-path
+failures looked like file defects. The second put every tree on the path and read
+the *first* stderr line — a duplicate-load-path warning — classifying all 14
+failures as genuine. Filter for lines that actually begin `Error`. Stderr order
+is not a severity ordering.
+
+**Re-attribute the residue after every fix.** Three waves running, one cause held
+58–83% of what remained after the previous head was removed. A long tail measured
+once is a long tail; measured again after the head comes off, it is usually
+another head.
+
+## Wave 677 — the components nothing builds are the components that broke
+
+**8 of 30 Rust crates were covered by no workflow, and 3 of those 8 did not
+compile. None of the 22 covered crates failed.** That correlation is the whole
+lesson: a crate no job builds cannot report that it stopped building, so every
+workflow stays green precisely where the repository is broken.
+
+**Theorem: in a repo of n components of which k are built by CI, the probability
+that a randomly-introduced breakage is reported is k/n** — independent of how
+many jobs run or how green they are. Adding jobs over already-covered components
+does not raise it. Only enlarging k does. Enumerate components and subtract; the
+gap is the number that matters, not the count of passing jobs.
+
+**Fix drift with the construct that prevents its recurrence.** `flash-spi` broke
+because a struct gained two fields and one call site named them all. The repair
+is `..Default::default()`, not adding two field names — struct-update syntax does
+not break the next time a field appears. Check the `Default` values are the ones
+that path wants before relying on them.
+
+**When a whole-suite build is red for a pre-existing reason, verify at the
+finest granularity the build system offers — and prove the redness is
+pre-existing.** `make` failed on unrelated targets needing a library this
+machine lacks. Running the identical build *without* my change failed the same
+way (the control), then `make <specific>.vo` verified each addition through the
+project's real load paths. That is stronger than a standalone compile, and it is
+available in almost every build system.
+
+**Read the two matrix definitions rather than pattern-matching 26 workflows.**
+My regex classified a discovery matrix as "(static list)". With only two
+candidates, opening them was faster and correct — one was a build matrix over
+OS/target with no coverage question at all. Scale the method to the population.
+
+**Then ask the general question, not the one you started with.** "Which
+workflows use a matrix" was the wrong question; "which crates does anything
+build" was the right one, and it turned two suspects into eight and three real
+defects.
+
+## Wave 678 — a `?` in a helper silently promotes a local failure to a global one
+
+**One unparsable initialiser destroyed its whole file.** `parse_var_decl` used
+`?` on the expression parser, so the failure escaped *past* the module body's
+recovery loop and the spec ended as `Expected RBrace, got Eof`. The module body
+recovers from failed declarations; the value position did not, and nothing about
+reading either function suggests they are on different sides of a boundary.
+
+**Theorem: a recovery handler protects exactly the call sites beneath it.** An
+error raised by a callee invoked outside the handler's dynamic extent is not
+recovered, however comprehensive the handler looks. When a parser (or any
+pipeline) has a recovery loop, every helper must either recover locally or be
+called from inside it. **Audit `?`/`throw`/`raise` in helpers against where the
+handler actually sits.**
+
+**Name what you could not parse; never omit it silently.** The fix records
+`<unparsed initialiser at line N>` rather than dropping the value — the feature
+is still unimplemented, and now the AST says so instead of looking complete.
+
+**A scanner must never consume a terminator it did not open.** A value scanner
+delegated brace groups to a helper that over-consumes on `{}` and would eat an
+enclosing block's closing brace. Track depth inline; on an unmatched closer,
+stop rather than consume.
+
+**Evaluate a coverage-claiming construct; never match it.** `--workspace` covers
+exactly the `members` list — crediting the flag would mark every crate covered,
+including three explicitly excluded ones the command does not build. Third
+construct in this campaign read as broader than it is, after a discovery matrix
+and `_CoqProject` membership. In every case, resolving it was a few lines the
+checker could run itself.
+
+**"In neither members nor exclude" is a build-stopping state, not a warning.**
+Two crates could not be built at all — cargo refuses with *"believes it's in a
+workspace when it's not"*. Excluding is the conservative repair: it fixes the
+error without silently enlarging what the workspace build covers.
+
+**A cwd reset can make a check print nothing and look clean.** My "converter
+compiles fine" came from cargo saying `manifest path does not exist` — my filter
+matched `^error` and cargo's message did not start that way. Filters that select
+*expected* failure text will pass unexpected failures. Assert the tool ran on the
+subject before reading its verdict.
+
+## Wave 679 — a manifest describes a build; only an invocation performs one
+
+**No workflow mentioned `trios-coq` at all.** Its `_CoqProject` lists 30 files,
+and I had published "641 Qed built" on the strength of that file existing. With
+the requirement that some workflow actually *runs* the project, the true figure
+was **197**. Found by auditing workflow **path filters**, not by looking at
+proofs.
+
+**Third correction to one gate's notion of "built"** — membership in a project
+file, then explicit `coqc` in a workflow, now *someone runs the project*. Every
+time the error was **matching a construct instead of resolving it**, and every
+time the gate had been written by someone who had just written that rule down.
+
+**Corollary: a manifest, project file, solution, target list or lockfile
+describes a build that some agent must run.** Its existence is evidence about
+intent; only an invocation is evidence about execution. Three constructs in this
+campaign read as performing work they merely describe: a discovery matrix, a
+`--workspace` flag, a `_CoqProject`.
+
+**After fixing a parser defect, expect the error count to RISE.** Two features
+landed and swallowed declarations went 13 → 38. That was correct: a file which
+had reported zero — because it never parsed far enough to lose anything
+countable — now revealed 25 losses from a *third* missing feature. **A feature
+whose absence aborts parsing occludes every feature later in the same file.**
+
+**The discriminator is per-file, not the total.** 19 files better and 1 worse is
+progress; 1 better and 19 worse is a regression. A single aggregate cannot tell
+those apart, and the per-file diff against the ratchet baseline costs one script.
+
+**Ship an unverifiable CI step non-blocking, and name the flip as the
+deliverable.** The trios-coq build has never run in CI and could not be verified
+locally (no Flocq, no opam). Landing it blocking would wall off every PR on an
+unknown; landing it non-blocking publishes the true state and leaves one
+explicit next action. Do not pretend the step is the achievement.
+
+## Wave 680 — a check on one machine is a measurement; a check in CI is a guarantee
+
+**165 of 167 propositions cite a workflow that has never run.** `formal-yosys.yml`
+exists only on a feature branch and triggers on push/PR to `master`. **GitHub
+registers workflows from the DEFAULT branch**, so a workflow file on a feature
+branch triggering on the default branch is inert. `gh run list` reports no runs,
+ever.
+
+The gates are real — written, executed every wave, ~30 defects caught including
+several in themselves. What was false is the sentence each `Gate:` line carries:
+*that CI re-checks this*. The convention existed precisely to bind a claim to a
+re-execution, and it was satisfied by **naming a step rather than reaching one**.
+
+**Theorem (locality of evidence): a check constrains the artifact only in states
+reachable from the environment where it was observed to pass.** One working tree
+establishes a property of that tree at that moment — nothing about another clone,
+another branch, or the next commit.
+
+**Check the branch before believing anything about CI.** `git branch --show-current`,
+`git rev-list --count origin/<default>..HEAD`, and whether the workflow file
+exists on the default branch. Three commands, and they should be the *first* ones
+in any session that will make claims about gating. This branch is 920 ahead,
+1700 behind, merge base four months old, 2230 files changed on both sides, no PR.
+
+**The action that examined CI rather than the code found in minutes what thirty
+waves of local green had hidden.** I had promised to "watch" a `continue-on-error`
+step. Doing that surfaced a workflow failing at `actions/checkout` — and then that
+none of my own workflows ran at all. **Periodically point an instrument at the
+instrument's environment**, not just at the subject.
+
+**Do not attempt a 2230-file conflict resolution unattended**, however tempting
+it is to "fix" the finding in the same wave. Report the numbers that make the
+decision cheap and name the options. The repair here is a human's call between
+merging, rebasing, and cherry-picking onto a fresh branch.
+
+**State when a gate cannot bootstrap itself.** The new reachability gate lives in
+the very workflow it reports as unreachable. Saying so plainly is better than
+relocating it somewhere that would make the report look self-consistent.
+
+## Waves 681–682 — never let the default branch of a verdict be the answer most checks expect
+
+**The liveness step scored every failure as a refutation.**
+`if yosys ...; then got=proves; else got=refutes; fi` — and **six of its seven
+probes expect `refutes`**. An elaboration error, a syntax error, a missing
+binary, a timeout: all `ok`. This is the same `returncode != 0` conflation
+catalogued many waves earlier, living inside the step whose entire purpose is to
+prove the design is not inert.
+
+**Theorem: if k of n cases expect the default branch, any fault landing there is
+undetectable in those k, and the masking probability rises with k/n.** Here 6/7.
+Make the default a *third* value that fails.
+
+**The dangerous half was not a tool error.** A probe naming a signal the design
+lacks does NOT fail yosys — it implicitly declares an undriven wire and the
+property genuinely refutes. Indistinguishable from a real refutation, forever,
+the moment an emitter renames a signal. Grep the tool's *warnings*, not just its
+exit code, and drop `-q` so they exist.
+
+**`$( cmd 2>&1 )` across a multi-line command substitution did not capture
+stderr — and the failure was silent.** My first fix passed its own phantom test
+while doing nothing, because the guard grepped an empty variable. **Redirect to a
+file when the capture matters.** A guard reading a variable you have not verified
+is populated is a guard on an empty string.
+
+**Revert rather than iterate at the end of a session.** A generic-fn-name parser
+change over-consumed angle brackets and turned a spec into a hard parse failure.
+Reverting cost one command; debugging it at 99% context would have risked leaving
+the tree broken.
+
+**Take a fix from the branch that already has it.** `master` carried the correct
+container config (`--user root`, `checkout@v6`) while this branch held a pre-fix
+copy. Hand-writing it would have been slower and less trustworthy than
+`git show origin/master:<path>`.
+
+**A premise repeated across waves earns scrutiny, not authority.** "It failed at
+checkout on every run since July" was wrong — those runs got past checkout and
+failed one step later, a different wall entirely. I had restated my own inference
+until it read as established.
+
+## Wave 683 — withdraw the explanation you cannot reproduce, keep the fix you verified
+
+**I published a mechanism I could not reproduce.** Prop. 173d claimed
+`$( cmd 2>&1 )` fails to capture stderr across a multi-line command
+substitution. Re-tested: it captures 132 KB with the warning present, and with
+`-q` restored it *still* contains the exact pattern the guard greps for. **Two
+changes went in together — dropping `-q` and redirecting to a file — and I
+credited the wrong one.** Change one thing when you intend to learn which one
+mattered; if you changed two, say the attribution is untested.
+
+The fix stands on its *verification* (passes clean, bites a planted phantom).
+The explanation does not. Those are separable, and only the second was wrong.
+
+**A depth-scanned `<...>` runs to EOF, because `<` is also a comparison.**
+Bounding it by SHAPE — `< Ident (, Ident)* >` — cannot run away. But shape bounds
+are narrow: `Result<[T?], StorageError>` has an argument that is not a bare
+identifier, and a correct version needs the argument to be a full type
+recursively. A parser without backtracking cannot attempt that, because a failed
+match has already consumed tokens. **Record the blocking constraint instead of
+shipping a narrower thing that looks complete.**
+
+**Fixing one copy of a defect exposes the other.** The bounded fn-name scan
+immediately hit an *identical* depth scan in `parse_type_annotation`, which had
+never mattered because the name always failed first. Third instance of the
+occlusion relation in this campaign — and the first between two copies of one
+mistake. **After fixing a shape, grep for the shape.**
+
+**Sweep for a shape the moment you have a rule for it.** Prop. 173 gave "never
+let the default branch of a verdict be the answer most checks expect". Scanning
+every workflow step for that found the witness step within minutes — same
+phantom exposure, all 14 cases expecting a refutation, invisible by construction.
+
+**A hand-written property file is a phantom surface.** Any artifact naming a
+signal by string, checked against a *generated* design, decouples silently the
+moment the generator renames it. One grep of the tool's warnings catches it, and
+it belongs in every such step — not only where you first noticed.
+
+**Keep a strictly-safer change even when it moves no number.** Replacing an
+unbounded scan with a bounded one changed nothing measurable and removed a path
+that was one signature away from destroying a file.
+
+## Wave 684 — count the occlusion chain before deciding a fix was wrong
+
+**Theorem: if features f₁…fₙ occur in one artifact such that fᵢ is unreachable
+until fᵢ₋₁ parses, then no proper subset containing f₁ improves that artifact —
+and any subset containing f₁ but missing the rest makes it strictly WORSE**,
+converting a partial parse into a hard failure. One spec here needed generic fn
+names → `(T) -> void` → `[T?]` → `read<str>(...)` in expression position, each
+unreachable until the previous parsed.
+
+So when a correct fix makes a file worse, **count the chain** before reverting.
+Then ship only the members that cannot regress — here, the one feature reachable
+*without* the head of the chain.
+
+**State the invariant of the construct you want, not the negation of the one you
+fear.** `<` is ambiguous with comparison. Two attempts failed trying to
+characterise a comparison. What works is positional: a generic list on a function
+name is *always* immediately followed by `(`. Requiring that makes the two
+impossible to confuse without knowing anything about comparisons.
+
+**Backtracking is usually cheap — check before designing around its absence.**
+Two waves went into shape-bounded matching because the parser had one token of
+lookahead. Its lexer is `{source, pos, line, col}` with `source` immutable, so a
+mark is three integers plus two tokens. Look at the state before concluding you
+cannot save it.
+
+**A file omitted from one hand-maintained list is disproportionately likely to be
+omitted from the next.** The two property files no phantom scan reached are the
+same two that were ungated for many waves. Both lists were written by reading the
+same mental inventory. When you find one such omission, check every *other* list
+for the same names.
+
+**Plant mutations into code, not comments.** My first bite test for the new scan
+targeted the first regex match in the file, which was inside a comment, and
+caught nothing — indistinguishable from a gate that does not work.
+
+**`git checkout <file>` reverts everything uncommitted in that file.** I used it
+to abort one malformed edit and lost verified work from the same session. Commit
+verified increments before attempting speculative ones.
+
+## Wave 685 — measure the chain before committing to clear it
+
+Last wave's theorem said an occlusion chain must be cleared atomically. This wave
+tried, implemented four of its links, and found a **fifth** only once the first
+four worked. The chain was deeper than the evidence available when I planned it.
+
+**So: before promising an atomic fix for a chain, measure its depth by
+implementing links throwaway-style and reading what each newly exposes.** The
+depth is not discoverable from the artifact — each link is invisible until its
+predecessor parses. Budget for "the chain is longer than it looks."
+
+**Keep the links that cannot regress; drop the heads.** Backtracking and
+recursive generic arguments changed no count and replaced a bound that could not
+express the corpus. Generic fn names and generic calls were verified working in
+isolation and still removed, because they are the *head* — with them present and
+the tail absent, a file goes from partial parse to hard failure.
+
+**Check whether the state you need to snapshot is actually expensive.** Two waves
+were spent designing around a parser with one token of lookahead. Its lexer is
+`{source, pos, line, col}` and `source` is immutable — a mark is three integers
+plus two tokens. **Look at the struct before concluding you cannot save it.**
+
+**Disambiguate by the invariant of what you want, not by excluding what you
+fear.** `<` is ambiguous with comparison. What works: a generic list is *always*
+immediately followed by `(`. That needs no theory of comparisons.
+
+**A lexer that discards unknown characters makes typos invisible.** `?` is not a
+token here — the default case skips and recurses, so `T?` lexes as `T`. It made
+one link free and it means a mistyped byte in a spec vanishes rather than
+erroring. Worth knowing about any lexer you rely on.
+
+**For any hand-maintained list of files, add a coverage check with an explicit
+exemption set.** Auditing found no new gaps — every omission was justified. But
+justified-and-implicit is exactly how the previous omission hid, and this
+campaign has now rediscovered the same two files with two different instruments.
+Exemptions that must be written down are countable; ones that live in someone's
+head are not.
+
+## Wave 686 — a feature can occlude a defect it created
+
+**The chain closed at six links, and the sixth was self-inflicted.** A parameter
+NAMED `fn` collided with the `fn` TYPE keyword I had added four waves earlier —
+the param parser skipped the name, the type parser read the name as a type, and
+the file collapsed. It was invisible until the other five links parsed.
+**When a chain ends in a construct you recently added, suspect your own feature
+before the corpus.**
+
+**One invariant settled three separate ambiguities**, and it has a shape worth
+copying:
+
+- a generic list is ALWAYS immediately followed by `(` — on a name and on a call
+- a binary `|` can never START an expression, so a `|` in primary position is a
+  closure
+- a keyword immediately followed by `:` is a NAME, because nothing else can be
+
+Each states what the *wanted* construct must look like. Two earlier waves failed
+trying to characterise the *feared* one (what does a comparison look like?).
+**Positive invariants are decidable from one token; negative ones are not.**
+
+**Buying the depth of an occlusion chain is not wasted work.** The previous wave
+implemented four links throwaway-style and reverted them all, which looked like a
+failed wave. It was the measurement that made this one atomic — and my own
+theorem forbids partial delivery, so without it this wave could not have started.
+
+**"It works for free" deserves one more question.** `[T?]` parsed only because
+the lexer *discards* `?`. That is not support, it is deletion: `Option<T>` and
+`T` are indistinguishable to this compiler. Check WHY something unexpectedly
+works before recording it as working.
+
+**Count what a component silently drops, even if you cannot decide what to do
+about it.** The lexer throws away 880 characters across 79 specs — including
+UTF-8 continuation bytes left over from a corruption I thought was repaired. The
+count cost nothing, needed no language decision, and turned an invisible loss
+into a ratchetable number.
+
+## Wave 687 — "a language decision" was three ordinary ones once measured
+
+**I had deferred making `?` a token because deciding what an unknown byte means
+looked like a design question.** Measuring what it actually means in the corpus
+answered it: postfix optional type (70), postfix try (48), prefix optional (13).
+Three uses, all real, none ambiguous. **Before deferring something as a "design
+decision", count how the artifact already uses it — the corpus often contains
+the decision.**
+
+**Position separated all three, with no lookahead.** A type annotation and an
+expression never occupy the same slot, so a postfix `?` in a type is an optional
+and in an expression is a try. Fourth construct in three waves settled by asking
+*where* rather than *what* — after `<` (generic vs comparison), `|` (closure vs
+bitwise-or), and a keyword followed by `:` (name vs keyword).
+
+**"It works for free" and "it is deleted" can be the same sentence.** `[T?]`
+parsed only because the lexer discarded `?`. Now that it is a token, `Option<T>`
+and `T` are distinguishable — which they were not, silently, for the whole
+campaign.
+
+**A repair scoped to a commit's file list cannot see the same defect outside
+it.** Five corrupted signature arrows survived every repair pass because their
+files were not among the 154 the corruption commit touched. They were invisible
+because the lexer *discarded* the byte instead of erroring — a silent discard
+leaves no trace in any count, which is why counting it first was what found them.
+
+**One of the seven code arrows was inside a string literal**, where the arrow is
+data and rewriting it would corrupt program output. Scope a mechanical repair by
+what the construct *is*, not by where the character appears.
+
+**Measure the part of a mess the tool cannot read, not the whole mess.** 280
+specs hold 257,486 non-ASCII bytes; exactly 8 ever reached the lexer's default
+arm. The first number invites a huge cleanup that would change comments for no
+benefit; the second names five real defects.
+
+## Wave 688 — two parsers for one grammar, and a metric that could not see the loss
+
+**The last four swallowed declarations were caused by duplication.**
+`parse_const_decl` had its own inline type parser — a bracket prefix and an
+identifier — so `const X : &[u8; 5]` failed at the `&` while the identical type
+parsed fine in a function signature. Deleting the copy and delegating to the
+shared parser took 4 → 0. **Two parsers for one grammar diverge; the only
+question is which construct finds it.** When a construct works in one position
+and not another, look for a second implementation before adding a third.
+
+**A counter placed inside a recovery path cannot see failures that never reach
+it.** "0 swallowed" was true and hid 40 specs capturing nothing, because a file
+whose preamble fails never enters the loop the counter lives in. **Pair any
+inside-the-machine counter with a coarse outside-the-machine one** — here,
+"files with declarations that captured zero nodes", which cannot be fooled by
+scope and needs no parser knowledge.
+
+**I nearly published the same withdrawn error a fifth time.** Measuring "60% of
+declarations captured" used a regex counting function-local `const` as
+module-level — the identical mistake Prop. 149 withdrew, on the identical file
+(`gf16.t27`, 669 phantom losses). It was caught only because that number was
+memorable from the earlier retraction. **A regex that must distinguish scope is
+measuring something only a parser defines, and it will be wrong in whichever
+direction makes the finding look bigger.**
+
+**Report distinct causes as distinct groups, not one number.** The 34 remaining
+zero-capture specs split into genuine literate-Markdown files and ordinary specs
+failing on unknown constructs. A single count would have implied a single fix and
+sent the next wave down one path for both.
+
+## Wave 689 — silent consumption inverts the search
+
+**Six waves hunted a parser gap that was one character of data.** 33 specs
+captured zero declarations. Each carried `bits : [[]Usize",` — a stray `"` where
+`]` belongs, opening a string literal that swallowed the rest of the file. One
+generator, one commit, 107 sites.
+
+**Theorem: if a lexical error causes the remainder of a file to be CONSUMED
+rather than reported, the symptom appears at the consumer — a missing
+declaration, an unclosed block — and carries no information about where the cause
+is.** Every instinct said "the parser cannot handle construct X". The cause was
+upstream of parsing entirely.
+
+**What broke it was a metric that knows nothing about parsing.** The
+inside-the-machine counter (`declarations-swallowed`) had reached 0 and stayed
+there, because a file whose preamble fails never enters the loop that counter
+lives in. A file-level question — *does a file that declares something public
+capture anything?* — read 34 and pointed straight at the files. **Pair every
+counter inside a mechanism with a coarse one outside it.**
+
+**Bracket balance is a decisive oracle when no uncorrupted example exists.** No
+`[[]T],` form appears anywhere in the corpus, so nothing could be copied. But
+`[[]Usize` has exactly one unclosed `[`, and `]` is the unique character that
+closes it. Applying the repair only where balance decides, and skipping
+otherwise, gave 0 skips over 107 sites — the oracle covered the whole population.
+**Look for a structural invariant before concluding a repair needs a judgement.**
+
+**"A scanner must never consume a terminator it did not open" was missing in a
+second place.** Fixed once in a value scanner, and the same defect sat in the
+recovery skip: a keyword-style block at end-of-module ran to EOF and ate the
+module's closing brace. After fixing a rule, grep for every scanner that could
+need it.
+
+**Stage by proving the diff is yours.** 61 specs showed symmetric diffs; 57 were
+provably the `"`→`]` substitution and 4 were not. Checking each changed line
+against the exact transformation is cheap and keeps someone else's uncommitted
+work out of your commit.
+
+## Wave 690 — a comment stripper that does not know about strings is a string corrupter
+
+**My first runaway-string gate reported 74 findings, every sampled one
+spurious.** It split each line on `//` before counting quotes — which cuts
+`"https://example.com"` in half and leaves an odd count. Replaced with a state
+machine that treats `//` as a comment only when *outside* a string.
+
+This is the exact inverse of the rule this campaign already enforces (strip
+comments before applying a regex to code). There, code was read as comment; here,
+a string was read as comment. **Both directions are the same defect: a scanner
+that decides what is code without tracking what is a string.**
+
+**A repair scoped to the shape you first saw finds the instances that look like
+the first one.** The struct-field pattern `name : [[]T",` missed the identical
+corruption in `const NAME : [[]U32" = "...";`. After any pattern-based repair,
+re-run the *detector* rather than assuming the pattern was the population.
+
+**Promote a signature to a gate the second time it appears**, not the third. The
+runaway-string shape cost 33 specs once and 4 more a wave later; the gate is
+twenty lines and it verified clean over 497 files, bit a planted corruption by
+file and line, and returned clean on restore.
+
+**An unexplained residue of one is indistinguishable from a residue of one you
+have not looked at.** The last zero-capture spec turned out to be an API
+*document* wearing a `.t27` extension — parsing even its fenced blocks captures
+nothing, because they hold signatures with indented prose. Excusing it by name
+with the reason makes the exemption countable; leaving the metric at 1 would have
+concealed the next one.
+
+**Test the excusal, not just the exclusion.** Before excusing the file I checked
+whether a fence-aware mode would help by extracting the fences and parsing those
+alone. It captured zero — which is what turned "the parser needs a Markdown mode"
+into "this is not a spec".
+
+## Wave 691 — duplication is found by the corpus, never by review
+
+**A third inline copy of the type parser, worth 88 recovery events in one
+change.** The return type in `parse_fn_decl` handled identifiers, generics and
+bracket prefixes but not `(`, so `-> (Lexer, Token)` failed while the identical
+type parsed fine in a parameter. The second copy (in `parse_const_decl`) was
+removed two waves earlier for exactly the same reason.
+
+**Theorem: where a grammar is implemented n times, each copy diverges on the
+constructs its own call sites never exercise.** So the defect surfaces only when
+a construct crosses from one position to another — and no amount of reading the
+function shows it, because the copy is correct for everything that has ever
+reached it. **The signal is always the same sentence: "this works over there and
+not here."** Treat that as evidence of duplication, not of a missing feature.
+
+**When you delete one duplicate, grep for the others immediately.** The const
+copy was found by `&[u8; 5]`, the return copy by `(Lexer, Token)`, two waves
+apart. A single `grep -c` for the inline-type idiom would have found both at
+once.
+
+**Know when a metric stops being about your code.** 161 recovery events remain,
+and 96 of them are English sentences and Markdown bullets in files carrying a
+`.t27` extension. *A parser cannot be improved into reading prose.* Continuing to
+drive that number down would mean either mangling the parser or deleting other
+people's documentation — so the honest move is to say what the residue is and
+stop.
+
+## Wave 692 — locating duplication is mechanical; removing it is not
+
+**The grep found the fourth copy in one command.** After two copies of a type
+parser were found by accident, two waves apart, scanning for the idiom — building
+a type string from raw lexemes instead of calling the shared parser — returned
+the remaining one immediately. **Run that grep the same hour you remove the first
+duplicate.**
+
+**But two repairs both regressed, identically.** Delegating to the shared parser
+took the ratchet from 161 events / 0 blind specs to 171 / 6, because that parser
+has no notion of a *field terminator* and consumed the struct's closing brace.
+Making the local loop nesting-aware regressed to exactly the same numbers.
+Reverting restored 161 / 0, which is what identified the cause.
+
+**Each copy has adapted to the call sites that reach it.** That is why removing
+one is not mechanical: the shared parser is correct for parameters and return
+types, where the terminator is `,` or `)` or `{`, and wrong for fields, where it
+is `,` or `}`. A duplicate is not simply redundant code — it encodes a context.
+
+**A scanner's termination must never depend on its input being well-formed.**
+My nesting-aware loop exited only when brackets balanced, so an unbalanced type
+at end-of-file spun forever — the lexer yields `Eof` indefinitely and `advance()`
+never progresses. It hung the build. Put the `Eof` break first and
+unconditionally.
+
+**When the obvious explanation is checkable, check it.** I assumed
+`parse_struct_body` was shared with unrelated grammar. It has exactly two
+callers, both genuine structs — so the regression is over-consumption shifting
+everything downstream, and the observable failure sat 40 lines later at an
+unrelated block. Same shape as a runaway string: **a scanner that consumes too
+much reports at the consumer, with no information about the cause's location.**
+
+**Two eliminated approaches, recorded at the site with their measurements, beat a
+third guess.** The next attempt needs the counterexample field type — which is a
+different piece of work from "try another loop".
+
+## A defect in the data is invisible to every component built to tolerate it
+
+Six waves of parser work, 24 gates, and 1213 passing tests went past 18 corrupted
+field types that a four-character balance check finds instantly:
+
+```
+benchmarks : [[]Const [,     <- three `[`, one `]`
+```
+
+Two attempts to make `parse_struct_body` nesting-aware were recorded as failures
+and reverted. They were not failures. A nesting-aware scanner is **correct** never
+to stop on that line, because the nesting genuinely never closes. The naive
+comma-terminated scanner that "worked" survives the corpus only by ignoring
+nesting — the exact property that makes it wrong everywhere else.
+
+**The rule.** The one component that would notice a malformed property is the one
+whose correctness depends on it — and if that component was written to tolerate
+the malformation, nobody will ever notice. Here:
+
+| instrument | why it was blind |
+|---|---|
+| the parser | does not track nesting, so unbalanced brackets are not a category it has |
+| `spec_parse_gate` | these cost **zero** recovery events — the naive loop stops at the comma and silently produces a *wrong type string* |
+| 1213 tests | none assert on a captured field's type text |
+
+The gates measured **control flow** (did recovery fire, was a declaration
+swallowed). The defect was in a **value**. A campaign can be exhaustive along one
+axis and have no instrument at all on the other.
+
+### The tolerance ledger
+
+Every `catch`, every recovery path, every "skip to the next declaration" makes a
+class of defect permanently unobservable. Tolerance is paid for in blindness, and
+the debt is invisible by construction — you cannot grep for what a tolerant
+component declined to report.
+
+The only way to price it is to run, **once**, an instrument that does not
+tolerate. Four `eprintln!` lines inside the loop printed the offending token
+stream on the first run and named the counterexample in one wave, against six
+waves of inference from downstream symptoms. When a repair "fails" for reasons
+you cannot state, stop repairing and print what the code actually sees.
+
+### Corollary: two failed repairs can mean the input is wrong
+
+Prop. 191 recorded two attempts and concluded *"the next attempt needs the
+counterexample, not a third guess."* That was right, but the framing was still
+"which repair is correct". The answer was **neither — the data is malformed**.
+Before a third attempt at any repair, check whether the thing being repaired is
+well-formed at all.
+
+### Repair only as far as your oracle reaches
+
+Prop. 186 repaired 107 sites of the sibling corruption (`[[]Usize",`) with 0
+skipped, because bracket balance determined the **whole** repair. Here it does
+not: `[[]Const [` → `[[]Const ]` is balanced and is a list type *with no element*.
+The generator lost the element type too, and nothing in the repository recovers
+it.
+
+So the 18 were **not repaired**. They were ratcheted — recorded in a baseline, a
+19th fails the build. Repairing them would mean guessing what the corpus meant,
+which is a decision about content, not a scanner's call. **An oracle that fixes
+part of a defect does not license fixing the rest by inference.**
+
+### The NOW.md heading convention above is now blocked by a gate
+
+`bootstrap/build.rs:152` enforces an English-only language policy and **panics**
+on any Cyrillic in a first-party doc — which fails `cargo check`, which is
+pre-commit gate 3 of 4. The `### Что легло` / `### Границы честности (BINDING)`
+shape recorded earlier in this skill therefore no longer commits. Use
+**`### What landed`** and **`### Honesty limits (BINDING)`**; the sections and
+their content are unchanged. (Grandfathered files are listed in
+`docs/.legacy-non-english-docs`, Architect approval only.) The failure surfaces
+as `BLOCKED: cargo check failed in bootstrap/` with the real cause buried in the
+build script's stderr — read `--- stderr`, not the top-level error.
+
+## Search for the question, not the shape you already found
+
+The skill already warns that *form-based scans find mostly correct text* (false
+positives) and that *a form-based scan finding nothing establishes nothing*
+(false negatives). This is the third face of the same coin, and it is the
+expensive one, because the gate stays **green** the whole time.
+
+Two members of one corruption family were found six waves apart:
+
+| | shape | sites | how it surfaced |
+|---|---|---|---|
+| first | `bits : [[]Usize",` — `"` for `]` | 107 | 33 specs captured nothing; six waves of parser work |
+| second | `x : [[]Const [,` — `[` for `]` | 18 | instrumenting a repair that had "failed" twice |
+
+Both were **one generator writing a wrong character**. After the first, a gate
+was written for *odd quote count*. It could not see the second. After the second,
+a check was added for *unbalanced field brackets*. It cannot see a third.
+
+Asking the question those are both instances of — *can this file's delimiters
+close at all?* — took one pass and immediately widened the family from 10 specs
+(all `[`) to **18 specs, 21 imbalances, three delimiter classes**, including
+paren and brace defects that no `[`-shaped search could ever return.
+
+### The coverage theorem, and why it is not just a slogan
+
+Let a defect class `D` come from an unknown corruption process, and let `S_σ`
+match a shape `σ` observed in some `d ∈ D`. Then
+
+```
+coverage(S_σ) = { d ∈ D : σ ⊑ d }
+```
+
+and the residue `D \ S_σ` is **undetectable by construction** — not merely
+unfound. Each newly discovered member yields a new `σ'` and a new gate, so
+shape-search converges to full coverage only *after* every member has been found
+by other means, at which point the gates are redundant.
+
+**A shape search cannot bound its own residue. A question search can.** If the
+question is decidable over the whole artefact — balance, parity, a total
+invariant — then "0 findings" is a real statement about the class.
+
+### The corollary that costs the most
+
+> A green shape-specific gate is evidence about the shape, **never** about the
+> class.
+
+The odd-quote gate was green continuously through all 18 sites the next wave
+found. Nothing was broken about it. It answered its question correctly and its
+question was too narrow — which is indistinguishable from health, from outside.
+
+**Practical test.** When adding a gate after finding a defect, write down the
+sentence *"this gate would also catch ___"*. If you cannot complete it with a
+defect you have **not** already seen, you have written a regression test, not a
+gate. Keep it — regression tests are worth having — but do not let it be counted
+as coverage of the class, and go looking for the decidable question underneath.
+
+Applied here: `runtime/instance.t27` is off by ten braces and
+`fpga/fifo.t27` by four parens. Neither was on anyone's list.
+
+## A green gate is indistinguishable from a blind one unless it publishes a denominator
+
+The previous section gave the theorem: a shape search covers exactly what contains
+its shape, and cannot bound its residue. Turning that on a campaign's own 29
+instruments produced something worse than the theorem predicts.
+
+**Two of them had been printing their blindness in the summary line all along.**
+
+```
+units scan: 13 files, 41 connections compared, 122 SKIPPED AS UNRECOGNISED,
+            0 new disagreements
+width scan: 16 signed declarations (3 RANGE-ANNOTATED), 5 reductions checked
+```
+
+`units_scan` infers a quantity from a port **name** against a hand-written table:
+it compares **41 of 163, 25%**. `width_scan` needs a range annotation to know what
+a declaration should hold: **3 of 16, 19%**. Both exit 0. Both had exited 0 every
+wave since they landed, and the numbers were right there in the output.
+
+Neither gate is broken. Each answers its question correctly. What was wrong is the
+reading: *"0 new disagreements"* was taken as **no unit defects** when it means
+**no unit defects among the quarter of connections whose names we recognise**.
+
+### The numerator fallacy
+
+For a gate `G` examining `E ⊆ A` and reporting `|F|` findings:
+
+```
+|F| = 0 with E = A      and      |F| = 0 with E ⊊ A
+```
+
+produce **byte-identical output and the same exit code**. So a green gate carries
+no information about `A \ E`, and an unstated scope silently becomes a universal
+claim. This is vacuity and locality-of-evidence one level up — at the instrument
+rather than the proof.
+
+**Enumerated in that repo: 22 of 29 checking scripts publish no denominator at
+all.** Seven print a skipped or exempt count; the rest print a numerator and an
+exit code. That is not evidence they are narrow — it is the absence of evidence
+either way, which is exactly the problem.
+
+### The fix is a paragraph, and it must be a paragraph
+
+No scanner can compute another scanner's true denominator — that is the halting
+problem wearing a lab coat. So the requirement is documentary: every checking
+script carries a **`COVERAGE.`** paragraph stating what it examined, what it could
+not, and why. A gate whose author cannot write that in one paragraph has not
+established coverage of anything.
+
+Be honest that this checks *presence*, not truth. A gate can satisfy it with a
+false denominator, and the meta-gate cannot tell. Say so **in the meta-gate's own
+COVERAGE. paragraph** — an instrument that cannot audit itself must at least
+declare it.
+
+### Why this is worth doing: it converts backlog into design questions
+
+Writing the two paragraphs settled both items on the spot:
+
+- `units_scan`'s residue is **not** reducible by widening the name table — that is
+  a shape search over names, so the theorem applies. Only a design-side naming
+  convention or a real type annotation can close it.
+- `width_scan`'s 13 unannotated declarations do not lack a better regex. **The
+  information is absent from the artefact.**
+
+Two "scan harder someday" tickets became one design question. That is what a
+denominator is for — it tells you whether more scanning can help at all.
+
+### The tell that the whole set needs re-running
+
+Adding this gate forced a run of every other gate, and that run failed:
+`faith_check` reported that a gate mutated an artifact its own docstring denied
+writing. **The previous wave had shipped with that gate red and nobody knew**,
+because each wave runs the gates its change touches.
+
+So: **when you add or edit any gate, re-run the entire set, not the ones you
+think are affected.** A gate suite is a single object; editing one member can
+falsify another's stated contract, and a per-change subset run will not see it.
+
+## CORRECTION — the syntax block above is not the language the compiler reads
+
+This skill opens by saying a verified claim must be recorded as a `.t27` spec, and
+gives a "Syntax in one block" section with `spec`/`rule`/`lemma`/`conjecture`/
+`verification`/`finding`, citing three files as *"the working idioms, not
+invented"*. **Measured against `t27c`, that form is read as an empty shell.**
+
+| form | files | code lines | AST nodes captured | density |
+|---|---|---|---|---|
+| `module X { const NAME : T = v; }` | 41 | 7,194 | 4,982 | **69.3 / 100 lines** |
+| `spec` / `rule` / `lemma` / `finding` | 28 | 13,598 | **56** | **0.4 / 100 lines** |
+
+**173×.** The declarative form yields exactly **2 nodes per file regardless of
+size** — `kind: Module, name: ""`, an anonymous wrapper with nothing inside. A
+6,630-line spec produces 2 nodes. The parser reads the outer shell and stops.
+
+Two of the three cited example files also **do not exist in the `t27` repo at
+all** — they live only in `trinity-fpga`, which has no parser. The table silently
+spanned two repositories, so "read one before writing a new spec" pointed at files
+a reader in `t27` cannot open and nothing has ever parsed.
+
+### What to write instead
+
+Use the **module form**, which is what the corpus uses and what `t27c` reads:
+
+```
+module GammaConjecture {
+    use math::constants;
+
+    // Claim: C-gamma-001 (CONJECTURAL), tolerance: CONJECTURAL
+    const GAMMA_PHI : f64 = pow(PHI, -3.0);
+}
+```
+
+Provenance, status tags and honesty limits still go in — as **comments attached to
+the declaration they qualify**, exactly as `specs/physics/gamma_conjecture.t27`
+does (0 recovery events, fully captured). The discipline is unchanged; the
+container is.
+
+### The general lesson, and it is the sharp one
+
+**Recorded is not read.** Every gate in that campaign enforces some
+well-formedness predicate `W` — parses without recovery, delimiters balance,
+quotes even. None of them entails `R`, that a consumer extracts content. A file
+can satisfy all of `W` and still yield `O(1)` output for `O(n)` input.
+
+The separating observable is not any predicate on the file. It is **whether the
+consumer's output scales with the input** — a ratio, not a pattern, which is why
+no shape search could find it and no numerator could report it.
+
+**Practical test, before writing anything into a source-of-truth format:**
+
+```bash
+<the tool> parse <your file> | grep -c "kind:"
+```
+
+Then double the file and run it again. If the count does not move, the tool is not
+reading your file, whatever its exit code says. This costs one command and would
+have saved 13,598 lines written into a shell.
+
+### An instrument refuted me in its own log — leave that mechanism in
+
+The gate written this wave asserted in its docstring that the corpus was "sharply
+bimodal, a factor of 200 with nothing in between", to justify a single threshold.
+It also printed the measured gap on every run. The first run printed **6×**.
+
+The claim never shipped, purely because the number that falsifies it was in the
+output next to it. **Make gates print the quantity their own threshold rests on.**
+A tuned constant with its justification unprinted is a claim nobody can check —
+including you, one wave later.
+
+## The obvious one-line fix is wrong: count the other uses first
+
+The correction above established that `spec Name {` is read as an empty shell. The
+cause is that **`spec` is not a keyword in that language at all** — it lexes as a
+bare identifier, so the declaration never forms.
+
+The fix suggests itself immediately: add `"spec" => TokenKind::KwModule` to the
+lexer. One line.
+
+**It is wrong.** `spec` appears **31 times in that corpus as an ordinary
+identifier** — `fn generate_t27(spec: TriSpec)`, `when spec = parse_tri_file(...)`
+— and promoting it wholesale breaks every one. Nothing about reading the 8 broken
+files reveals this; only counting the *other* uses does:
+
+```bash
+grep -rhoE "\bspec\b" specs/ | wc -l      # all uses
+# then separate `spec Ident {` from the rest
+```
+
+**Rule: before promoting any word to a keyword, count its occurrences in the
+non-declaration position.** A keyword promotion is a global change to a shared
+namespace, and the evidence for it is never in the files you are trying to fix.
+
+### Contextual keywords, and the positional invariant that decides them
+
+A module opener is `spec Ident {` and **nothing else**. Three tokens decide it, so
+it is a contextual keyword — legal as a declaration head, legal as an identifier
+everywhere else. This is the same pattern that settled generic function names in
+that parser (a generic list is *always* followed by `(`) and it keeps recurring:
+
+> When a token is ambiguous, look for a **positional** invariant rather than
+> widening the grammar. Backtrack to check it if lookahead is too short — that is
+> what `mark()`/`reset()` are for.
+
+Result, measured: 8 empty shells → **1**, recovery events 161 → **154**,
+declarations swallowed 0 → 0, 1213 tests still passing.
+
+### Theorem (repair asymmetry) — a detector is not a diagnostic
+
+The density check that found this is a **ratio** test: it reports *how much* was
+read without knowing *why*. That is exactly what makes it a valid detector for an
+unbounded class of causes (Prop. 193's question-search), and exactly what makes it
+useless for localising any one of them.
+
+The remaining shell proves it. `ternary_logic.t27` opens `type Trit = Trit` — an
+unsupported construct whose recovery occludes everything after it. **Two
+independent causes produced one indistinguishable symptom**, and `8 → 1` rather
+than `8 → 0` is the *only* evidence the second cause exists.
+
+So: **a bounded-residue detector and a cause-naming diagnostic are different
+instruments, and you need both.** A campaign that builds only detectors can prove
+something is wrong and never close anything; one that builds only diagnostics
+fixes what it happened to look at. The tell that you have only detectors is a
+finding count that drops but never reaches zero — the residue is not stubbornness,
+it is a second cause your detector cannot distinguish.
+
+### And check that "read" means "used"
+
+The 7 recovered specs are now parsed. **Nothing consumes their contents** — no
+generator, no checker reads them. "Read by the parser" is one relation further
+along than "recorded in a file", and still not "used by anything". State which one
+you have achieved; the temptation is to report the last one you can name.
+
+## The error messages were already being collected and thrown away
+
+Before building any new instrument, check what the existing one already knows and
+discards. In that compiler, every recovery event pushed a formatted error string
+into a `discarded` vector. Only `discarded.len()` was ever printed.
+
+**One `eprintln!` over that vector turned a scalar into a ranked work-list** —
+154 events, 20 distinct causes, each with a file and a line. Several waves had
+gone into inferring causes by hand from downstream symptoms, and the causes were
+in a variable the whole time.
+
+Ask it explicitly: *what does this code compute that it does not report?* Counters
+built from rich values, exceptions caught and rethrown as booleans, `Result::Err`
+strings collapsed to `is_err()`. Every one is a diagnostic already paid for.
+
+## Theorem (composition confound) — a metric over mixed kinds measures the mix
+
+Ranking those causes produced the wave's real finding. The top two, 91 of 128
+events, were **Markdown**:
+
+```
+48 events / 30 files   Unexpected top-level token: Ident   e.g.  ## Specification
+43 events / 17 files   Unexpected top-level token: Minus   e.g.  - protocol_version: ...
+```
+
+Headings and bullet lists, in files named `.t27`. Structurally, **16 of 497 specs
+are Markdown documents and account for 36% of the "parser backlog"**.
+
+Stated generally: for a ratchet `M(C) = Σ_{x∈C} m(x)` over a corpus partitioned
+into kinds with different characteristic `m`, `M` moves under **three** independent
+operations:
+
+1. improving the subject (the parser got better),
+2. improving the instrument (the counter got more honest),
+3. **changing the mix of kinds** (someone added or renamed a file),
+
+and `M`'s value alone cannot distinguish them. Renaming sixteen files to `.md`
+would have moved that campaign's headline number from 154 to 99 with **no parser
+and no spec changing at all**.
+
+**Every ratchet over a heterogeneous population is partly a composition metric.**
+This is the unexamined-denominator failure again, applied to the denominator's
+*contents* rather than its size — and the fix is the same: publish the partition,
+not just the total.
+
+Practical: when a ratchet improves, ask *which of the three happened*. If files
+entered or left the corpus that wave, the number is not comparable to last wave's
+and saying so costs one sentence.
+
+## An exemption granted by name cannot notice it has siblings
+
+The sharpest part of this is that the campaign had **already met one of these
+files**. `c_api_contract.t27` was excused in an earlier wave as "documentation
+wearing a `.t27` extension", with the reasoning that renaming it is a decision
+about the corpus rather than a parser defect.
+
+That reasoning was correct. The **scope** was wrong: it was recorded as a
+singleton exception, by literal filename, when it was a *sample of a population*.
+Fifteen siblings went on inflating a number read as a parser backlog for many
+waves after.
+
+> **Rule: when you excuse something, ask what class it belongs to and count the
+> class.** A by-name exemption is a fact about one file; a by-property exemption
+> is a fact about the corpus, and only the second can tell you how big the
+> problem is.
+
+The tell is the phrasing of your own justification. If the reason you wrote is a
+general one — *"this is documentation, not code"* — but the exemption you coded is
+a literal string, those two disagree, and the code is the one that will be read
+next wave.
+
+## Theorem (exemption drift) — every prose justification in a checker is an unchecked claim
+
+The previous section's rule — *when you excuse something, count the class it
+belongs to* — is mechanical, so it can be run over a whole suite. Doing that
+across 28 gates found **13 hardcoded exemption sets, 8 naming literal files**, and
+two that were wrong **in opposite directions**.
+
+An exemption is a pair `(J, S)`: a justification `J`, which is a predicate over
+the corpus, and a set `S` of literals. Soundness requires
+
+```
+S = { x : J(x) }
+```
+
+and **nothing enforces it**. The two drift apart independently:
+
+| | | |
+|---|---|---|
+| `S ⊊ {x : J(x)}` | **under**-exemption | siblings go unnoticed; the count is inflated |
+| `S ⊋ {x : J(x)}` | **over**-exemption | checks are silently disabled; the count looks complete |
+
+### Over-exemption is the dangerous half
+
+Under-exemption produces *visible* noise — an inflated number somebody eventually
+investigates. Over-exemption produces **silence**: the artefact is simply absent
+from every count, and the count still looks whole. There is no symptom at all.
+
+The instance was mine, written two waves earlier. A gate exempted four scripts
+with the reason *"not checking scripts, so coverage is not a question they
+answer"*. Re-deriving that stated property — never returns a failure status, emits
+no `::error::` — refuted three of the four:
+
+```
+bench.py         ::error::arm '{label}' exited nonzero      <- can fail CI
+mutate.py        ::error::mutate self-test found no RTL     <- can fail CI
+scale_probe.py   has a `return 1` failure path
+trace_reader.py  the only one the sentence is true of
+```
+
+Three scripts that gate CI were excused from a requirement by a sentence that was
+not true of them, and it survived because **a justification written in prose is
+never compared to the code beneath it.**
+
+### The corollary, and it generalises past exemptions
+
+This skill already holds that an unrun check proves nothing, an unbounded search
+establishes nothing, and an unpublished denominator means nothing. A `# reason:`
+comment beside an exemption is **all three at once** — an assertion about the
+corpus, never executed, never bounded, never counted.
+
+**Practical rule.** Whenever you write a justification for skipping something,
+write it twice: once in prose, once as a predicate you can run. Then run it and
+compare the two sets. If they differ, one of them is wrong and you have just found
+out which — cheaply, and before it silently disables a check for a year.
+
+The tell that a set needs this: it is spelled with literal filenames while its
+comment above it is a general sentence. That mismatch is visible without running
+anything, and it is the same tell as the previous section's — because it is the
+same defect, seen from the over-exempting side.
+
+### Report a zero-effect correctness change as zero
+
+The other half of this wave re-derived an under-scoped exemption into a structural
+property. **Measured effect: none** — the counter it feeds was 0 before and after.
+
+Say that. The temptation is to report the fix and let the reader assume it moved
+something, or to hunt for a number that did move and lead with it. A correctness
+change with a zero-sized effect is still worth making, and describing it honestly
+costs one clause: *"recorded as a correctness change with no numeric effect."*
+
+## Theorem (refutation liveness) — every suppression list needs an expiry check
+
+The exemption audit above continued into a gate's `KNOWN_OPEN` list, which carried
+its own contract in a comment:
+
+> *"a known finding is listed with its reason, and anything NOT on this list fails
+> the build. Removing an entry here must coincide with fixing the defect, or the
+> gate goes red — which is the point."*
+
+That guards **one** direction. The reverse had no signal at all. The single entry
+recorded a real defect as *"Real, unfixed"* — and the RTL had since been repaired.
+The gate printed `0 known-open` and exited 0 every wave since, in silence.
+
+An expected-refutation entry `e` asserts `fires(e)`. Checking only
+
+```
+¬fires(e) ⇒ e ∈ KNOWN          (a new defect must be listed)
+```
+
+is half a contract. Soundness also needs
+
+```
+e ∈ KNOWN ⇒ fires(e)           (a listed defect must still exist)
+```
+
+and **the missing half is unobservable by construction**: a non-firing entry
+produces no output, so the failure looks exactly like success.
+
+**This applies to every suppression mechanism**, not just this one — `KNOWN_OPEN`,
+`EXPECTED_VACUOUS`, `EXCUSED`, expected-refutation guards, `xfail`/`skip` markers,
+allowlists, and every ratchet baseline entry. Each asserts a live defect. Each rots
+the moment somebody fixes it, and nothing connects the fix to the record.
+
+The check is four lines: compute the set that fired, subtract, fail on the
+remainder. Write it when you write the list.
+
+## Check the tracking status before you publish a ratio
+
+This wave came one step from publishing *"92% of the RTL is unscanned."* The
+arithmetic was right — the gate reads one directory, 13 of 158 `.sv` files under
+`build/` — and a sibling tree genuinely still contained the pre-fix code.
+
+**It was false.** `build/` is entirely gitignored. The five sibling trees are
+untracked derived copies (`build/mut` is literally a `copytree` of `build/rtl` for
+mutation testing), and the "unfixed" file was a stale snapshot, not live RTL. One
+`git ls-files` call was the difference between a finding and a retraction.
+
+> Before reporting any coverage ratio, ask what the denominator's members **are**:
+> tracked sources, generated artefacts, or scratch. A ratio over a directory
+> listing counts whatever happens to be on disk.
+
+What *did* survive the check is worth more than the number would have been: the
+gate's subject tree is **generated and gitignored**, so its result is not
+reproducible from the repository alone — it depends on whatever the build step last
+produced. **A denominator can be published and still not be versioned.** That
+belongs in the `COVERAGE.` paragraph, and it is a fact no amount of scanning
+harder would have surfaced.
+
+## Theorem (self-referential blindness) — never choose which checks to run by recall
+
+An earlier section here says: *when you touch any gate, re-run the entire set.*
+Six waves then ended with the line **"all 20 gates green"**. The suite had **58
+steps**. The 20 were a list typed by hand, and the strongest check in it — the one
+that deletes the subject and asks what still passes — was not on that list.
+
+It had been **red for six waves**.
+
+Let `S` be a suite and `A ∈ S` the check that validates membership in `S`. If the
+operator runs a hand-chosen subset `R ⊆ S`, then
+
+```
+A ∉ R   is unobservable from inside R
+```
+
+Every member of `R` passes, and `A`'s absence removes the only signal that
+`R ≠ S`. **A suite's completeness check must be run by construction — enumerated
+from the workflow file, never from memory.** The failure mode of recall is
+silence, and what gets dropped is disproportionately the slow, expensive check,
+which is exactly the one worth having.
+
+The corollary, measured: the four gates missing from the sweep were the four I had
+**written** in those six waves — each landing with a proposition asserting the
+whole set was green.
+
+### A rising number can be the symptom
+
+The README claimed *"all N checking steps are absence-swept"*, and `N` was derived
+as *steps not exempt*. Every new unexempted step therefore **raised** it — 44, 45,
+46, 47 — and the prose was updated to match each wave. Adding the missing
+exemptions dropped it to **43**.
+
+The count rose *precisely because* the sweep was broken. A green consistency gate
+and a red completeness gate, together, made the defect look like progress.
+
+> When a metric moves in the direction you want, check that the mechanism moving
+> it is the one you think. A derived number is only as meaningful as the
+> derivation, and "more steps are swept" and "more steps escaped classification"
+> can be the same arithmetic.
+
+### Measure the exemption, don't assert it — it fails about a quarter of the time
+
+Applying the earlier rule (*write the justification as a runnable predicate*) to
+four new exemptions, each claiming *"its subject is X, not the RTL, and its absence
+case is internal and enforced"*:
+
+```
+copy the script ALONE into an empty tree, run it, read the exit code
+```
+
+| gate | starved | |
+|---|---|---|
+| three of them | exit 1 | correctly name what is missing |
+| the fourth | **exit 0** | found one script — *itself* — and declared it compliant |
+
+The fourth's subject was `formal/*.py`, so **a directory containing only the
+scanner satisfies every count it makes**. "The corpus is present" is not "the
+corpus is the right corpus." The fix was to resolve which scripts CI actually runs
+and require those to be there — coverage is an invocation's *output*, not the glob
+that requested it — plus a decline path for a tree with no workflow steps at all.
+
+Running that test costs four shell lines and caught a gate that would have passed
+forever in an empty repository.
+
+## Theorem (the suspended check) — `continue-on-error` plus "until green" is a red reported as success
+
+The previous section's fix — *run the suite by construction, not by recall* — was
+built as a runner that parses the workflow files, extracts every
+`python3 formal/*.py` invocation and runs all of them. 43 invocations, 30 scripts,
+no list to forget.
+
+**Its first full run disagreed with CI, and the disagreement was the finding.**
+
+One gate failed whose workflow step carries `continue-on-error: true`. A runner
+that ignores the flag disagrees with the thing it simulates. But treating it as a
+hard failure is not safe either: it trains the operator to expect one red and wave
+it through, which is precisely how a *second* red gets missed. So report them in
+their own category, labelled for what they are — **red checks the workflow
+ignores, not passes.**
+
+Enumerated in that repo: **5 steps carry the flag, 2 of them are checks.** One
+read *"non-blocking until observed green"*. Building it locally: it has **never
+been green** — three proof files used `Forall` while importing only a local
+module, and `Forall` lives in the standard list library. A missing import fails on
+every version of the toolchain, so it was not an environment artifact.
+
+Stated generally: a step with `continue-on-error: true` and a justification of the
+form *"non-blocking until X"* is a **promise to re-check**. Nothing schedules that
+re-check, and the step emits no signal distinguishing
+
+```
+green, safe to enforce        red for a year
+```
+
+— both render as a passing workflow. The flag converts a failing check into an
+**indefinitely suspended** one, and the suspension becomes invisible at exactly
+the moment it should end.
+
+This is the refutation-liveness theorem with the polarity reversed. There, a
+suppression entry rotted when the defect was **fixed**. Here, a suspension rots
+when the defect is **not** fixed. Both are unobservable because the mechanism that
+would report the change is the one that was switched off.
+
+> **Every `continue-on-error` needs an expiry probe**: a check that the suspended
+> step *still fails*, so the day it starts passing is the day the build tells you
+> to flip the flag. A suspension without one is a deletion with better manners.
+
+### Fix the class, then stop at the class boundary
+
+The missing import was in three files, not one — found by asking which files use
+the symbol without importing its module, rather than by fixing the file the build
+happened to name first.
+
+After those three, the build advanced and stopped on something else entirely: a
+type error inside a proof (`81 : Z` where `nat` was expected). That is **proof
+content, not bookkeeping.** It was left alone and reported.
+
+Two different defect classes were hiding behind one suspended check, and only the
+first is mechanically repairable. Say which one you fixed, say the build still
+fails, and do not flip the flag — *"the build advances past three files and now
+fails differently"* is an honest result; *"fixed the Coq build"* would not be.
+
+## A suspended check accumulates defect classes, not defects
+
+The previous section established that `continue-on-error: true` turns a failing
+check into an indefinitely suspended one. Repairing behind a single such flag,
+until the point where guessing would start:
+
+| # | class | files |
+|---|---|---|
+| 1 | a symbol used with its module never imported | 3 |
+| 2 | bare numeral in `nat` position under an open `Z_scope` | 1 (3 sites) |
+| 3 | `assert (H : P) := term.` — not valid syntax at all | 1 |
+| 4 | same as 2, under `R_scope` | 1 |
+| 5 | `&&` outside `bool_scope` | 1 |
+
+**Proof files building: 10 of 28 → 25 of 28.**
+
+Two things worth carrying:
+
+**One repair unblocked seven files.** A build stops at its first error, so every
+file downstream of a failure is reported by *nothing* — not as failing, not as
+skipped. The visible defect count is always 1, regardless of the true count, and
+that is not a property of this build system but of every fail-fast pipeline.
+**Never estimate remaining work from the current error.**
+
+**Five unrelated classes had accumulated behind one flag.** They could, because
+the observable was "workflow passed" — which distinguishes neither one defect from
+five, nor a recent regression from a year-old one. A suspension does not pause a
+check; it pauses your knowledge of it, and the debt compounds silently.
+
+### Stop at the class boundary and say where it is
+
+The build now fails with `Tactic failure: Cannot find witness` — a proof
+obligation, not bookkeeping. That is where mechanical repair ends. It was left,
+reported, and **the flag was not flipped**.
+
+Reporting "10 → 25 of 28, still failing, here is the remaining error" is worth
+more than a green tick would be, and infinitely more than flipping the flag to
+make the number look finished.
+
+## An exclusion coarser than the defect cannot see a partial fix
+
+Scanning for class 4, the scan skipped any line already containing `%nat` — to
+avoid re-reporting sites already annotated. The actual defect:
+
+```coq
+Nat.gcd 400 (Nat.gcd 300 200) = 100 /\ (400+300+200 = 900)%nat /\ (30^2 = 900)%nat
+```
+
+**Two conjuncts annotated, one not.** The line contained the marker, so the scan
+skipped it.
+
+> When an exclusion's granularity is coarser than the defect's, it hides
+> **partially** corrected artefacts — and a partial fix is the single most likely
+> state of any file somebody has already worked on.
+
+The rule: exclude at the granularity of the thing you are checking. If the defect
+is per-token, do not exclude per-line. If it is per-property, do not exclude
+per-file. "Already touched" is not "already fixed", and a scan that conflates them
+goes blind precisely where a repair is in progress.
+
+### Theorem (suspension bookkeeping)
+
+A suspension is a triple `(step, flag, promise)` and is sound only if the promise
+is checkable. Running the suspended check on every invocation is the direct test
+and is often prohibitive — here it means rebuilding a proof tree.
+
+The cheap sound alternative is to ratchet the **set** of suspensions: a new one
+fails the build until it is recorded with what would end it, and a removed one
+appears as a baseline entry with no matching step. That proves nothing about
+whether any suspended check still fails — and claiming otherwise would be the
+numerator fallacy again — but it does guarantee that **no suspension is ever
+undocumented**, which is the property that was actually missing.
+
+## Theorem (tactic failure is not proof failure) — and the warning was in the log
+
+The previous section stopped at a proof error and called it *"a proof obligation,
+not bookkeeping, and was not guessed at"*. Correct not to guess. **Wrong about the
+category**, and the evidence was three lines away in a warning the build had been
+printing all along:
+
+```
+line 22: To avoid stack overflow, large numbers in nat are interpreted as
+         applications of of_num_uint.  [abstract-large-number]
+Error:   Tactic failure: Cannot find witness.
+```
+
+The definition was `theta_period_ps : nat := 142857143`. A Peano `nat` literal
+that large is kept **abstract**, so `lia` cannot lift it into its arithmetic and
+reports a missing witness — which reads exactly like an unprovable goal.
+
+Measured against a control, which is the only reason this is knowable:
+
+| goal | `lia` | structural lemma |
+|---|---|---|
+| `x > 0`, x = 7 | **OK** | — |
+| `x > 0`, x = 142857143 | fails | `Nat.lt_0_succ` — **OK** |
+| `x <> 0`, x = 142857143 | fails | `Nat.neq_succ_0` — **OK** |
+
+Same statement, same type, different tactic. `lia` evaluates; `Nat.lt_0_succ :
+0 < S n` never looks at the value.
+
+**Stated generally.** A decision procedure returns failure for two distinct
+reasons:
+
+```
+the goal is false or unprovable          the goal left my fragment
+```
+
+and **the message does not distinguish them.** A large literal, a non-linear term,
+an opaque definition, a missing hint database — each leaves the fragment while the
+goal stays trivially true. So *"the prover failed"* is evidence about the prover's
+fragment, never about the proposition. Same relation as an unpublished denominator
+and an unrun check, one level down: at the tactic.
+
+**Why this is worth its own rule:** a tactic failure is the most
+authoritative-looking negative result you will meet. It comes from a decision
+procedure, it is deterministic, and it feels like mathematics. It is a tool
+report.
+
+### Practical procedure when a solver fails
+
+1. **Read the warnings above the error.** They are printed by the same run and
+   routinely name the cause. This one cost a wave because the error was read and
+   the warning above it was not.
+2. **Run a control**: the same goal shape with a small or simple instance. If the
+   control passes, the failure is about your term, not your claim.
+3. **Reach for a structural lemma** that does not inspect the value —
+   `Nat.lt_0_succ`, `Nat.neq_succ_0`, constructor discrimination. A goal that is
+   true *by shape* should be proven by shape.
+4. Only after all three: consider that the statement might actually be false.
+
+### Closing a suspension is a deliverable — say so, with the caveat attached
+
+The step this unblocked carried the comment *"flip `continue-on-error` off once it
+is observed green — that flip is the deliverable, not this step."* Six mechanical
+defect classes later: **28 of 28 files, `make` exits 0, flag off.**
+
+Attach the caveat in the same breath: green was measured on **one toolchain
+version on one host**. Enforcing the step is how a version difference would get
+discovered — which is the argument *for* flipping it, not against, but it means
+"CI will pass" is not what was established. Write the caveat into the workflow
+comment, where the next reader of that step will find it.
+
+## `Qed` is a statement about a derivation, never about the truth of its premises
+
+The previous section closed a proof tree at 28 of 28 files and noted the limit:
+*compiling is not meaning*. Making that limit measurable produced the sharpest
+result of the run, and the instrument was the proof assistant's own:
+
+```
+Print Assumptions avs_efficiency_lower_bound.
+Axioms:
+  ClassicalDedekindReals.sig_forall_dec      <- standard, comes with Reals
+  isscc_pi_2024_measured_bound               <- DOMAIN: asserts the bound
+```
+
+**A lower-bound theorem resting on an axiom that asserts the bound.** The `Qed` is
+entirely correct — the derivation is valid. The premise was assumed.
+
+For `T` proved from assumption set `A`, `Qed` certifies `A ⊢ T` and says nothing
+about `⊨ A`. So
+
+```
+∅ ⊢ T                unconditional
+{T'} ⊢ T,  T' ≈ T    a restatement of its own hypothesis
+```
+
+are **indistinguishable** in a `Qed` count, in a built/unbuilt file split, and in
+the file's own prose. It is the unexamined-denominator failure carried into logic:
+here the denominator is the assumption set.
+
+### Use `Print Assumptions`, not a grep for `Axiom`
+
+No text scan can reconstruct this. An `Admitted` lemma declares itself as nobody's
+axiom, yet appears in the assumptions of **everything that uses it** — so a `Qed`
+sitting downstream of an `Admitted` is not a proof, and only the proof assistant
+will tell you. In that tree: **136 `Axiom`/`Parameter`/`Hypothesis`/`Admitted`
+across 13 files, 32 of them `Admitted.`**
+
+Ask the tool the question. The tool has the answer and a regex structurally cannot.
+
+### Do not forbid domain axioms — ratchet them
+
+A measured physical constant legitimately enters a model as an axiom. Whether a
+*particular* constant should be assumed is a modelling decision, not a scanner's,
+and a gate that bans them lands red and gets disabled.
+
+What was actually missing is narrower and enforceable: **a proof must not acquire
+an assumption silently.** Ratchet the set of `(theorem, axiom)` pairs. Existing
+dependencies stand; a new one fails the build and has to be argued for.
+
+### Report the unresolved fraction, always
+
+The scan found 460 theorem names and **resolved 340**. The other 120 — **26%** —
+are modules whose probe failed to load. They are counted and published, because
+"12 theorems rest on a domain axiom" is a statement about the 340 and a **lower
+bound** on the tree.
+
+A probe-based instrument has two failure modes that look identical from the
+summary line: *the property is absent* and *the probe did not run*. Print the
+resolved count next to the finding count every time, and make the gate fail
+outright when it resolves zero — otherwise a tree that does not load reports a
+clean sweep.
+
+## Attribute a residue before you publish it — the instrument owned 100% of this one
+
+The previous section reported an instrument resolving **340 of 460** items and
+called the missing 26% "the honest residue... a lower bound on the tree."
+
+It was a lower bound on **the scanner**. Three independent instrument defects:
+
+| cause | fix | resolved |
+|---|---|---|
+| probe hardcoded one load-path root | read them from the project file — it declares **two** | 340 → 393 |
+| a `Module X.` qualifies every name beneath it | track the module stack | 393 → **419** |
+| two files in no project listing | one missing import, one solver-fragment issue | +1 built |
+
+An unresolved fraction has exactly two possible owners — **the artefact** and
+**the instrument** — and publishing it without saying which implies the first.
+Try to resolve it *once* before reporting it. Here that took one wave and the
+instrument owned all of it.
+
+The middle row is the subtle one: querying an unqualified name fails with
+*"reference not found"*, which in a summary line is **indistinguishable from "the
+module did not load"**. Two different failures collapsed into one number, which is
+the unexamined-denominator failure occurring inside a residue count.
+
+### A coverage improvement and a regression look identical in a ratchet
+
+Fixing the scanner took visible dependencies from **12 theorems to 19**. Nothing
+was acquired — they were always there. But the gate exists precisely to catch
+*newly acquired* dependencies, so it fired, correctly, on a change that was pure
+instrument gain.
+
+> When you improve an instrument's coverage, **re-baseline with the reason written
+> into the baseline file**, not silently. The next reader sees a jump and has only
+> your note to distinguish "the scanner got better" from "the proofs got worse."
+
+Also: a count reported as `N of M` is worth more than `N`, and the ratio needs its
+own attribution — `28 of 28` in that repo counted the *project listing*, while the
+directory held **30** files. Two more existed that no build had ever touched.
+
+## A destructive check needs a restore that survives its own death
+
+The strongest gate in that suite starves the subject: it moves the generated RTL
+and the property files aside, runs everything, and restores them. Killed by a
+timeout mid-run, it leaves them moved.
+
+**23 of 44 gates then failed for reasons having nothing to do with any of them.**
+Diagnosis cost most of a wave, and recovery needed regenerating one tree from its
+generator and `git checkout` of 15 tracked files — plus the stash directory was
+deleted before its contents were understood, which would have been unrecoverable
+had those files not been tracked.
+
+Two rules:
+
+1. **Before deleting anything that looks like a backup, list its contents and
+   account for every file.** "It looked empty" was wrong; it held the only copy.
+2. **A check that mutates its own subject must restore on death, not on
+   completion** — a trap handler, a context manager, or a restore-first step that
+   runs at startup. A `try/finally` inside the process does not survive `SIGKILL`
+   from a timeout, so the durable form is: *on startup, if a stash exists, restore
+   it before doing anything else.*
+
+The tell that you have this problem: a cascade of unrelated gate failures right
+after a long-running job was interrupted. Suspect the environment before the code.
+
+## Theorem (cleanup placement) — a `finally` establishes nothing about the case you care about
+
+The previous section recorded an outage: a destructive check moved its subjects
+aside, was killed by a harness timeout, and left them moved. This is its fix, and
+the reasoning generalises past this repo.
+
+For a process holding external state `S` with restore `R`, in-process cleanup
+(`finally`, `defer`, a context manager, an `atexit` hook) establishes exactly:
+
+```
+terminated normally  ⇒  R ran
+```
+
+and says **nothing** under abnormal termination — which is precisely the case
+where `S` is left corrupted. `SIGKILL` cannot be trapped at all, and a signal can
+arrive at any instant, so no in-process handler is sufficient. The only placement
+that is total is **the next run, before anything else**:
+
+```python
+def main():
+    recover()          # idempotent; driven by the stash EXISTING,
+    ...                # not by remembering that we created it
+```
+
+Two design points that matter more than they look:
+
+- **Never overwrite a destination that already exists.** A present file means
+  somebody restored or regenerated it. Clobbering that turns a recovery into a
+  second outage. Restore what is missing, report what you kept.
+- **Drive it off the artefact, not off state.** A flag file saying "a run is in
+  progress" has the same problem as the `finally` — it is written by the process
+  that may die. The *presence of the stash* is the signal.
+
+### The observing command can cause the failure it is looking for
+
+Verifying this fix was nearly broken by:
+
+```bash
+python3 formal/absence_sweep.py | head -2
+```
+
+`head` closes the pipe after two lines, which can `SIGPIPE` the producer mid-run
+— **the exact interruption under investigation, introduced by the command used to
+watch it.**
+
+Run long destructive commands to completion into a file, then read the file. Never
+through `head`, `grep -m`, or any early-exiting consumer.
+
+### Diagnose environment before code when failures scatter
+
+The tell for this whole class: **a cascade of unrelated checks failing at once.**
+23 of 44 gates failed, spread across every subject area, none for a reason
+connected to what they check. That pattern is almost never a code regression — a
+code change breaks the things it touches. Suspect the environment first: a moved
+directory, a killed job, a missing generated artefact.
+
+Related, and worth separating from real failures: one gate refused that wave with
+*"the machine was contended (load > 6.0 on 8 cores). No comparison is printed."*
+That is a **correct** refusal — a timing taken under load is not a measurement —
+but it means a suite runner's verdict can be machine-state-dependent. A red must
+be read before it is believed.
+
+## Theorem (absence is not a value) — a suite's verdict on a missing subject is arbitrary
+
+The outage recorded above produced a measurement no design review would have: on
+**one identically starved tree, 23 of 44 gates failed and 21 passed.**
+
+Both groups saw the same absent subjects. Whether a gate reported *"found no
+property files"* or *"0 disagreements"* was **not a fact about the tree** — it was
+a fact about how that gate happened to be written. The 21 passes established
+nothing, and were indistinguishable from the 21 passes of a healthy run.
+
+For a check `C` over subject `S`, `C(∅)` is defined but carries no information
+about `C`'s question. A suite therefore partitions on `S = ∅` into
+
+```
+gates that treat ∅ as a failure       gates that treat ∅ as a clean result
+```
+
+and that partition is a property of the **implementations**, not of the subject.
+So the aggregate verdict on an absent subject is arbitrary — which is the whole
+argument for running a starvation sweep in the first place, seen from the other
+side.
+
+**Practical consequence.** When a subject can go missing accidentally (a killed
+job, a failed generator, a bad checkout), guard it *once*, early, loudly — rather
+than hoping each check declines. Place the guard first so a suite-wide cascade of
+unrelated reds becomes one line naming the cause.
+
+### A guard must not repair
+
+The obvious next step — have the guard restore the tree and continue — is wrong.
+A guard that silently repairs makes the outage invisible again, which is the exact
+failure the whole chain is about. Separate the roles:
+
+- **guard**: detects, names, refuses, and says *do not delete the stash* (that is
+  what got done last time, and it held the only copy);
+- **recovery**: runs in the destructive tool's own startup and in the suite
+  runner, where it is a deliberate action, logged.
+
+### State the residual window, do not imply it away
+
+After the fix the window is: CI — closed. Suite runner — closed. **A single gate
+invoked by hand — still open.** Closing that means a guard inside every script,
+and that was not done.
+
+Write the three cases out. "Fixed" would have been false, and the next reader
+needs to know which invocation path they are on.
+
+### A suite runner whose verdict depends on machine load
+
+Worth separating from real failures, because it recurred in both full runs: one
+gate refused with *"the machine was contended (load > 6.0 on 8 cores). No
+comparison is printed"*, and passed at load 5.3.
+
+The refusal is **correct** — a timing taken under load is not a measurement. The
+consequence is uncomfortable and should be said plainly: **the suite's verdict is
+not a pure function of the repository.** A red must be read before it is believed,
+and a runner that aggregates such gates cannot be treated as a decision procedure.
+
+## Theorem (self-matching liveness) — exclude the scanner from the population it scans
+
+The previous section established that whether a check passes on an absent subject
+is a property of *how it was written*. Making that partition designed instead of
+accidental meant executing every exemption: **each gate copied alone into an empty
+tree and run.**
+
+| result | gates |
+|---|---|
+| exit 1 — names what is missing | 13 |
+| exit 2 — declines, nonzero | 1 |
+| exit 0 — **correct** (its subject genuinely absent = pass) | 1 |
+| exit 0 — **wrong** | 1 |
+
+**15 of 16 held, and the sixteenth had a defect no reading of the code had caught
+in over a hundred waves.**
+
+That gate checks whether other gates strip comments before regex-matching Verilog.
+It already carried the right liveness floor — *"a scan that found nothing in scope
+reports clean"*, so `scoped == 0` fails. Alone in an empty tree it found **one**
+file, itself, and:
+
+```python
+READS_VERILOG = re.compile(r"\.sv\b|build/rtl|glob\(['\"]\*\.sv")
+```
+
+**that line makes the file match its own pattern.** `scoped` became 1, the floor
+was satisfied, and it reported a clean sweep of an empty corpus.
+
+Stated generally: a floor of the form *"the scan must have found ≥1 item in
+scope"* is sound **only if the scanner is excluded from the population it scans.**
+For any scanner whose implementation must *mention* the pattern it searches for,
+`scoped ≥ 1` holds identically — the floor is a tautology, and it is tautologous
+in exactly the case it was written to detect.
+
+**The defect grows with the precision of the scanner.** The more literally you
+write the pattern, the more certainly your source contains it. A vague scanner
+would not have had this bug.
+
+Two fixes, and either alone leaves a hole:
+
+1. **exclude your own file** from the population;
+2. **require the artefacts the pipeline actually references to be present** —
+   coverage is an invocation's output, not a glob's.
+
+## Execute the exemption, do not read it
+
+This is the third wave in which running a stated absence case beat reading it, so
+it is worth stating as procedure rather than as a finding:
+
+```bash
+mkdir -p /tmp/probe/<dir> && cp <script> /tmp/probe/<dir>/
+cd /tmp/probe && <run the script>; echo "starved exit=$?"
+```
+
+Four lines. It found a false exemption in a list that had been believed for the
+gate's entire life, and it distinguishes four outcomes that a code review reads as
+one: *exits 1 naming the cause*, *declines nonzero*, *passes correctly*, and
+*passes wrongly*.
+
+**And record the table, not the verdict.** Writing "all exemptions verified" into
+the list would have lost exactly the information that mattered — that one of the
+sixteen was different, and which one. The table is now in the source above the
+exemption set, so the next reader inherits the measurement rather than the
+conclusion.
+
+## Theorem (ratchet monotonicity) — a finding ratchet is satisfied by deleting the subject
+
+Every absence case tested so far starved a check **completely**. The untested
+middle is a subject that is *partly* there. Measured with **249 of 497 specs
+removed**:
+
+| gate | full corpus | half corpus | verdict |
+|---|---|---|---|
+| parse gate | 154 events | **95** | `ratchet holds` — reads as 38% better |
+| delimiter scan | 21 imbalances | **6** | `ratchet holds` — 71% better |
+| class scan | 16 documents | **11** | `ratchet holds` |
+
+**All exit 0.** Deleting half the subject is not merely undetected — in three of
+them it is indistinguishable from *progress*.
+
+For a finding count `M(C) = |{x ∈ C : P(x)}|` and any `C' ⊆ C`, `M(C') ≤ M(C)`. A
+ratchet asserting `M(now) ≤ M(baseline)` is therefore **satisfied by every
+deletion**, up to and including the complete removal of its own subject. It
+constrains the numerator and is **unbounded below in the denominator**.
+
+An earlier rule here says gates must *publish* a denominator, and these do —
+`497 specs` appears on every run. **Publishing is not ratcheting.** Nothing had
+ever checked that the 497 stayed 497.
+
+**Ratchet the population size as its own gate**, so a deletion is exactly as loud
+as a regression. Do not forbid removing files — forbid removing them *silently
+while another gate reports the drop as an improvement*.
+
+## Record the general form of a defect, or it recurs in one wave
+
+The previous section recorded self-matching as: *a scanner whose regex mentions
+its own pattern satisfies its own liveness floor.*
+
+Writing the very next gate, I put in a liveness check of the form
+`all(populations_empty)` — and it **passed alone in an empty tree**, because one
+of the populations was `formal/*.py` and it counted **itself**. Same defect, one
+wave later, no regex involved.
+
+The narrow record is why it did not transfer. The general form is:
+
+> **Any scanner that is a member of the population it measures will satisfy its
+> own liveness floor.** Regex, glob, file count, database query — the mechanism is
+> irrelevant.
+
+When you write up a defect, ask what the *smallest* class is that contains it, and
+record that. "A regex matching its own source" is a symptom; "the instrument is
+inside its own sample" is the defect.
+
+**Corollary, from three occurrences of the identical repair:** when a scanner's
+subject is the project's own tooling, **resolve the reference set from the
+pipeline** — the workflow file, the manifest, the project file — rather than
+globbing the directory. A glob returns whatever is on disk, including the scanner
+and nothing else. That is not a per-gate fix; it is the default such a gate should
+be written with.
+
+## Theorem (hollowing) — a file that still exists and has been emptied defeats a file-count guard
+
+The previous section closed the deletion case by ratcheting population **size**.
+The next case is a file that is *still there* and has been hollowed out. Measured
+with **249 of 497 specs replaced by a single comment line, every file present**:
+
+| gate | full | hollowed |
+|---|---|---|
+| parse gate | 154 events | **95** — `ratchet holds` |
+| delimiter scan | 21 imbalances | **9** — `ratchet holds` |
+| class scan | 16 documents | **9** — `ratchet holds` |
+| **the size guard written for exactly this** | 497 specs | **497** — agreed |
+
+For a corpus `C` and any content measure `‖·‖` with `‖∅‖ = 0`: deletion moves both
+`|C|` and `Σ‖c‖`; **hollowing moves only the second**. A guard on cardinality is
+therefore *complete for deletion and empty for hollowing* — and the two are
+indistinguishable in every finding count, because a finding needs content to be
+found in.
+
+Hollowing is strictly the harder case: it produces the same drop in every
+downstream metric while leaving the evidence *outside* everything those metrics
+measure. The fix is one line of arithmetic — **ratchet `Σ‖c‖` alongside `|C|`**.
+Measured after: `specs-lines: 76092 → 38522 (37570 missing)` with `specs=497`
+unchanged.
+
+### A COVERAGE paragraph is a work-list, not a disclaimer
+
+The size guard's own coverage note had said it: *"It counts FILES, not content: a
+spec emptied to zero bytes is not detected here."* Written honestly one wave
+earlier, and the case it named was demonstrated **the very next wave**.
+
+> Every stated residue is a prediction that something will eventually be found
+> there. Reading those paragraphs as admissions is the mistake; reading them as a
+> **queue** is the correct use.
+
+This works because writing an honest residue forces you to name the exact shape
+you cannot see — which is already most of the work of constructing the case that
+exploits it. Pull the next wave's task straight out of the last wave's coverage
+notes.
+
+### Two operational notes that cost time here
+
+- **`cmd &` inside a tool call dies with its shell.** A long job backgrounded that
+  way produced an empty log and looked like a silent failure. Use the harness's
+  own background mechanism, which survives the call.
+- **A hand-run check during a running destructive sweep sees a starved tree.** One
+  gate here failed with `FileNotFoundError: formal/witnesses.sv` mid-wave — not a
+  defect, but the documented open window occurring live. If a check fails with a
+  missing *subject* file, look for a sweep in progress before debugging the check.
+
+## Verify the checkout, not just the command — a stale worktree fabricates findings
+
+This cost three false findings and one red gate on `master` in a single session, all
+from the same cause, and the second and third happened *after* the first was
+diagnosed and written down.
+
+The working checkout at `/Users/playom/t27` sits on `feat/wave-547/host-heapsort`,
+which forked **2026-04-04** and is **2,399 commits behind master**. The trees are
+not close:
+
+```
+bootstrap/src/compiler.rs    22,142 lines on the branch    36,970 on master
+cargo test -p t27c           1221 passed, 0 failed         1602 passed, 13 failed
+```
+
+What that produced:
+
+| claimed | actually, on master |
+|---|---|
+| "a CI step can be added, all 1221 tests pass" | 13 fail — the gate landed **red** and was reverted 34 minutes later |
+| "`math_compare.rs` is compiled by nothing, 10 orphan tests" | `mod math_compare;` is `main.rs:30`, live since June |
+| "its plateau test asserts `1e-9` and is provably wrong" | master asserts `1e-8`, with the 2.1e-9 drift documented above it — **fixed two months earlier** |
+| "8 orphan `.rs` files" | 7, and none carry tests |
+
+The third case is the sharpest: a commit from June had *already found and fixed*
+the exact bug, naming the same `2.1e-9` figure in its message. The finding was not
+merely wrong — it was a rediscovery of solved work, presented as new.
+
+**The rule.** Before any claim about a repository, establish which tree you
+measured:
+
+```bash
+git rev-parse --abbrev-ref HEAD
+git rev-list --left-right --count origin/master...HEAD    # behind / ahead
+```
+
+If the answer is not `origin/master`, either say so in the finding or measure
+again against a worktree of master. **Running a command locally is not evidence
+about CI unless the tree matches** — and verifying the *command* is not verifying
+the *checkout*. In the red-gate case the agent re-ran the tests before landing and
+got the same 1221; the repetition confirmed nothing, because it repeated the same
+mistake.
+
+### The tell, and why a warning is not enough
+
+The tell is a finding that seems *too available*: a live module nobody declared, a
+test that contradicts its own file's constants, a whole directory of orphans. Real
+defects of that size in a maintained repo are rare, and "obvious and unnoticed for
+months" is far more often a stale checkout than a real oversight.
+
+Note that the third occurrence happened with an explicit warning about this exact
+trap written into the task. The warning did not prevent the wrong assumption — it
+caused the agent to *check against master*, which is what actually caught it. So
+the durable form is not "remember the branch", it is **make the master check a
+step, not a caution**.
+
+### When the finding evaporates, correct the record — do not file a second one
+
+The right response to "the issue I filed is false" is to retract that issue with
+the measurement that refutes it, not to open a new one. A second record leaves the
+false claim standing next to it, and the false one is usually the more findable.
+
+And separate the roles: an agent that discovers this should *draft* the retraction
+and stop. Commenting on or closing a public issue is publishing — an orchestrator's
+instruction is not the user's authorisation for it.
+
+## Depth is the wrong axis when the checker never reaches the code
+
+Two gates read the same 32 generated Verilog files from the same CI artifact.
+`fpga-lint` (yosys `read_verilog -sv` + `hierarchy -top`) scored **32/32**.
+`fpga-conformance` (Icarus, full elaboration) scored **4/32**. The obvious reading
+is "lint checks shallower, so deepen it" — and the obvious reading was measured and
+found wrong: full `synth -top` across all 32 gives **31 pass / 1 fail**, and the one
+failure is for an unrelated reason. Deepening the tool flags 1 of 28 real defects and
+certifies the other 27.
+
+The axis is not depth, it is **reachability**. Yosys elaborates a function body only
+at a call site, and **406 of 485 functions in those files have zero call sites**. The
+broken code is never visited, so no amount of "check harder" reaches it. Injecting a
+single call site flipped yosys from silent `rc=0` to an error on exactly the line
+Icarus reports.
+
+**Before proposing that a gate be strengthened, measure the strengthened gate.**
+"Run the same tool deeper" and "run a tool that traverses differently" are different
+remedies, and only one of them was ever going to work here. A remedy that sounds
+right and is never measured is how a fourth vacuous green gets built on top of three
+that were just removed.
+
+Corollary for any coverage-shaped claim: **a checker's silence over unreached code is
+indistinguishable from a pass.** Ask what fraction of the artefact the instrument
+actually visits before quoting its verdict.
+
+## When the producer already names the defect it is shipping
+
+All 26 emitter-defect files carried `// UNSUPPORTED_ICARUS: struct <Name> contains
+non-lowerable fields`. All 4 passing files carried zero. Perfect correlation, both
+directions.
+
+That marker is the finding. **The emitter already has the predicate** — it computes
+"I cannot lower this", writes the fact into the output as a comment, and emits the
+broken code anyway. The gap is not detection; it is that detection is not wired to
+refusal.
+
+So when a defect class correlates exactly with a marker the producer emits, do not
+write a detector — **the detector exists**. Report the missing edge between it and
+the failure path, and check whether the same generator has other markers with the
+same shape. A tool that annotates what it got wrong and proceeds is a fail-open in
+the same family as `exit 0` after `NOT READY`.
+
+## A number found next to the defect may belong to a different defect
+
+"489 of 618 specs (79.1%)" sat in `compiler.rs` a hundred lines from the struct-prefix
+fallback, and was cited as this defect's scope through several passes. It is neither:
+it belongs to a different cause (`param_types` cleared and not repopulated in
+`gen_verilog_fn`), **and that repair has already landed**. Wrong on both counts at once
+— wrong defect, and describing a state that no longer exists.
+
+The measured scope was 26 of 32, obtained by running the compile. **Proximity in a file
+is not attribution, and a committed figure is a claim about the past.** Re-derive the
+number for the defect you are actually filing.
+
+### Two measurement bugs that score everything as broken
+
+Both hit inside one pass, both in the same family as the vacuous greens being
+investigated:
+
+- **`echo "exit=$?"` after a pipeline** reads the *last* command's status. Piping into
+  `head` reports `head`'s success, not the tool's.
+- **`timeout` does not exist on macOS.** Every invocation exits `127`, so a sweep scores
+  all N targets as failures and looks like total collapse.
+
+A result of "everything failed" or "everything passed" deserves one control run before
+it is believed — in either direction.
+
+## One mutant can mask another — plant them separately
+
+A guard was loosened so that a reset-block line satisfied an assertion meant for a
+handshake block. Proving the repair meant planting the mutant: delete the clear from
+*both* handshake blocks, show the old assertions pass, re-anchor, show they fail.
+
+That is what was asked for, and it would have been **half a proof**. The two
+assertions panic in order — the `B`-channel one fires first and aborts the test, so a
+both-lines mutant demonstrates nothing about the `R` channel. The agent noticed, re-ran
+with **only** `R` deleted, and showed it bites independently.
+
+**A mutant that kills the test at the first assertion leaves every later assertion
+unproven.** Plant one mutant per guard, not one mutant per file, and read *which*
+assertion fired rather than that the run went red. The failure message is the evidence
+— "the block body was `s_axi_awready <= 1'b1; s_axi_wready <= 1'b1;`" proves the
+assertion is reading the right span; a bare `FAILED` proves only that something did.
+
+Corollary: this is the same shape as the vacuous-green family, one level up. There, a
+gate passed without checking. Here, a gate *failed* without checking everything it
+claims to — and a red result is even less likely to be audited than a green one.
+
+## A pre-push gate that blocks you is a question, not an obstacle
+
+The same pass hit a local pre-push hook (`NotebookLM`) and the environment offered
+`SKIP_NOTEBOOK_GATE=1`. Instead the agent asked whether the gate was *right*: the file
+it demanded, `.trinity/current_task/.notebook_id`, is **tracked in git** and was merely
+absent from a sparse checkout. Adding it satisfied the gate legitimately.
+
+**Before bypassing a gate, establish whether it is wrong or you are.** The bypass flag
+exists, is one word, and would have produced an identical-looking green — which is
+exactly why reaching for it is how a bypass becomes the default. If the gate turns out
+to be genuinely wrong, say so in the PR and fix the gate; do not route around it.
+
+## Scope the diff to the defect you proved
+
+The same pass found a second fail-open one function away — a reset-block assertion
+matched against the whole output, where five of its strings also occur elsewhere. It
+was left **unfixed, documented in the PR body, and filed separately**, because it needs
+its own mutant proof.
+
+That is the right call and it is worth naming, because the tempting move is to fix both
+while the file is open. A change whose evidence covers one defect should not carry a
+second: the reviewer cannot tell which measurement backs which hunk, and an unproven
+repair riding along with a proven one inherits its credibility without earning it.
+
+## A surviving mutant is not yet a fail-open — compose it with a real defect
+
+A verdict flag had been a hardcoded `let theorem_matrix_ok = true;` — the textbook
+fail-open. It was repaired, and the repair was tested the obvious way: restore the
+hardcoded `true` and see whether anything fails. **Nothing failed.** Read literally,
+that says the guard does not bite and the repair is incomplete.
+
+It says no such thing. Every failure path inside the phase exits through `bail!`
+*before* the verdict is computed, so the flag can never be observed as `false`: the
+conjunct is a tautology given the control flow, and the mutation changes no reachable
+behaviour. It is an **equivalent mutant**. Composing it with a genuine defect — a
+matrix of 23 variants where 24 are required — made the gate fail as it should.
+
+**Two different things produce a surviving mutant:**
+
+- the guard fails to catch a real change — a defect in the guard;
+- the change was **unobservable** — a defect in the mutant.
+
+Only composition tells them apart. Plant the suspect mutant *together with* a real
+break: if the pair is caught, the guard is fine and your mutant was inert. And prove
+the consumption separately — deleting the success assignment must fail, or the flag
+truly is dead.
+
+The corollary matters more than the case: **"the mutant survived" is a lead, not a
+verdict**, exactly like "the scan found hits" and "the checker was silent". Reporting
+it as a finding without the composition step manufactures a defect in working code —
+the same shape as the phantom-defect family recorded further up, arriving through the
+one instrument that was supposed to be immune.
+
+### A value-sensitive proof can still admit more than one value
+
+The same pass: a Coq lemma proved by `vm_compute; reflexivity` genuinely constrains its
+literals — an exhaustive ±5000-ulp scan showed φ's mantissa is the **only** one that
+satisfies it. That is real evidence, and it invites the wrong conclusion, because on the
+*other* side of the same equation three mantissas satisfy it, one of which passes every
+downstream check including `coqchk`.
+
+**A proof pins what it computes over, not every constant in its statement.** Before
+treating a passing proof as a gate on a literal, scan the neighbourhood of each literal
+separately. One being uniquely determined says nothing about the next.
+
+## The decisive test for a self-referential guard: extract it and see if it still builds
+
+Mutation testing could not settle whether a guard was vacuous — every surviving mutant
+invited the equivalent-mutant defence. What settled it was cheaper and absolute.
+
+**Copy the test body, plus only the type declarations it names, into a file containing
+no production logic at all, and compile it.**
+
+- Before the repair: it compiled and passed — `1 passed; 0 failed`. The test had copied
+  two production lines into its own body and asserted against its own local vector. It
+  constrained `std::slice::sort_by`, not the command.
+- After: **38 compile errors** naming nine missing functions, and no binary.
+
+A guard that still builds without the code it guards is not weak, it is **absent**. This
+is a yes/no answer where mutation gives a judgement call, so reach for it first whenever
+a test and its subject live in the same file.
+
+## Prove consumption with the artefact, not with the unit test
+
+A unit test calling a function is not the command calling it. Both mutants above were
+eventually caught by tests — which says the *tests* reach the code, not that the
+*program* does.
+
+The proof was two real binaries driven by a stubbed `gh`: pristine printed the alarming
+gate first and exited **1**; the same build with the ranking inverted and the verdict
+forced to `None` printed the quiet gate first and exited **0**. That is the claim —
+"this code decides the exit status" — and only the built artefact can carry it.
+
+Applies wherever a checked property is separated from its consumer by a layer: the
+lemma proved but never imported, the phase computed but bailing before its flag is read,
+the seal recomputed but not compared.
+
+## An unreadable history is not a zero
+
+`num()` returned `-1` on unparseable input and was fed `gh(...).unwrap_or_default()`,
+which yields `""` when the API call fails. `-1` then lost every `> 0` test: the finding
+dropped out of the alarming set, `--strict` exited **0** where it previously did not —
+**one HTTP 502 downgraded every hole** — and the verdict printed `has never run anywhere
+at all` about a workflow whose history had simply not been read.
+
+**Absence of an answer and an answer of zero must not share a representation.** A
+sentinel that is numerically comparable will be compared, and it will lose or win
+silently. Use an optional and make the unknown case loud.
+
+The converse is equally load-bearing and was preserved in the same repair: **a 404 *is*
+an answer.** Twelve of 54 registered workflows genuinely have no file on the default
+branch. Collapsing "could not determine" into "no runs" is the defect; collapsing "does
+not exist" into it as well would be the over-correction.
+
+## No grep for a present token can find a missing one
+
+A deliberate hunt for fail-open defects was given nine confirmed shapes and eight
+grep patterns. It produced **272 raw hits and one genuine finding** — a rate of about
+1 in 25, worse than the 1-in-19 this repo had already measured for form-based scans.
+
+**Neither of the pass's real results came from the patterns.** One came from reading a
+small file end to end. The other came from noticing an *absence*: the `= true;` sweep
+was useful only because its hits were compared against the `let mut … = false`
+declarations, and one name appeared in the declarations and never in the assignments.
+
+That is the general point. The fail-open family is disproportionately made of things
+that are **not there** — a flag never assigned, a phase whose body was dropped, a
+toolchain no workflow installs, an assertion that never mentions the code it guards.
+A textual search enumerates what exists. To find what is missing you need **two sets
+and a difference**: declarations vs assignments, required contexts vs contexts that
+ran, tests that name a function vs functions that exist, workflow steps vs the tools
+their commands invoke.
+
+Budget accordingly: grep for the shapes, but expect the yield to come from reading a
+few whole files and from one set-difference you construct on purpose.
+
+### The scan's own harness is in scope for the same defect
+
+The same pass nearly reported a **clean sweep across all seven patterns** — zero hits
+each — because zsh does not word-split an unquoted variable, so `git grep … -- $PATHS`
+searched one nonexistent path. A known-positive control (`runs-on` must appear many
+times) caught it. A second call lost its argument to zsh's `:c` history modifier.
+
+Both are the exact defect class being hunted, in the instrument. **Run the control
+before believing any zero**, and treat a uniform result across independent patterns —
+all zero, or all hit — as evidence about the harness until proven otherwise.
+
+## A skip that is not `#[ignore]` is counted as a pass
+
+Three tests reported `SKIP: lake not on PATH` and the suite printed
+`173 passed; 0 failed; **0 ignored**`. They were not hidden — they were **classified as
+successes**. None used `#[ignore]`; each printed a line and returned, which libtest cannot
+distinguish from doing the work.
+
+Worse, the reason was unreachable: `cargo test` captures a *passing* test's stdout, so the
+explanation existed only in a buffer nobody printed. Recovering it needed `--nocapture` to
+make the line exist and `--test-threads=1` to make it attributable to a test name.
+
+**A self-declared skip is invisible twice over** — once in the count, once in the log. When
+auditing coverage, do not ask how many tests failed; ask how many *ran*, and be aware that
+the framework's own tally will not tell you.
+
+Generalisation worth carrying: an early `return` on a missing precondition is the most
+common way a test suite quietly stops testing. Grep for the convention the codebase uses
+(`SKIP:`, `eprintln!` before `return`, a bare `if !tool_available() { return; }`) and count
+it separately from `ignored`.
+
+### Guard the absence, not just the growth
+
+The ratchet built for this records a **set of name+reason pairs**, not a number — so a
+renamed skipping test still trips it — and its baseline is emitted by the same parser that
+reads CI's log, never typed by hand. A hardcoded count restates what you already know and
+survives no rename.
+
+Its degenerate cases matter more than its happy path: given no `test result:` line, or no
+log at all, it reports *"skip set NOT evaluated"* and exits 0 — refusing to certify rather
+than reading absence as a clean set. That is the distinction between an honest gate and the
+fail-open family: **an instrument that cannot see must say so, not report zero.**
+
+## An instrument that cannot fail is not measuring
+
+A differential testbench reproduced its published numbers on the first run. The auditor
+then did the thing the author had not: fed the **fixed** rendering in as the "old" side. The
+harness failed, correctly —
+
+```
+FAIL harness: old wrote address 0 -- the off-by-one this harness exists to demonstrate
+is not reproducing
+```
+
+That anti-vacuity control is what separates a measurement from a ritual. A harness that
+passes on the post-fix artefact and was never run against a *non*-defective "before" has
+demonstrated nothing about what it detects.
+
+Companion caveat from the same pass, stated in the PR rather than glossed: `vvp` exits **0**
+on FAIL as well as PASS — measured, not assumed. So the harness is **reporting, not a gate**,
+and calling it a gate would have been the overclaim. Check your runner's exit semantics
+before describing anything as blocking.

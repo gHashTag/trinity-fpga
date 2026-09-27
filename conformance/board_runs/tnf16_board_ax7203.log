@@ -1,0 +1,24 @@
+# start 2026-09-27T06:06:20Z
+# usb HUB ['0x1130000']
+# cmd python3 tnf16_board_ax7203.py --port /dev/cu.usbserial-1130
+# limit 1800 s
+# spec trinet/tnf16_on_board_ax7203 sha256 703b35c059110c0eb663c4542c425f80d899b02d89b3b1838e3268676b476889
+# port /dev/cu.usbserial-1130 baud 1144744 (wire 1142857) window 24
+# 1035886 requests, expected words from conformance/tnf_ref.py in 29.7 s
+# vectors sha256 2b1ea80b6fd383156c09e946c5669f5fdf04163e58b9f3821b4ac96bd9fd2c38 (1035886 requests)
+  [ok  ] edge     add   17424/17424
+  [ok  ] edge     mul   17424/17424
+  [ok  ] near     add  250000/250000
+  [ok  ] near     mul  250000/250000
+  [ok  ] pinned   add     519/519
+  [ok  ] pinned   mul     519/519
+  [ok  ] uniform  add  250000/250000
+  [ok  ] uniform  mul  250000/250000
+sent 1035886, answered 1035886, window 24
+elapsed 102.4 s (10118 answers/s)
+TNF16 RESULT: 1035886/1035886 bit-exact (fails=0, lost=0)
+real 133.52
+user 38.35
+sys 10.74
+# exit=0
+# end 2026-09-27T06:08:33Z

@@ -1,0 +1,22 @@
+# start 2026-09-27T03:46:05Z
+# usb HUB ['0x1130000']
+# cmd python3 tern_tc_layer_ax7203.py --mats wk --layers 0 --n_x 1 --setkey --port /dev/cu.usbserial-1130 --baud 1144744 --keys ../trinet-keys.txt --model /Users/playra/igla-coder-gpu/c_infer/model.bin
+model.bin: 1 matrices, 64 rows, 20480 ternary weights (58.7% nonzero)
+jobs: 640 (32-trit chunks x 1 x-vectors)
+setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+  [ok ] L0/wk         64/64     rows bit-exact
+------------------------------------------------------------------
+jobs sent               : 640 of 640 planned (window 24)
+receipts verified (tag) : 640/640 under node 0x5452494e
+rejected                : none
+rows bit-exact          : 64/64  (activations: ternary)
+elapsed                 : 0.14 s (4627 answers/s)
+longest host pause      : 0.8 ms (after 41 answers)
+------------------------------------------------------------------
+RESULT: every row above computed on the AX7203 bit-exact against the
+        int8-weight oracle, and every receipt verified under the key.
+real 0.28
+user 0.09
+sys 0.02
+# exit=0
+# end 2026-09-27T03:46:06Z
