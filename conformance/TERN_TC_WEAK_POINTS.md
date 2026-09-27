@@ -66,6 +66,11 @@ therefore lies between 494 and 570 bytes, and the hypothesis survived a test
 that could have refuted it. The window-30 slip came about 10 times later than
 the pre-registration expected, so the stall model is incomplete.
 
+**Update, 09:35Z.** With the UART moved off the FE1.1s dongle onto a
+separate single-TT hub, window 64 still slipped, but only after 189,001 jobs
+(`TERN_TC_LAYER_RECEIPTS.md`, rerun step 4). The old dongle, bus or port is
+not needed for the loss, but very probably made it more frequent.
+
 ## 4. A receipt proves the key, not the FPGA
 
 The tag is SipHash-2-4 under a 16-byte key that the host also holds. A program

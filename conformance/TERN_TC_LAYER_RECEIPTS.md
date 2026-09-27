@@ -604,3 +604,47 @@ Command, unchanged from step 2 except the port:
     not be chance.
 - One attempt. It is retried once only if it fails before the first job. The
   record then keeps both runs.
+
+**Result, 09:34:34Z to 09:35:17Z: FAIL, as predicted.** Log:
+`board_runs/tern_tc_all_w64_genesys.log` (3,343 bytes, 0 hits for the key).
+
+    setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+    jobs sent               : 189001 of 403200 planned (window 64)
+    receipts verified (tag) : 188936/403200 under node 0x5452494e
+    rejected                : {'fabricated': 1, 'short': 1, 'missing': 214264}
+    rows bit-exact          : 16426/33792  (activations: ternary)
+    elapsed                 : 39.79 s (4748 answers/s)
+    longest host pause      : 8.3 ms (after 141395 answers)
+      ! nonce 0x01fda508 was never issued: a5 fc 01 08 a5 fd 01 0b e2 03 00 4e 49 52 54 2f ac 15 dc
+      ! after 189001 sent, 64 outstanding: short or unframed read (19 bytes) 24 7b 50 98 a5 03 01 0c e2 03 00 4e 49 52 54 94 3c c3 5e; 94 more bytes waiting
+
+The run is not cited for its rows and was not retried: it failed after the
+first job.
+
+- **The key survived the replug.** The board was not power-cycled, `--setkey`
+  found key slot 0x03 already set, and 188,936 tags verified under the host's
+  key.
+- **The prediction held.** Bytes were still lost with the old dongle, bus and
+  port out of the path. So they are not needed for the loss.
+- **The slip came late.** It came after 189,001 jobs. The three earlier
+  window-64 slips behind the FE1.1s dongle came after 6,744 to 19,049 jobs
+  (mean 11,915).
+  - If this path had the old rate of stalls long enough to overflow, the
+    chance of 189,001 clean jobs would be e^(-189001/11915), about 1e-7.
+  - So the old dongle, bus or port very probably made such stalls far more
+    frequent. One run cannot give the new rate.
+  - The earlier slips were on older harness revisions (`2b9830c5`,
+    `b1e95f6f`). That is a second difference besides the path.
+- **The bytes.** The node id `4e 49 52 54` sits at offset 11 in both reads.
+  The first 11 bytes of the first read are the tail of the answer for nonce
+  `0x0003e20b`, which ends in `a5 fd 01 0b e2 03 00`. Every job before it was
+  verified (189,001 - 64 outstanding - 1 = 188,936). If there is one hole and
+  the node answers in order, the first 8 bytes of that answer were lost: node
+  id and half the tag. The holes so far are 16, 4, 59, 7 and 8 bytes.
+- **"fabricated" is the harness's label for a misaligned read.** Here it is a
+  framing slip, not a forged answer: the 19 bytes straddle two genuine
+  answers.
+
+What is left open: the source of the stalls, and whether a truly direct
+connection (no hub at all) changes the rate further. Window 24 stays the
+operating point.
