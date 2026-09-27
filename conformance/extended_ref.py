@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-extended_ref.py — ЭТАЛОННЫЙ (golden) оракул для multi-component extended форматов.
+extended_ref.py — REFERENCE (golden) oracle for multi-component extended formats.
 
-  double_double  — 2 × IEEE-754 binary64 (hi + lo), представляющих hi+lo EXACTLY
-                   как error-free expansion (Bailey/Hida/Briggs/Dekker).
-                   Ширина = 128 бит (2 × 64).
+  double_double  — 2 × IEEE-754 binary64 (hi + lo), representing hi+lo EXACTLY
+                   as an error-free expansion (Bailey/Hida/Briggs/Dekker).
+                   Width = 128 bits (2 × 64).
   quad_double    — 4 × IEEE-754 binary64 (hi + lo1 + lo2 + lo3), error-free.
-                   Ширина = 256 бит (4 × 64).
+                   Width = 256 bits (4 × 64).
 
-Декод: каждый binary64-limb декодируется точно (Fraction), value = sum of limbs.
-Энкод: точное значение → sequence of error-free binary64 limbs через алгоритм
-       Деккера–Hida (двухсловное разложение с round-ties-even).
-Add/Mul: decode → точная Fraction-арифметика → encode.
+Decode: each binary64 limb is decoded exactly (Fraction), value = sum of limbs.
+Encode: exact value → sequence of error-free binary64 limbs via the
+        Dekker–Hida algorithm (two-word split with round-ties-even).
+Add/Mul: decode → exact Fraction arithmetic → encode.
 
-Согласовано с:
+Consistent with:
   - conformance/double_double_decode_conformance_ax7203.py
   - conformance/quad_double_decode_conformance_ax7203.py
 
-Эти HW-скрипты выдают FP32 на UART (узкое место аппаратуры); наш oracle работает
-в собственной ширине (128/256 бит) и не теряет точности. Полигоном является
-математическое ℤ[2^k] (точные dyadic rationals).
+These HW scripts send FP32 over UART (the hardware bottleneck); our oracle works
+at its own width (128/256 bits) and loses no precision. The domain is
+the mathematical ℤ[2^k] (exact dyadic rationals).
 
 Honesty: Trinity conformance team.
 """
@@ -29,7 +29,7 @@ from fractions import Fraction
 from dataclasses import dataclass
 
 
-# -------------------- формат --------------------
+# -------------------- format --------------------
 
 @dataclass(frozen=True)
 class ExtendedFormat:

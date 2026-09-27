@@ -18,7 +18,7 @@ Note: Sacred ALU is standalone RTL (not in UART-conformance catalog format).
 This script is a SKELETON — actual HW test requires a UART wrapper around sacred_alu.
 The standalone RTL uses AXI-Stream, not UART. A bridge module is needed.
 
-Honesty: [смоделировано] — skeleton. Not HW-tested.
+Honesty: [simulated] — skeleton. Not HW-tested.
 """
 import argparse, sys, os, math
 from fractions import Fraction

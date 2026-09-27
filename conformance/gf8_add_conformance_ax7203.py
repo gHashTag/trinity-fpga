@@ -13,7 +13,7 @@
 #   on hardware (after flash): python3 gf8_add_conformance_ax7203.py --port /dev/cu.usbserial-1120 --baud 160000
 #
 # HONESTY: a bit-exact pass on hardware (IDCODE-recheck 0x13636093 + UART) is the
-# only thing that turns compute-HW 0→1/83. SW self-test = [смоделировано], not HW.
+# only thing that turns compute-HW 0→1/83. SW self-test = [simulated], not HW.
 import argparse, struct, sys, os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

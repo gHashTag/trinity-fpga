@@ -1,38 +1,38 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-gfternary_ref.py — ЭТАЛОННЫЙ (golden) оракул для GFTERNARY (2-bit ternary).
+gfternary_ref.py — REFERENCE (golden) oracle for GFTERNARY (2-bit ternary).
 
-GFTERNARY = 2-битный формат с тремя значениями {-φ, 0, +φ} где φ = (1+√5)/2.
-Кодирование (matches corona_compute_gfternary_*_ax7203.v):
+GFTERNARY = a 2-bit format with three values {-φ, 0, +φ} where φ = (1+√5)/2.
+Encoding (matches corona_compute_gfternary_*_ax7203.v):
 
     00 = 0
     01 = +φ
     10 = -φ
     11 = +φ (reserved → collapses to +φ; matches RTL behavior)
 
-Арифметика: decode→exact op (в кольце Q[φ])→quantize к {0, +φ, -φ} по правилу
-ближайшего (с насыщением знака).
+Arithmetic: decode→exact op (in the ring Q[φ])→quantize to {0, +φ, -φ} by the
+nearest rule (with sign saturation).
 
-Поскольку φ иррационально, decode возвращает пару (a, b) представляющую a + b·φ
-где a, b ∈ ℤ. Результат операции затем квантуется:
+Since φ is irrational, decode returns a pair (a, b) representing a + b·φ
+with a, b ∈ ℤ. The result of the operation is then quantized:
 
     result > 0  → +φ (code 1)
     result < 0  → -φ (code 2)
     result == 0 → 0  (code 0)
 
-Эти пороги совпадают с RTL: любое положительное → +φ, любое отрицательное → -φ.
-Это естественная "знаковая сатурация" — decode(exact_sum)→sign(exact_sum).
+These thresholds match the RTL: any positive → +φ, any negative → -φ.
+This is a natural "sign saturation" — decode(exact_sum)→sign(exact_sum).
 
-Точное сравнение a + b·φ с нулём выполняется в ℤ[√5]:
+The exact comparison of a + b·φ with zero is done in ℤ[√5]:
     a + b·φ > 0  <=>  2a + b + b·√5 > 0
-    если b > 0:  b·√5 > -(2a+b)  — либо тривиально (если 2a+b >= 0), либо
-                 5b² > (2a+b)²  (после возведения в квадрат положительных сторон)
-    если b < 0:  аналогично с обратным знаком.
-    если b == 0:  очевидно sign(a).
+    if b > 0:  b·√5 > -(2a+b)  — either trivially (if 2a+b >= 0), or
+               5b² > (2a+b)²  (after squaring both positive sides)
+    if b < 0:  the same with the opposite sign.
+    if b == 0:  sign(a), obviously.
 
-Согласовано с conformance/gfternary_compute_conformance_ax7203.py (self-test
-сложения/умножения). По образцу gf_ref.py.
+Consistent with conformance/gfternary_compute_conformance_ax7203.py (self-test
+of add/mul). Patterned on gf_ref.py.
 
 Honesty: Trinity conformance team.
 """
@@ -42,7 +42,7 @@ from dataclasses import dataclass
 import math
 
 
-# φ как float высокой точности (используется только как fallback при сравнении).
+# φ as a high-precision float (used only as a fallback in comparisons).
 _PHI_FLOAT = (1 + math.sqrt(5)) / 2
 
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-int_ref.py — ЭТАЛОННЫЙ (golden) оракул для целочисленных форматов.
+int_ref.py — REFERENCE (golden) oracle for integer formats.
   int4, int8, int16, int32, int64, int128    — two's complement signed
   uint4, uint8, uint16, uint32               — unsigned
 
-Целые числа точно представимы как Fraction. Арифметика — modular (wraparound)
-по умолчанию (стандартное поведение fixed-width int); есть также saturating-варианты.
-По образцу gf_ref.py.
+Integers are exactly representable as Fraction. Arithmetic is modular (wraparound)
+by default (standard fixed-width int behaviour); saturating variants exist too.
+Patterned on gf_ref.py.
 
 Honesty: Trinity conformance team.
 """

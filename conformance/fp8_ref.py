@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-fp8_ref.py — ЭТАЛОННЫЙ (golden) оракул для OCP FP8/FP4/FP6 минифлоат-семейства.
-  fp8_e4m3 (E=4,M=3,bias=7)  — нет Inf; NaN только при exp=max & mant=max
+fp8_ref.py — REFERENCE (golden) oracle for the OCP FP8/FP4/FP6 minifloat family.
+  fp8_e4m3 (E=4,M=3,bias=7)  — no Inf; NaN only at exp=max & mant=max
   fp8_e5m2 (E=5,M=2,bias=15) — IEEE Inf/NaN
-  fp4_e2m1 (E=2,M=1,bias=1)  — нет specials
-  fp6_e2m3 (E=2,M=3,bias=1)  — нет specials
-  fp6_e3m2 (E=3,M=2,bias=3)  — нет specials
-Round-ties-even, точная Fraction-арифметика. По образцу conformance/gf_ref.py.
+  fp4_e2m1 (E=2,M=1,bias=1)  — no specials
+  fp6_e2m3 (E=2,M=3,bias=1)  — no specials
+  fp6_e3m2 (E=3,M=2,bias=3)  — no specials
+Round-ties-even, exact Fraction arithmetic. Patterned on conformance/gf_ref.py.
 
 Honesty: Trinity conformance team.
 """

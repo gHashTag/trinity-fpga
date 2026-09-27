@@ -8,7 +8,7 @@
 # Format: 2-bit code. 0=0.0, 1=+φ, 2=-φ, 3=+φ(reserved→+φ).
 # Frame: AA 55 fmt a_byte b_byte trigger → A5 + 4 bytes (result in [1:0] of byte 1).
 #
-# Honesty: [смоделировано] — SW golden oracle. HW conformance requires UART flash + run.
+# Honesty: [simulated] — SW golden oracle. HW conformance requires UART flash + run.
 import argparse, sys, struct, math, random
 from fractions import Fraction
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-legacy_ref.py — ЭТАЛОННЫЙ (golden) оракул для legacy форматов с плавающей точкой.
+legacy_ref.py — REFERENCE (golden) oracle for legacy floating-point formats.
   vax_f, vax_d, vax_g, vax_h        — DEC VAX (base 2, hidden 1, bias 128/1024/16384)
   ibm_hfp32, ibm_hfp64, ibm_hfp128   — IBM hex FP (base 16, no hidden bit, bias 64)
   cray_float                         — Cray-1 (base 2, explicit leading 1, bias 16384)
@@ -9,10 +9,10 @@ legacy_ref.py — ЭТАЛОННЫЙ (golden) оракул для legacy фор�
   x87_fp80                           — Intel 80-bit extended (explicit integer bit, bias 16383)
   x87_48bit                          — 48-bit x87-style truncated (bias 16383)
 
-Каждый формат со своим encoding-правилом; общие — round-ties-even и точная
-Fraction-арифметика. По образцу gf_ref.py.
+Each format has its own encoding rule; shared by all: round-ties-even and exact
+Fraction arithmetic. Patterned on gf_ref.py.
 
-Согласовано с conformance/ibm_hfp32_decode_conformance_ax7203.py и
+Consistent with conformance/ibm_hfp32_decode_conformance_ax7203.py and
 conformance/vax_f_decode_conformance_ax7203.py.
 
 Honesty: Trinity conformance team.
@@ -130,7 +130,7 @@ def pow2(e: int) -> Fraction:
 
 
 def ilog2_base(a: Fraction, base: int) -> int:
-    """floor(log_base(a)) для точной положительной Fraction (base 2 or 16)."""
+    """floor(log_base(a)) for an exact positive Fraction (base 2 or 16)."""
     assert a > 0
     n, d = a.numerator, a.denominator
     e = n.bit_length() - d.bit_length()

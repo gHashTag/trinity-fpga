@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-ieee_ref.py — ЭТАЛОННЫЙ (golden) программный оракул для стандартных
-IEEE 754 binary форматов: binary16/32/64/128/256 + tf32.
+ieee_ref.py — REFERENCE (golden) software oracle for the standard
+IEEE 754 binary formats: binary16/32/64/128/256 + tf32.
 
-Использует точную рациональную арифметику (fractions.Fraction):
-round-ties-even доказуем, gradual underflow корректен.
-По образцу conformance/gf_ref.py.
+Uses exact rational arithmetic (fractions.Fraction):
+round-ties-even is provable, gradual underflow is correct.
+Patterned on conformance/gf_ref.py.
 
 Honesty: Trinity conformance team.
 """

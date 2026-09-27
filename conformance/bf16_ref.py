@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-bf16_ref.py — ЭТАЛОННЫЙ (golden) оракул для bfloat-семейства (8-бит экспонента).
+bf16_ref.py — REFERENCE (golden) oracle for the bfloat family (8-bit exponent).
 bfloat16 (E=8,M=7), bfloat24 (E=8,M=15), bfloat32 (E=8,M=23).
-IEEE 754 стиль, round-ties-even, точная Fraction-арифметика.
-По образцу conformance/gf_ref.py.
+IEEE 754 style, round-ties-even, exact Fraction arithmetic.
+Patterned on conformance/gf_ref.py.
 
 Honesty: Trinity conformance team.
 """

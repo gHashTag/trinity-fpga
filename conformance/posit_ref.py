@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-posit_ref.py — ЭТАЛОННЫЙ (golden) оракул для posit-семейства (Unum/posit).
+posit_ref.py — REFERENCE (golden) oracle for the posit family (Unum/posit).
   posit8  (n=8,  es=0)    useed = 2^(2^0) = 2
-  posit16 (n=16, es=2)    useed = 2^(2^2) = 16   (стандартный posit16)
-  posit32 (n=32, es=2)    useed = 16             (стандартный posit32)
-  posit64 (n=64, es=3)    useed = 2^(2^3) = 256  (стандартный posit64)
+  posit16 (n=16, es=2)    useed = 2^(2^2) = 16   (standard posit16)
+  posit32 (n=32, es=2)    useed = 16             (standard posit32)
+  posit64 (n=64, es=3)    useed = 2^(2^3) = 256  (standard posit64)
 
-Кодировка: sign | regime (variable-length run) | exponent (es) | fraction.
-  regime = run of m одинаковых бит, terminated противоположным:
-    run of 1s длины m -> k = m-1
-    run of 0s длины m -> k = -m
+Encoding: sign | regime (variable-length run) | exponent (es) | fraction.
+  regime = run of m identical bits, terminated by the opposite bit:
+    run of 1s of length m -> k = m-1
+    run of 0s of length m -> k = -m
   value = (-1)^S * useed^k * 2^e * (1 + frac)
   specials: raw==0 -> +0 ; raw==sign-bit-only (2^(n-1)) -> NaR
 
-Round-ties-even, точная Fraction-арифметика. По образцу conformance/gf_ref.py.
-Согласован с conformance/posit32_decode_conformance_ax7203.py (golden_posit32).
+Round-ties-even, exact Fraction arithmetic. Patterned on conformance/gf_ref.py.
+Consistent with conformance/posit32_decode_conformance_ax7203.py (golden_posit32).
 
 Honesty: Trinity conformance team.
 """
@@ -103,7 +103,7 @@ def decode(fmt: PositFormat, raw: int):
         return Special("nar")
 
     sign = (raw >> (fmt.n - 1)) & 1
-    # двух-дополнение всего слова для отрицательных -> magnitude field
+    # two's complement of the whole word for negatives -> magnitude field
     mag = raw if sign == 0 else ((1 << fmt.n) - raw)
 
     # regime: parse run starting at bit (n-2) downward

@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-decimal_ref.py — ЭТАЛОННЫЙ (golden) оракул для IEEE 754 decimal BID-семейства.
+decimal_ref.py — REFERENCE (golden) oracle for the IEEE 754 decimal BID family.
   decimal32, decimal64, decimal128 (Binary Integer Decimal).
 
-Кодировка BID (IEEE 754-2008): sign + combination + coefficient C (binary int).
+BID encoding (IEEE 754-2008): sign + combination + coefficient C (binary int).
   value = (-1)^s * C * 10^(E - bias)
   Case A (C < 2^M_small): combination top2 != 11; E = exp field, C = lower bits.
-  Case B (C в [2^M_small, 2^M_big)): combination top2 == 11, top4 != 1111;
+  Case B (C in [2^M_small, 2^M_big)): combination top2 == 11, top4 != 1111;
            C = implicit "100" MSBs | lower bits.
   Specials: top4 == 11110 -> Inf ; top4 == 11111 -> NaN.
 
-Коэффициент и порядок — точные целые; само значение 10^(E-bias) — целая степень 10,
-поэтому value = C * 10^(E-bias) представимо ТОЧНО как Fraction (целое/целое).
-Round-ties-even при encode (выбор ближайшего C). По образцу gf_ref.py.
+Coefficient and exponent are exact integers; 10^(E-bias) is an integer power of 10,
+so value = C * 10^(E-bias) is EXACTLY representable as a Fraction (int/int).
+Round-ties-even on encode (the nearest C is chosen). Patterned on gf_ref.py.
 
-Согласовано с conformance/decimal64_decode_conformance_ax7203.py (BID decode).
+Consistent with conformance/decimal64_decode_conformance_ax7203.py (BID decode).
 
 Honesty: Trinity conformance team.
 """

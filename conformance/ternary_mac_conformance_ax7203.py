@@ -15,7 +15,7 @@ Usage:
 Note: ternary_mac_16 is standalone RTL (AXI-Stream style, not UART-conformance format).
 HW test requires a UART wrapper. This script provides the golden oracle + self-test.
 
-Honesty: [смоделировано] — SW golden oracle. HW requires UART bridge.
+Honesty: [simulated] — SW golden oracle. HW requires UART bridge.
 """
 import argparse, sys, random
 
