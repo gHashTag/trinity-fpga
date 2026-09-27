@@ -90,7 +90,7 @@ owner's yes.
 | E0 | LAN check above | done | no |
 | E1 | 200 MHz heartbeat on UART, built with `tri fpga-build`, using the existing `specs/fpga/constraints/dual_clk_heartbeat_ax7203.xdc` | builds; then one flash proves the 200 MHz path | yes, 1 flash |
 | E2 | PHY bring-up: release `phy_rst_n`, advertise 100M only over MDIO, report in-band status on UART | Icarus testbench on a KSZ9031 status model; build | yes, 1 flash |
-| E3 | ARP + ICMP responder at 192.168.1.222 | Icarus testbench on frames generated in Python; build | ping from the Mac |
+| E3 | ARP + ICMP responder at 192.168.1.222 | Icarus testbench on frames generated in Python; build; board step pre-registered in `specs/trinet/eth_arp_icmp_e3_ax7203.t27` | ping from the Mac, judged by `eth_arp_icmp_ax7203.py --judge` |
 | E4 | UDP bridge: K TRI-NET frames per datagram into the unchanged node core. **OP_SETKEY is refused on UDP**; the key is set over UART only. | co-sim with `formal/tern_tc_layer_rtl_tb.v`-style streams; build | pre-registered 640-job check, then `--all` |
 | E5 | Harness transport `--udp HOST:PORT` in `tern_tc_layer_ax7203.py`, with no change to the checks | self-test with a software cell over loopback UDP | with E4 |
 
@@ -402,6 +402,324 @@ and a frame counter going up. It says nothing about frame contents, the TX path
 **The lasting fix** is still in the engine, not the FASM: the local branch
 `fix/zinv-t1-pad-pip` (`f3a8c73c`, not pushed), or router2. Until then,
 `tri fpga-tristate` runs on every FASM before a flash.
+
+### E3 build and simulation, 2026-09-27 17:55Z to 19:19Z (checked; not flashed)
+
+**What it is.** An ARP and ping responder at 192.168.1.222, MAC
+02:00:5E:F9:00:01 (both are RTL parameters), on top of E2's PHY bring-up and
+report. It answers ARP who-has for its IP and ICMP echo requests to its MAC and
+IP, and ignores everything else. What it does, nibble by nibble, is in the
+header of the RTL; this section does not repeat it.
+
+Files, all new:
+
+| file | what |
+|---|---|
+| `fpga/vivado/eth_arp_icmp_ax7203.v` | the design; E2's MDIO and report logic, unchanged except for the new report fields |
+| `specs/fpga/constraints/eth_arp_icmp_ax7203.xdc` | E2's pins and IOSTANDARDs, SLEW FAST on the six TX pins |
+| `formal/ksz9031_frame_model.v` | E2's KSZ9031 model with frames both ways: plays a stimulus file on RXD, decodes TXD, checks TX timing |
+| `formal/eth_arp_icmp_tb.v` | the bench |
+| `conformance/eth_arp_icmp_ax7203.py` | the checker. With no arguments it runs `--self-test`, `--static`, `--sim` and `--gate` and prints `RESULT PASS` or `RESULT FAIL`. `--port` reads the board; not run |
+| `fpga/openxc7-synth/RAMB36E1_mock.v` | a behavioural RAMB36E1 for the gate run (see "Found on the way") |
+| `artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit` + `.sha256` | the bitstream to flash, from the patched engine. The `.bit` is gitignored; the `.sha256` is tracked |
+| `specs/trinet/eth_arp_icmp_e3_ax7203.t27` | the board step's prediction and judge, fixed before any flash (see "E3 on the board" below) |
+| `conformance/eth_arp_icmp_e3_from_spec.mjs`, `conformance/eth_arp_icmp_e3_params.py` | the spec's generator and its output, the numbers `--judge` reads |
+
+**Design choices, and why.**
+
+| choice | why |
+|---|---|
+| 100BASE-TX only: E2's MDIO writes advertise 100M and nothing else | 40 ns nibbles; fabric capture has room. The board showed `ib=3B` (link, 100, full duplex) with these writes |
+| RXD sampled on the **falling** edge of RXC | the KSZ9031 sends edge-aligned data and adds about 1.2 ns of RX clock delay (the Linux micrel driver's figure, not the datasheet's). Mid-nibble sampling leaves about +-20 ns whatever that delay really is. A second, rising-edge sample is compared inside every frame and the mismatches are counted in `ed`, so the board says whether the choice mattered |
+| TXC = RXC inverted: two flip-flops XNORed in one kept LUT2, **no ODDR, no clock net as data** | at 100M the link partner's recovered 25 MHz is within 100 ppm and the PHY re-times TX through a FIFO. CFGMCLK (65.6 to 68.7 MHz) is not a 25 MHz multiple; the 200 MHz oscillator is unproven (E1 not flashed). An ODDR has no model in `cells_sim.v` and has never run in this flow; at 100M both TXC edges carry the same nibble, so flip-flops do |
+| TXD and TX_CTL leave flip-flops at the TXC falling edge, through `TX_DLY` = 10 kept LUT1 stages each | the PHY samples TX_EN on the rising edge (mid-nibble) and TX_EN xor TX_ER on the falling edge. Without a delay the data would change on that falling edge (the negative scenario below shows the model flagging it). The chain moves the change some ns later; the bench stands in 3 ns for it |
+| SLEW FAST on the TX pins | at the default slow slew, 12 mA LVCMOS33 edges take several ns out of the 20 ns half period |
+| transmit only while in-band status reads 0xB (link, 100, full) four nibbles in a row | without a link RXC runs at 125 MHz and TXC with it; TX_CTL stays low then. Frame logic needs 25 MHz and at 125 MHz sees only idle |
+| a 2-slot buffer of 2 KiB per slot, one RAMB36 | ping payloads from 0 to 1472 bytes (1500-byte datagram, 1514-byte frame). **BRAM cost:** 4 KiB of one RAMB36, 1 of 365 on the xc7a200t. The required minimum, 56 bytes (98-byte frame), would fit 2 x 128 bytes (2 Kib), an eighth of a RAMB18 or some LUT RAM; the step from there to 1472 bytes costs one block |
+| the reply is a template plus bytes read back from the stored request; the IP header checksum and the ICMP checksum of the reply are summed as the request goes by, the FCS as the reply goes out | the frame is received once, checked (FCS, IPv4 header checksum, ICMP checksum), then answered; nothing is sent from a frame that failed a check |
+| counters `rx fe ce aq ar eq er ed lk` added to E2's report line | 189 bytes per line; E2's fields keep their order and meaning |
+
+**Known limit: the 2-slot buffer drops in one pattern.** A request is stored if
+a slot is free at its SFD, and a slot stays busy until its reply has been
+sent. At line rate that never drops unless a request is shorter than the reply
+sent before it, such as ARP, ping, ARP, ping at the 12-byte minimum gap. The
+dropped request is counted in `aq`/`eq` and not in `ar`/`er`. The scenario
+`min_ifg_drop` checks exactly that case, worked out by hand in the checker. A
+ping once a second never meets it.
+
+**Static check of the full parameters** (`--static`, RESULT PASS): E2's timers
+unchanged at both CFGMCLK ends; the largest ping fits a slot (1514 <= 2048
+bytes); IFG 24 nibbles (96 bit times). Counters are 16-bit: a flood of
+minimum-size frames wraps `rx` in 0.44 s, a little less than the 0.49 to
+0.51 s between report lines. A ping cannot.
+
+**Simulation.** Icarus, E2's scaled timers, frame logic at the real 25 MHz.
+Every request is built in the checker with `struct` and `zlib.crc32`. Every
+reply is computed there from the protocols, not from the RTL, and compared
+byte for byte from preamble to FCS. The judge also checks the preamble (15 x 5
+then D), padding to 60 bytes, the idle nibbles between replies (at least 24,
+and exactly 24 where the timing forces it), every counter on the last report
+line, E2's fields, and zero model errors (TXD/TX_CTL setup and hold of 1 ns at
+each TXC edge, TX_ER, TXC period while sending, MDIO). The self-test runs the
+judge on made-up output that is wrong in one detail at a time, and it must fail
+each.
+
+| scenario | RTL | gate level |
+|---|---|---|
+| `arp_us`: who-has .222, broadcast and unicast | PASS, 2 exact replies, 200 idle nibbles apart | PASS, same as RTL |
+| `arp_other`: who-has .1; a request for us to another MAC | PASS, no TX | PASS, same as RTL |
+| `icmp_56`: ping, 56-byte payload | PASS, exact reply 5 nibbles (200 ns) after the request's last nibble | PASS, same as RTL |
+| `bad_fcs`: bad FCS, a flipped data bit, a 58-byte runt with a good CRC, a trailing dribble nibble | PASS, no TX, `fe=4` | PASS, same as RTL |
+| `not_for_us`: ICMP to .223, to another MAC, to broadcast; UDP; echo reply; fragment; IP options; IPv6 | PASS, no TX, all 8 counted in `rx` only | PASS, same as RTL |
+| `back_to_back`: ARP then ping at the minimum 12-byte gap | PASS, both, in order | PASS, same as RTL |
+| `icmp_large`: `-s 1000` and `-s 1472` | PASS, both exact | PASS, same as RTL |
+| `icmp_small`: `-s 0` with junk padding, `-s 17` (odd length), `-s 18`, a shortened preamble | PASS, 4 exact replies, zero padding | PASS, same as RTL |
+| `min_ifg`: 4 ARP then 4 pings, all at the minimum gap | PASS, 8 replies, exactly 24 idle nibbles apart within each run | PASS, same as RTL |
+| `min_ifg_drop`: ARP, ping, ARP, ping, ARP, ping at the minimum gap | PASS, 5 replies; the 4th request dropped and counted (`eq=3 er=2`) as worked out by hand | PASS, same as RTL |
+| `bad_csum`: bad IPv4 header checksum; bad ICMP checksum | PASS, no TX, `ce=2` | PASS, same as RTL |
+| `overflow`: `-s 1000` then two `-s 56` at the minimum gap | PASS, third request finds both slots busy (`eq=3 er=2`); second reply after exactly 24 idle nibbles | PASS, same as RTL |
+| `rxd_late_8ns`: RXD 8 ns after RXC | PASS, exact replies; `ed=241` (a rising-edge sample would have failed) | PASS, same as RTL |
+| `rxc_late_15ns`: RXC 15 ns after RXD | PASS, exact replies, `ed=0` | PASS, same as RTL |
+| `nolink`: the PHY never links (RXC 125 MHz) | PASS, requests counted, nothing sent, `lk=0` | PASS, same as RTL |
+| `tx_skew_zero` (negative): no TX delay, data changes on the TXC falling edge | PASS: the model reports 361 errors, as it must | PASS, the same 361 errors |
+
+Final run with no arguments, 18:40Z to 19:19Z under `nice -n 19`, `--jobs 4`: self-test 25 of 25, static PASS, RTL 16 of 16, gate 16 of 16, **`RESULT PASS`**. Log `/tmp/e3sim/run_all.log` (not kept in the repo). RTL runs took 11 to 25 s, gate runs 428 to 770 s. In every scenario the gate run prints the same `TXF` lines, timestamps included, the same report lines and the same `TB` summary as the RTL run (compared line by line).
+
+The checker gained `--judge` (below) after that run. Rerun with
+`--self-test --static --sim`, ending 19:37:22Z: self-test 46 of 46 (the 25 above and 21 judge
+cases), static PASS, RTL 16 of 16 with the same counters as before,
+**`RESULT PASS`**. The gate runs were not repeated: the gate code and the RTL
+are unchanged, and the spec pins both.
+
+The gate-level netlist is `synth_xilinx -flatten -abc9 -nocarry -nodsp -nosrl`,
+the build's flags, with E2's scaled parameters set by `chparam`. As in E2, it
+checks the synthesis of this logic, not the exact bitstream. Cells in the
+netlist: 1864 FDRE, 129 FDSE, 6 FDRE_1 (falling edge), 50 LUT1 (the TX
+delay chains), 807 LUT2, 327 LUT3, 273 LUT4, 299 LUT5, 527 LUT6, 1 RAMB36E1,
+1 IOBUF, 2 BUFG.
+
+**Build.** `tri fpga-build --top eth_arp_icmp_ax7203 --nosrl`, all four steps
+rc=0. Resources are the same in every build below: **2316 LUT, 2015 FF, 1
+RAMB36**, no CARRY4, no DSP.
+
+| build | engine | post-route Fmax, mclk / rxc | payload sha256 | `tri fpga-tristate` |
+|---|---|---|---|---|
+| `e3` | archived nextpnr-xilinx (the default), router1 | 80.64 / 86.00 MHz, checked at 50 | `df43fa66a968678a924be69b98b2796ab5c9179e3fcdda5fcbcf90220457ccec` | **flagged**: `LIOI3_X0Y235.OLOGIC_Y0` (MDIO) without ZINV_T1, as with E2 |
+| `e3z` | nextpnr-xilinx `fix/zinv-t1-pad-pip` `f3a8c73c`, router1 | 80.64 / 86.00 MHz, checked at 50 | `4fd7923d0d65b06cfffd877c7a73411e73f7d1e2e535b2acff18b49cb6b684c9` | pass, 1 ZINV_T1 |
+| `e3h1` | `nextpnr-himbaechel` (nextpnr-live), router1 | 92.11 / 111.54 MHz; rxc FAIL at 125 | `fa48b770ddf8c7364b6225f7b8f5059f1780a5f1d48196b943804fe254bb43b6` | pass, 1 ZINV_T1 |
+| `e3h2` | `nextpnr-himbaechel` (nextpnr-live), router2 | 91.75 / 106.53 MHz; rxc FAIL at 125 | `2c1eb0c44bfe71e3abd4340f13a63a30a1b9326c520e7a651c818f9612b3ef36` | pass, 1 ZINV_T1 |
+
+- **`e3z` is the one to flash**: `artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit`,
+  payload `4fd7923d…1b6684c9`. It is the same engine and fix as `e2p`, whose
+  frames were identical to the `e2z` that ran on the board.
+- **What the Fmax numbers mean.** nextpnr-xilinx ignores `create_clock` and
+  checks every clock at 50 MHz. With a link, RXC is 25 MHz (40 ns) and every
+  rxc path has 86 MHz (11.6 ns) or better. himbaechel reads the XDC, so it
+  checks rxc at the 125 MHz of the no-link case and fails it, at 106 to 112 MHz.
+  At 125 MHz the frame logic only sees idle and TX_CTL is held low, so that
+  fail matters for nothing that is sent. The longest rxc path is the reply byte
+  multiplexer (`tbyte`) into the transmit register in `e3z` and `e3h1`, and
+  the end-of-frame decision (`v_ping` into the slot bookkeeping) in `e3h2`.
+- **Checked in the routed netlists** of `e3z` and `e3h1`: the 50 LUT1 of the
+  TX delay chains (5 pins x 10) and the TXC LUT2 survive place and route. The
+  six falling-edge flip-flops (RXD, RX_CTL, the TXC half) sit in slices with
+  `CLKINV` set in the FASM and no rising-edge flip-flop beside them. nextpnr
+  reports no falling-edge path, so their hops (one net each into the
+  rising-edge logic, 20 ns at 25 MHz) are not timed by it.
+- The build writes Fmax for mclk only into `manifest.json`: see "Found on the
+  way".
+- himbaechel used `/Users/playra/openxc7-src/nextpnr-live/build/nextpnr-himbaechel`
+  as it is, unchanged (binary sha256 `402471c6…9f26bfbd`; its `fasm.cc` carries
+  the other agent's uncommitted changes), with its own chipdb, then the same
+  `fasm2frames` and `xc7frames2bit`. It warns "ignoring unsupported XDC option
+  '-name'" on the `create_clock` line and applies the period anyway.
+
+**Found on the way.**
+
+1. **himbaechel's router2 routes through unused BRAM tiles' cascade wires.** In
+   `e3h2`, 24 address nets of the one RAMB36 (at `BRAM_L_X6Y225`) enter
+   through the neighbouring, unused BRAM tiles `X6Y220` and `X6Y230`: their
+   `IMUX` into `BRAM_CASCOUT_ADDR*`, then `BRAM_CASCINBOT_ADDR*` into the used
+   tile, feeding both halves (48 pin connections). The FASM sets
+   `CASCOUT_ARD_ACTIVE` and `CASCOUT_BWR_ACTIVE` in those neighbours. prjxray
+   knows the bits, but nothing on this board has used them. router1 (`e3h1`,
+   `e3z`) enters every pin through the tile's own IMUX. Do not flash `e3h2`
+   first.
+2. **`tri fpga-build` records no Fmax for `rxc`.** nextpnr pads short clock
+   names: `Max frequency for clock  'rxc'` has two spaces, and the regex in
+   `fpga/openxc7-synth/build_trinet_node.py` line 252 expects one. So
+   `manifest.json` has only `mclk`. The figures above are read from
+   `nextpnr.log`. **Fixed 19:25Z** (file time): the regex now takes `\s+`. Run on the
+   four E3 `nextpnr.log` files it finds `mclk` and `rxc` in each (80.64/86.00,
+   80.64/86.00, 92.11/111.54, 91.75/106.53), where the old one found `mclk`
+   only. No build was rerun for it.
+3. **`cells_sim.v`'s RAMB36E1 has no behaviour.** Yosys's
+   `/opt/homebrew/share/yosys/xilinx/cells_sim.v` declares the ports and a
+   `specify` block and nothing else, so every output floats. The first gate
+   run failed `arp_us` with X on TXD in the bytes read back from the buffer
+   and in the FCS. The gate run now compiles a copy of `cells_sim.v` without
+   that module plus `fpga/openxc7-synth/RAMB36E1_mock.v`. The mock covers the
+   subset this design uses (true dual port, no output register, no cascade or
+   ECC, zero INIT, widths 1 to 36) and stops the simulation on anything else.
+   The checker refuses to run if `cells_sim.v` ever gains behaviour for it. The
+   mock is written from one reading of UG473, the same reading as the RTL, so
+   it checks yosys's mapping (width 9, READ_FIRST, address bits) and not the
+   silicon.
+   It prints same-address read-during-write collisions. The receiver only
+   writes the free slot and the transmitter only reads the busy one, so a
+   collision can only happen while the transmitter is idle and its read data is
+   unused; every one printed is of that kind (37 in the 16 gate runs, each checked against the `TXF` times: none
+   during a frame or the 200 ns before one). Both ports are
+   READ_FIRST on one clock, so the read would return the old byte anyway.
+
+**What the simulation cannot show.**
+
+- **The KSZ9031's timing is from memory.** The 1.2 ns RX clock delay and 0 ns
+  TX delay are the Linux micrel driver's defaults; the model's 1 ns TX setup and
+  hold are the RGMII receiver figures as I recall them. None was checked
+  against the datasheet. `rxd_late_8ns` and `rxc_late_15ns` show the receive
+  side has about 20 ns either way; the transmit side has no such sweep.
+- **The TX edge timing on the board.** The bench puts TXD 3 ns after the TXC
+  falling edge. The real figure is the routed LUT chain minus the routed TXC
+  path, and no tool in this flow reports it. If it is under the PHY's hold time,
+  the last FCS nibble goes out as an error and the Mac drops every reply; the
+  RX counters would still rise.
+- **BRAM on this board.** No bitstream from this flow has used a block RAM
+  here. `e3z` writes it as two RAMB18 halves at width 4 plus the RAMB36 bit for
+  width 9, READ_FIRST, as nextpnr-xilinx's `fasm.cc` does. The mock checks the
+  netlist against UG473, not those bits against the silicon.
+- **Pin-level effects**: SLEW FAST edges, reflections, the PHY's reset
+  behaviour, the cable. VCCO_16 is still not read off the schematic, as in E2.
+- **The pre-link 125 MHz case is untimed** (nextpnr-xilinx) or failing
+  (himbaechel). Nothing is sent then; the counters and the in-band parser are
+  what run at that rate.
+- **The host's side**: whether macOS answers its own ARP cache from a reply
+  over Wi-Fi through the router, and whether 192.168.1.222 is in the router's
+  DHCP pool. E0 saw nothing at .222 at 04:04Z.
+
+### E3 on the board: pre-registered 19:36Z, not run
+
+**The prediction and its judge were fixed before any flash.**
+`specs/trinet/eth_arp_icmp_e3_ax7203.t27` holds every number the board step is
+judged by:
+
+- the address, MAC and PHY id;
+- in-band status 0x3B;
+- the `rc` bounds;
+- the ping counts;
+- the six log names.
+
+It also pins these files by sha256:
+
+- the RTL, the XDC, the model and the bench;
+- both mocks;
+- the bitstream record;
+- the E2z log;
+- the checker itself.
+
+`node conformance/eth_arp_icmp_e3_from_spec.mjs` does four things:
+
+1. compiles the spec;
+2. runs its test blocks;
+3. reads the pinned values back out of the RTL, the checker and the logs;
+4. writes `conformance/eth_arp_icmp_e3_params.py`.
+
+With `--check` it fails on drift instead of writing. Because the checker's own
+sha is pinned, its judging rules cannot change after logs exist unless the spec
+changes too, in the open. `tri fpga-specs` runs the check with every other
+generator's.
+
+**Two constants in my notes were wrong. Both were caught before anything
+ran.**
+
+- **The address as a 32-bit number was off by 32.** The spec's test block and
+  its read-back from the RTL both refused it.
+- **The upper `rc` bound was 399648.** Writing the generator's exact
+  recomputation showed the ceiling is 399650. The generator now recomputes both
+  bounds itself. As a mutation test, a spec with the bound one below 399651 was
+  refused by its test block and by the generator.
+
+**The `rc` bounds.** They take 25 MHz ± 100 ppm, counted over 2^20 CFGMCLK
+cycles, at the 68.7 and 65.6 MHz ends:
+
+- low bound: floor(24997500 × 2^20 / 68.7e6) − 1 = 381538;
+- high bound: ceil(25002500 × 2^20 / 65.6e6) + 1 = 399651.
+
+The E2z log's 36 in-band lines read 388996 to 389366, inside both bounds. A
+test block checks that.
+
+**The judge.** `python3 conformance/eth_arp_icmp_ax7203.py --judge` reads the six
+logs from `conformance/board_runs/` and prints one verdict. A counter change is
+the last `e3_uart_after` line minus the last `e3_uart_before` line, mod 2^16.
+The verdicts are tried in this order:
+
+| verdict | when |
+|---|---|
+| CONFLICT | the `ping -c 2` before the flash got a reply: another host holds .222. Stop |
+| **H1** (works), all of | 20 sent and at least 18 received; `arp -an` has .222 at `2:0:5e:f9:0:1`; `eq` rose by at least the replies received, and `er` by as much as `eq`; `aq` rose by 1 or more, and `ar` by as much as `aq`; `lk=1`, `ib=3B` and `id=00221622` on every line; `rc` inside 381538..399651 on every line |
+| H4 (no link) | a line has `lk=0` or `ib` other than 3B: E2's link not reproduced |
+| H3 (RX broken) | neither `aq` nor `eq` moved |
+| H2 (TX or BRAM broken) | `ar` or `er` rose, but the Mac got no reply |
+| OTHER | anything else; the judge lists the H1 conditions that failed |
+
+`ed`, `fe` and `ce` are printed as information only.
+
+H2 cannot tell a TX timing fault from a BRAM fault, because the reply's
+destination MAC is read out of the BRAM. The next step would be a build that
+sends a fixed frame without the BRAM.
+
+**When the judge refuses.** It exits 2 with "not judged" if any of these hold:
+
+- a log is missing or unfinished;
+- a command differs from the one listed below;
+- the logs' `# start` stamps are out of order;
+- the flash log names another payload, or the load did not finish.
+
+`--self-test` runs 21 made-up cases for the judge, covering every verdict and
+the refusals. They include counters that wrap between the two reads, and `rc`
+on each bound and one past it. On the empty `board_runs/`, the judge refuses
+all six logs and exits 2.
+
+**Steps.**
+
+- Each flash needs the owner's «да», and the owner types the sudo password.
+- One attempt per log name.
+- The port is whatever `tri fpga-usb` names at the time. The
+  `/dev/cu.usbserial-110` below is the 09:32Z one.
+- `tri fpga-run` runs in `conformance/`.
+
+```
+tri fpga-run e3_preping -- ping -c 2 192.168.1.222
+tri fpga-usb
+tri fpga-ioclients
+tri fpga-flash e3_flash artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit --owner-yes "QUOTE" --expect 4fd7923d
+tri fpga-run e3_uart_before -- python3 -u eth_arp_icmp_ax7203.py --port /dev/cu.usbserial-110 --lines 10
+tri fpga-run e3_ping -- ping -c 20 192.168.1.222
+tri fpga-run e3_arp -- arp -an
+tri fpga-run e3_uart_after -- python3 -u eth_arp_icmp_ax7203.py --port /dev/cu.usbserial-110 --lines 10
+python3 conformance/eth_arp_icmp_ax7203.py --judge
+tri fpga-flash node0_restore_after_e3 artifacts/bitstreams/trinet_node0_ci30762491794.bit --owner-yes "QUOTE" --expect ee75d97b
+tri fpga-run tern_tc_all_w24_after_e3 -- python3 -u tern_tc_layer_ax7203.py --all --setkey --port /dev/cu.usbserial-110 --baud 1144744 --keys ../trinet-keys.txt --model /Users/playra/igla-coder-gpu/c_infer/model.bin --window 24
+tri fpga-keycheck
+```
+
+- **`e3_preping` must show 0 received.** If anything answers at .222, stop
+  before the flash. The judge would say CONFLICT.
+- **The two UART reads.** Each takes about 5 s. The counters count from
+  configuration and never reset, so the ping's effect is the difference between
+  the reads.
+- **The last two runs** put the node back on the board and repeat the W24
+  control, as after E2 and `e2z`.
+- **The flash command is written here, not run.** Its raw form is
+  `sudo /opt/homebrew/bin/openocd -f fpga/openxc7-synth/ax7203_al321.cfg -c
+  "init" -c "pld load 0 artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit" -c
+  "runtest 2000" -c "shutdown"`. `tri fpga-flash` adds the payload check, the
+  UART lock and the log.
+
+**Where the files point.** This section and the one before it were drafted as
+`conformance/E3_DRAFT_SECTION.md` and merged here. The comment in
+`specs/fpga/constraints/eth_arp_icmp_ax7203.xdc` still names the draft. That
+file stays as built, because the spec pins it.
 
 ## Security notes for E4
 

@@ -1,0 +1,181 @@
+// SPDX-License-Identifier: Apache-2.0
+; specs/trinet/eth_arp_icmp_e3_ax7203.t27 -- pre-registration: Ethernet step E3 on the AX7203,
+; the board answering ARP and ping at 192.168.1.222
+; The one source for this board step. conformance/eth_arp_icmp_e3_from_spec.mjs compiles this file
+; with the t27 compiler (wasm), evaluates every test block below, checks the pinned files, reads back
+; the constants it repeats from the RTL, the checker, the bitstream record and the E2z log, and
+; writes conformance/eth_arp_icmp_e3_params.py, which `eth_arp_icmp_ax7203.py --judge` reads.
+; `--check` fails on drift. Written 2026-09-27 before the bitstream was ever on the board. ASCII,
+; English.
+
+; WHY. E2 with the one-bit fix (e2z) read the KSZ9031 over MDIO on the board: PHY id 00221622 on
+; 40 of 40 lines, link 100 full duplex, in-band status 0xB, frames seen on RXD. E3 adds receive,
+; a 2-slot RAMB36 buffer and transmit on the same pins and answers ARP and ICMP echo. It is built
+; (payload below) and passes the checker's self-test, static, RTL and gate simulations against
+; formal/ksz9031_frame_model.v. The board is the only test of the real pad timing (RXD sampled on
+; the falling edge of RXC, TXC = RXC inverted, TX data through TX_DLY LUT1 stages) and of the first
+; RAMB36 this flow has put on this board. This file fixes the verdict before that test.
+
+; WHAT RUNS. Six tri fpga-run / tri fpga-flash logs in conformance/board_runs, in this order by
+; their # start stamps; the judge refuses logs that are missing, out of order, or ran another
+; command:
+;   LOG_PREPING  ping -c PRE_PING_COUNT IP_TEXT, before the flash: nobody may answer there
+;   LOG_FLASH    tri fpga-flash of the bitstream whose payload is PAYLOAD_SHA256 (owner's yes)
+;   LOG_BEFORE   eth_arp_icmp_ax7203.py --port ... --lines UART_LINES
+;   LOG_PING     ping -c PING_COUNT IP_TEXT
+;   LOG_ARP      arp -an
+;   LOG_AFTER    eth_arp_icmp_ax7203.py --port ... --lines UART_LINES
+; Then the node bitstream goes back on the board and the W24 control runs, as after E2 and E2z;
+; those two are recorded, not judged here.
+
+; THE JUDGE. `python3 conformance/eth_arp_icmp_ax7203.py --judge`. The checker's bytes are pinned
+; below (RUNNER_SHA256), so the rules cannot change once the logs exist. Deltas d_x are the last
+; report line of LOG_AFTER minus the last line of LOG_BEFORE, mod 65536 (counters are 16-bit).
+; "Every line" is every report line of LOG_BEFORE and LOG_AFTER. rx is the host's received count
+; from LOG_PING, tx its transmitted count.
+;   CONFLICT  LOG_PREPING got more than PRE_PING_MAX_REPLIES replies: the address was in use.
+;   H1        works. All of: tx == PING_COUNT; rx >= PING_MIN_REPLIES; arp -an maps IP_TEXT to
+;             MAC; d_eq >= rx; d_er == d_eq; d_aq >= 1; d_ar == d_aq; on every line lk == 1,
+;             ib == IB and id == PHY_ID; every line's rc in [RC_MIN, RC_MAX].
+;   H4        not H1, and some line has lk != 1 or ib != IB: no stable 100M full-duplex link.
+;   H3        not H1 or H4, and d_aq == 0 and d_eq == 0: the link is up and the board recognised
+;             none of the host's requests (receive path).
+;   H2        not the above, d_ar >= 1 or d_er >= 1, and rx == 0: the board counted replies
+;             sent and the host got none (transmit path or the RAMB).
+;   OTHER     anything else, for example 1..PING_MIN_REPLIES-1 replies, d_er != d_eq, another MAC
+;             in the ARP table, rc out of bounds with everything else right.
+; PASS is H1 only. fe, ce, ed and d_rx are printed, not judged: fe and ce count the LAN's frames
+; too, and ed says whether a rising-edge RXD sample would have worked as well (0 = yes).
+
+; PREDICTION. H1.
+
+; WHAT IT DOES NOT SAY.
+;   That the design is right under load, with jumbo pings, or at 1000M: E3 is 100BASE-TX only, and
+;   one ping per second never fills the second buffer slot. That the TX timing margin is large:
+;   only that it was enough on this board, this cable, this switch. Anything about 10M. Anything
+;   about the node's key or receipts: E3 carries no MAC and no key. One attempt; a second only if
+;   the first fails before its first report line, and then both are recorded.
+
+; ROUTER. nextpnr-xilinx fix/zinv-t1-pad-pip f3a8c73c, router1 (e3z). A router2 build (e3h2)
+; routed BRAM address nets through the cascade wires of unused neighbour tiles; it is not the one
+; pinned here and is not to be flashed first.
+
+module trinet_eth_arp_icmp_e3_ax7203;
+
+pub const KIND : str = "board-diagnostic-preregistration";
+pub const ID : str = "trinet/eth_arp_icmp_e3_ax7203";
+pub const GENERATED : [1]str = ["conformance/eth_arp_icmp_e3_params.py"];
+pub const RUNNER : str = "conformance/eth_arp_icmp_ax7203.py";
+pub const RUNNER_SHA256 : str = "9fed2bde85d50316d3943030d4ac6b7443cbe5a00952134a40d2fd8e6f0466ef";
+pub const RECORD_DOC : str = "conformance/NODE_ETHERNET_PLAN.md";
+
+; --- The six logs, in order (conformance/board_runs/NAME.log) ---------------------------------
+pub const LOG_PREPING : str = "e3_preping";
+pub const LOG_FLASH : str = "e3_flash";
+pub const LOG_BEFORE : str = "e3_uart_before";
+pub const LOG_PING : str = "e3_ping";
+pub const LOG_ARP : str = "e3_arp";
+pub const LOG_AFTER : str = "e3_uart_after";
+
+; --- Code and data of record: never edited -------------------------------------------------
+pub const RTL_FILE : str = "fpga/vivado/eth_arp_icmp_ax7203.v";
+pub const RTL_SHA256 : str = "72ccbf907ef6e2b38570f71bd5da6fa492cec0baf547501b50eca9cfd1edb763";
+pub const XDC_FILE : str = "specs/fpga/constraints/eth_arp_icmp_ax7203.xdc";
+pub const XDC_SHA256 : str = "8921492b31f5e34f28d0d10b59a59e431c9f6f449a2d694713ac9781b8f5535e";
+pub const MODEL_FILE : str = "formal/ksz9031_frame_model.v";
+pub const MODEL_SHA256 : str = "392727916c85e4ac14a129c042829cdbe13cafa59bf116ca9fa5fe5f0c3a2300";
+pub const TB_FILE : str = "formal/eth_arp_icmp_tb.v";
+pub const TB_SHA256 : str = "f59a165c3161fa370b217efc9d15b3cf4066be4d683d4c743c35e29587485adb";
+pub const RAMB_MOCK_FILE : str = "fpga/openxc7-synth/RAMB36E1_mock.v";
+pub const RAMB_MOCK_SHA256 : str = "e304d2ca1b154e7b8e728a30352424e2e810ab37a8a64b7835cf9b65fcf499ba";
+pub const STARTUP_MOCK_FILE : str = "fpga/openxc7-synth/STARTUPE2_mock.v";
+pub const STARTUP_MOCK_SHA256 : str = "512a152f465a08528bf0b3bbd8d14d41338844ff6bff45acc0847b07ca476ef4";
+pub const BIT_RECORD_FILE : str = "artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit.sha256";
+pub const BIT_RECORD_SHA256 : str = "2f482d26c424a6ea2041beaba37664d5013cab1f3c42dfe4aa875764d51c944f";
+; the E2z report lines the rc bounds are checked against
+pub const E2Z_LOG_FILE : str = "conformance/board_runs/e2z_phy_status.log";
+pub const E2Z_LOG_SHA256 : str = "a9186cd94283bf34da9d6c0fc3fa615718be0ab6c7455baab6878f148fa1a1f0";
+
+; --- The bitstream (the .bit itself is not in git; the record above is) ----------------------
+pub const BIT_NAME : str = "artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit";
+; sha256 from the sync word 0xAA995566 on, as tri fpga-flash computes it and --expect checks it
+pub const PAYLOAD_SHA256 : str = "4fd7923d0d65b06cfffd877c7a73411e73f7d1e2e535b2acff18b49cb6b684c9";
+pub const BIT_FILE_SHA256 : str = "e75a6ff75d49d82e8e51af089fe1a49e4da230eb0b167a66b185910b1f555695";
+
+; --- The design's identity: read back from the RTL parameters and the checker ---------------
+pub const IP_TEXT : str = "192.168.1.222";
+pub const IP_U32 : u32 = 3232235998;
+; MAC 02:00:5E:F9:00:01, locally administered
+pub const MAC_HI16 : u16 = 512;
+pub const MAC_LO32 : u32 = 1593376769;
+pub const TTL : u8 = 64;
+; KSZ9031RNX PHYID1:PHYID2
+pub const PHY_ID : u32 = 2233890;
+; report field ib: answered and in-band seen (3), in-band 0xB = link, 100M, full duplex
+pub const IB : u8 = 59;
+
+; --- Host side ------------------------------------------------------------------------------
+pub const PRE_PING_COUNT : u8 = 2;
+pub const PRE_PING_MAX_REPLIES : u8 = 0;
+pub const PING_COUNT : u8 = 20;
+; the Mac is on Wi-Fi, the board on the router's switch: two of twenty may be lost on the air
+pub const PING_MIN_REPLIES : u8 = 18;
+pub const UART_LINES : u8 = 10;
+pub const POLL_LOG2 : u8 = 25;
+
+; --- rc: RXC edges counted over 2^WIN_LOG2 cycles of CFGMCLK ---------------------------------
+pub const WIN_LOG2 : u8 = 20;
+pub const RXC_HZ : u32 = 25000000;
+pub const RXC_PPM : u8 = 100;
+pub const RXC_LO_HZ : u32 = 24997500;
+pub const RXC_HI_HZ : u32 = 25002500;
+pub const CFGMCLK_MIN_HZ : u32 = 65600000;
+pub const CFGMCLK_MAX_HZ : u32 = 68700000;
+; floor(RXC_LO_HZ 2^20 / CFGMCLK_MAX_HZ) - 1 and ceil(RXC_HI_HZ 2^20 / CFGMCLK_MIN_HZ) + 1; the
+; one count each side is the window's edge
+pub const RC_MIN : u32 = 381538;
+pub const RC_MAX : u32 = 399651;
+; E2z on the board, the 36 report lines with ib=3B: rc 0x05EF84 .. 0x05F0F6
+pub const E2Z_IB_LINES : u8 = 36;
+pub const E2Z_RC_MIN : u32 = 388996;
+pub const E2Z_RC_MAX : u32 = 389366;
+
+test identity {
+    assert IP_U32 == 192 * 16777216 + 168 * 65536 + 1 * 256 + 222;
+    assert MAC_HI16 == 2 * 256 + 0;
+    assert MAC_LO32 == 94 * 16777216 + 249 * 65536 + 0 * 256 + 1;
+    assert PHY_ID == 34 * 65536 + 22 * 256 + 34;
+    assert IB == 3 * 16 + 11;
+    assert TTL == 64;
+}
+
+test rc_bounds_are_25_mhz_over_the_cfgmclk_range {
+    assert 1000000 * RXC_LO_HZ == RXC_HZ * (1000000 - RXC_PPM);
+    assert 1000000 * RXC_HI_HZ == RXC_HZ * (1000000 + RXC_PPM);
+    assert WIN_LOG2 == 20;
+    assert CFGMCLK_MAX_HZ * (RC_MIN + 1) <= RXC_LO_HZ * 1048576;
+    assert RXC_LO_HZ * 1048576 < CFGMCLK_MAX_HZ * (RC_MIN + 2);
+    assert CFGMCLK_MIN_HZ * (RC_MAX - 2) < RXC_HI_HZ * 1048576;
+    assert RXC_HI_HZ * 1048576 <= CFGMCLK_MIN_HZ * (RC_MAX - 1);
+}
+
+test e2z_lies_inside_the_bounds {
+    assert RC_MIN <= E2Z_RC_MIN;
+    assert E2Z_RC_MIN <= E2Z_RC_MAX;
+    assert E2Z_RC_MAX <= RC_MAX;
+    assert E2Z_IB_LINES > 0;
+}
+
+test host_side {
+    assert PRE_PING_MAX_REPLIES == 0;
+    assert PING_MIN_REPLIES <= PING_COUNT;
+    assert 10 * PING_MIN_REPLIES >= 9 * PING_COUNT;
+    assert UART_LINES >= 2;
+}
+
+; the checker's read gives up after 1.5 s per line + 5 s; a line comes every 2^POLL_LOG2 cycles,
+; and the first one up to one period after the port opens
+test uart_read_fits_its_timeout {
+    assert POLL_LOG2 == 25;
+    assert 2 * (UART_LINES + 1) * 33554432 < CFGMCLK_MIN_HZ * (3 * UART_LINES + 10);
+}

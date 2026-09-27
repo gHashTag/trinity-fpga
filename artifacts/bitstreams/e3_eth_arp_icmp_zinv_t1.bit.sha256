@@ -1,0 +1,2 @@
+e75a6ff75d49d82e8e51af089fe1a49e4da230eb0b167a66b185910b1f555695  e3_eth_arp_icmp_zinv_t1.bit (file)
+4fd7923d0d65b06cfffd877c7a73411e73f7d1e2e535b2acff18b49cb6b684c9  payload from the sync word; E3 build (/tmp/trinet-node-build/e3z), nextpnr-xilinx fix/zinv-t1-pad-pip f3a8c73c, router1, --nosrl; tri fpga-tristate: 1 ZINV_T1, 0 without; NOT flashed

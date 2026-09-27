@@ -249,7 +249,7 @@ def main():
         if "Failed to find a route" in log:
             print("  %s/seed %d: unrouted nets" % (placer, seed))
             continue
-        fm = re.findall(r"Max frequency for clock '([^']+)': ([\d.]+) MHz", log)
+        fm = re.findall(r"Max frequency for clock\s+'([^']+)': ([\d.]+) MHz", log)  # nextpnr pads short names: clock  'rxc'
         rec["fmax_mhz"] = {c: float(v) for c, v in fm}  # last report wins (post-route)
         rec["placer"], rec["seed"] = placer, seed
         steps.append(rec)
