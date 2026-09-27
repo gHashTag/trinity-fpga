@@ -97,10 +97,12 @@ operator forging their own receipts).
 
 ## Board run, 2026-09-27 UTC
 
-**Result: FAIL.** The main run lost UART framing after 19,049 jobs. Steps 4 and 5
-were held back at first (a failed step is recorded and the run stops there), then
-run once each at the owner's request: step 4 passed, step 5 lost framing the same
-way after 9,951 jobs. The 284,160-receipt figure stays withdrawn.
+**Result: FAIL for the full run.** The main run lost UART framing after 19,049
+jobs. Steps 4 and 5 were held back at first (a failed step is recorded and the run
+stops there), then run once each at the owner's request: step 4 passed, step 5
+lost framing the same way after 9,951 jobs. Step 5 rerun with `--window 8`
+passed: 51,840/51,840 receipts, 320/320 rows. The full run has not been repeated
+at that window, and the 284,160-receipt figure stays withdrawn.
 
 - Machine: MacBook Pro, Apple M1 Pro, macOS 26.5.2 (25F84), Python 3.14.6,
   pyserial 3.5.
@@ -215,9 +217,47 @@ Expected 51,840 jobs, `receipts verified (tag) : 51840/51840`, `rows bit-exact :
   2.08 s, about 4,750 jobs/s.
 - No retry: the failure came after the first job.
 
-Open, none of it tested: why the framing slipped. It slipped twice, after 19,049
-jobs and after 9,951 jobs. Between those two runs, all 3,200 jobs of step 4 came
-back framed. Candidates: the CP2102N's
+**5a. Step 5 with `--window 8`.** Run once at the owner's request, 02:29:44Z to
+02:29:56Z, to probe the window candidate below. Same port, same hub, same baud,
+no power cycle. The only change is 8 jobs in flight instead of 64. The harness
+was still `2b9830c5` from this checkout. `b1e95f6f`, which sets the default
+window to 24 and adds the failed-read diagnostics described below, reached the
+branch at 02:28:34Z, a minute before this run, and was not used. This is not the
+rerun planned under "Rerun that tells the causes apart".
+
+    python3 tern_tc_layer_ax7203.py --mats down --layers 5 --act int8 --n_x 1 --setkey --window 8 \
+        --port /dev/cu.usbserial-1130 --baud 1144744 --keys ../trinet-keys.txt \
+        --model ~/igla-coder-gpu/c_infer/model.bin
+
+Expected `receipts verified (tag) : 51840/51840`, `rows bit-exact : 320/320`,
+PASS. Got:
+
+    model.bin: 1 matrices, 320 rows, 276480 ternary weights (61.8% nonzero)
+    jobs: 51840 (32-trit chunks x 1 x-vectors x 6 digit planes)
+    setkey: node 0x5452494e already holds a key (0x03); receipts below will show whether it is ours
+      [ok ] L5/down      320/320    rows bit-exact
+    jobs sent               : 51840
+    receipts verified (tag) : 51840/51840 under node 0x5452494e
+    rejected                : none
+    rows bit-exact          : 320/320  (activations: int8)
+    elapsed                 : 11.93 s (4344 jobs/s)
+    RESULT: every row above computed on the AX7203 bit-exact against the
+            int8-weight oracle, and every receipt verified under the key.
+
+- PASS. This is the first board run of the trained model's w_down with int8
+  activations: layer 5, 320 rows, one x-vector, all of it on the existing
+  bitstream.
+- No slip in 51,840 jobs, which is 5.2 times the 9,951 jobs after which the
+  window-64 run of the same matrix slipped. One run: this fits the window
+  candidate, but it does not prove it.
+- Every job was sent in this run, so 4,344 jobs/s is a real rate. The window-64
+  runs reached about 4,660 to 4,750 jobs/s before they slipped.
+
+Open: why the framing slipped. It slipped twice at window 64, after 19,049 jobs
+and after 9,951 jobs. Between those two runs, all 3,200 jobs of step 4 (also at
+window 64) came back framed. At window 8, 51,840 jobs came back framed. Nothing
+else has been tested, and the full `--all` run at a smaller window has not been
+done. Candidates: the CP2102N's
 baud divider at 1,144,744 against the node's (earlier board runs went through a
 CP2102N seen as `usbserial-130` on another Mac); the USB 2.0 hub (the CP2102N
 did not enumerate on the first hub port tried); 64 jobs in flight
