@@ -1,0 +1,129 @@
+// SPDX-License-Identifier: Apache-2.0
+; specs/trinet/e3_tx_hold_model_ax7203.t27 -- pre-registration: the E3 transmit edge timing at the
+; FPGA's output buffers, in nextpnr-xilinx's own delay model, for the routed e3z netlist
+; The one source for this check. conformance/e3_tx_hold_from_spec.mjs compiles this file with the
+; t27 compiler (wasm), evaluates every test block below, checks the pinned repo files, reads back the
+; constants it repeats from the E3 spec, the RTL and the bitstream record, and writes
+; conformance/e3_tx_hold_params.py, which the runner conformance/e3_tx_hold_model.py reads.
+; `--check` fails on drift. Written 2026-09-27T23:06:06Z (date -u), before any run of the runner and
+; before any SDF of e3z existed. ASCII, English.
+
+; WHY. NODE_ETHERNET_PLAN.md, "The TX edge timing on the board": TXD and TX_CTL change some ns after
+; the TXC falling edge, through TX_DLY kept LUT1 stages per pin, and "no tool in this flow reports"
+; how many. If it is under the PHY's hold time, the last FCS nibble goes out as an error and the
+; board run reads H2. The bench stands in 3 ns for it. nextpnr-xilinx can write an SDF of the routed
+; design (--sdf): its own delay per net and per cell, from the prjxray timing classes. That is a
+; model, not the board, but it is the number this flow has and nobody has read yet.
+
+; WHAT RUNS. nextpnr-xilinx NEXTPNR_BIN (sha pinned) on the e3z synthesized netlist BUILD_DIR/node.json
+; with the e3z build's own arguments (chipdb, XDC, --freq, --seed, --placer, --router,
+; --timing-allow-fail) plus --sdf, into WORK_DIR. The run is accepted as e3z only if the FASM it
+; writes is byte-equal to BUILD_DIR/node.fasm (FASM_SHA256): same placement, same routing, the one
+; whose bitstream is PAYLOAD_SHA256. Then the runner walks the SDF back from the input pin I of the
+; output buffer of each of the six TX pads to a flip-flop: interconnect delays, LUT pin-to-output
+; delays, the flip-flop's clock-to-Q, and the clock net's delay into that flip-flop's clock pin.
+; For a TX data pin p (TXD0..3, TX_CTL) that sum is D_p. For TXC it is C_fall along the branch from
+; the rising-edge flip-flop tq_p (TXC falls at the RXC rising edge, when TXD and TX_CTL also launch)
+; and C_rise along the branch from the falling-edge flip-flop tq_n.
+
+; THE CHECK, per data pin p, in picoseconds:
+;   hold_fall  = D_p - C_fall                          must be >= HOLD_MIN_PS
+;   setup_rise = RXC_HIGH_MIN_PS + C_rise - D_p        must be >= SETUP_MIN_PS
+; hold_fall is the time TX_EN xor TX_ER of the previous nibble stays after the TXC falling edge at
+; the output buffers. setup_rise is the time the new nibble is there before the next TXC rising
+; edge, with RXC's high time at its RGMII minimum (40 % of 40 ns). The walk must find, for each data
+; pin, exactly TX_DLY LUTs between the flip-flop and the buffer, and for TXC exactly one LUT with
+; two flip-flop branches.
+;   PASS       every data pin meets both.
+;   FAIL       some pin misses one: the model predicts the H2 failure mode.
+;   NO VERDICT the FASM differs, a pinned file or binary differs, or the walk does not find the
+;              structure above. Nothing is concluded then.
+
+; PREDICTION. PASS. A guess, information only, not part of the verdict: hold_fall between
+; GUESS_HOLD_LO_PS and GUESS_HOLD_HI_PS on every pin (the RTL comment's 0.3 to 1 ns per stage, less
+; the TXC path's one LUT).
+
+; WHAT IT DOES NOT SAY. Anything about the board: the model has one corner and the SDF carries one
+; number per arc, so a real hold check (fastest data against slowest clock) is not made; the output
+; buffers, the pads, the board traces and the PHY's input delays are outside it (the six pins share
+; IOSTANDARD LVCMOS33, SLEW FAST and default drive, so their buffers are alike, not measured); the
+; KSZ9031's TX pad-skew registers are left at reset values by E3. A PASS says the design's intent
+; (data after the falling edge, well before the rising one) survived place and route in the tool's
+; own numbers. It moves nothing in the E3 spec and changes no E3 verdict.
+
+module trinet_e3_tx_hold_model_ax7203;
+
+pub const KIND : str = "offboard-model-preregistration";
+pub const ID : str = "trinet/e3_tx_hold_model_ax7203";
+pub const GENERATED : [1]str = ["conformance/e3_tx_hold_params.py"];
+pub const RUNNER : str = "conformance/e3_tx_hold_model.py";
+pub const RUNNER_SHA256 : str = "fbb01db6e9c5b2c96dd7e3f6e1c9312f10578565d83a6dc34ffcf8b18abdcf02";
+pub const RECORD_DOC : str = "conformance/NODE_ETHERNET_PLAN.md";
+pub const WRITTEN_UTC : str = "2026-09-27T23:06:06Z";
+
+; --- Repo files of record: pinned, and the constants below read back out of them ------------
+pub const E3_SPEC_FILE : str = "specs/trinet/eth_arp_icmp_e3_ax7203.t27";
+pub const E3_SPEC_SHA256 : str = "9f15f35540ee9fa56a0d23a436b907127b5d8638f9f8b863c05155540124bf4d";
+pub const RTL_FILE : str = "fpga/vivado/eth_arp_icmp_ax7203.v";
+pub const RTL_SHA256 : str = "72ccbf907ef6e2b38570f71bd5da6fa492cec0baf547501b50eca9cfd1edb763";
+pub const XDC_FILE : str = "specs/fpga/constraints/eth_arp_icmp_ax7203.xdc";
+pub const XDC_SHA256 : str = "8921492b31f5e34f28d0d10b59a59e431c9f6f449a2d694713ac9781b8f5535e";
+pub const BIT_RECORD_FILE : str = "artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit.sha256";
+pub const PAYLOAD_SHA256 : str = "4fd7923d0d65b06cfffd877c7a73411e73f7d1e2e535b2acff18b49cb6b684c9";
+
+; --- The e3z build on this Mac: checked by the runner, not by the generator -----------------
+pub const BUILD_DIR : str = "/tmp/trinet-node-build/e3z";
+pub const NODE_JSON_SHA256 : str = "3b91491691a17672e178eef06291456039e9103a2dfe1a2564cf305c89bd1f32";
+pub const FASM_SHA256 : str = "95809a97d96c563ebb02c954d24d1848d1e5ef3a85c7af1668a666dffc5fb265";
+; ~ is the runner's HOME. PATH's nextpnr-xilinx (~/.local/bin) is another binary and writes no
+; ZINV_T1; the FASM check is what ties this one to e3z.
+pub const NEXTPNR_BIN : str = "~/openxc7-src/nextpnr-xilinx-zinv/build/nextpnr-xilinx";
+pub const NEXTPNR_SHA256 : str = "25aeb46a747bc456c8100cd495f8c3c8265653a47ad9ad1712a049b9cffcf99d";
+pub const CHIPDB : str = "~/openxc7-src/chipdb/xc7a200tfbg484-2.bin";
+pub const CHIPDB_SHA256 : str = "5c88a26d973bff2fc33582f3937cc07d30bfc397ebae16d69a18fe49a14786a7";
+pub const FREQ_MHZ : u8 = 50;
+pub const SEED : u8 = 1;
+pub const PLACER : str = "heap";
+pub const ROUTER : str = "router1";
+pub const WORK_DIR : str = "/tmp/e3txhold";
+
+; --- The design, read back from the RTL -----------------------------------------------------
+pub const TX_DLY : u8 = 10;
+pub const DATA_PORTS : [5]str = ["eth_txd[0]", "eth_txd[1]", "eth_txd[2]", "eth_txd[3]", "eth_txctl"];
+pub const CLOCK_PORT : str = "eth_txc";
+pub const FF_FALL_NET : str = "tq_p";
+pub const FF_RISE_NET : str = "tq_n";
+
+; --- Timing, picoseconds --------------------------------------------------------------------
+; 100BASE-TX RGMII: 25 MHz, 40 ns period; RXC duty cycle 40 to 60 % at 10/100 (RGMII v2.0)
+pub const PERIOD_PS : u16 = 40000;
+pub const RXC_HIGH_MIN_PS : u16 = 16000;
+; RGMII v2.0 TsetupR and TholdR at the receiver, 1.0 ns minimum (TI SNLA243; plan, "The driver")
+pub const SETUP_MIN_PS : u16 = 1000;
+pub const HOLD_MIN_PS : u16 = 1000;
+; the bench's stand-in for the chain (formal/ksz9031_frame_model.v), for comparison only
+pub const BENCH_TX_DELAY_PS : u16 = 3000;
+pub const GUESS_HOLD_LO_PS : u16 = 2000;
+pub const GUESS_HOLD_HI_PS : u16 = 10000;
+
+test duty_cycle_bound {
+    assert 100 * RXC_HIGH_MIN_PS == 40 * PERIOD_PS;
+    assert 2 * RXC_HIGH_MIN_PS < PERIOD_PS;
+}
+
+test window_is_open {
+    assert HOLD_MIN_PS + SETUP_MIN_PS < RXC_HIGH_MIN_PS;
+    assert BENCH_TX_DELAY_PS >= HOLD_MIN_PS;
+}
+
+test guess_inside_window {
+    assert GUESS_HOLD_LO_PS >= HOLD_MIN_PS;
+    assert GUESS_HOLD_HI_PS + SETUP_MIN_PS <= RXC_HIGH_MIN_PS;
+    assert GUESS_HOLD_LO_PS < GUESS_HOLD_HI_PS;
+}
+
+test e3z_build {
+    assert FREQ_MHZ == 50;
+    assert SEED == 1;
+    assert TX_DLY == 10;
+}
