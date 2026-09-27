@@ -565,7 +565,10 @@ answers/s). The hub is not excluded as the source of the stalls that let the
 bridge buffer fill. Window 64 without the hub, owner-approved, is still
 waiting for the adapter to be plugged in directly.
 
-### Rerun step 4 (pre-registered): `--all` at window 64, UART on its own hub, 2026-09-27 09:40Z
+### Rerun step 4 (pre-registered): `--all` at window 64, UART on its own hub, 2026-09-27 09:34Z
+
+(Heading stamp corrected at 10:37Z from 09:40Z, which was not read from a clock: the
+pre-registration commit cf82eeb79 is 09:34:19Z. Nothing else in this section changed.)
 
 At 09:32Z the owner moved the Mac end of the UART cable ("подключил в другой
 usb"). `system_profiler SPUSBHostDataType` and `ioreg -p IOUSB` then show:

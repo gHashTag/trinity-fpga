@@ -1,0 +1,13 @@
+2026-09-27T10:20:50Z ternary_storage_search: spec specs/numeric/ternary_storage_search.t27 sha256 f5653560baa3e9f1, log research/block/ternary_storage_search.log
+2026-09-27T10:20:50Z generator --check: same   research/block/ternary_storage_params.py
+2026-09-27T10:20:50Z pins: block_tnf.py, model, test and dev text match the spec
+2026-09-27T10:20:50Z tables: E2M1, TNF4_7, E2M2 equal block_tnf's; TNF4_7 + the 1/12 code == E2M1 as float64: True
+2026-09-27T10:20:50Z tables: T27_N recomputed from NormalDist, equal
+2026-09-27T10:20:56Z loaded in 5.8 s; torch threads 6; target modules 210; windows test 148, dev 130
+2026-09-27T10:22:26Z ARM ruler test BASE    rule -  ppl 14.4869  k None  89.6 s
+2026-09-27T10:22:26Z ruler BASE -: 14.4869 against main 14.4874, |diff| 0.0005 within 0.01
+2026-09-27T10:24:10Z ARM ruler test E2M1    rule B  ppl 21.9353  k [-5, 4, 0]  103.9 s
+2026-09-27T10:24:10Z ruler E2M1 B: 21.9353 against main 21.9397, |diff| 0.0044 within 0.01
+2026-09-27T10:25:37Z ARM ruler test TNF4_7  rule B  ppl 36.7612  k [-5, 4, 0]  87.3 s
+2026-09-27T10:25:37Z ruler TNF4_7 B: 36.7612 against main 36.7214, |diff| 0.0398 OUTSIDE 0.01
+2026-09-27T10:25:37Z STOP: ruler TNF4_7 rule B missed by 0.0398
