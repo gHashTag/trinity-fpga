@@ -94,6 +94,25 @@ live; the live run's log path will be recorded in the table above at launch.
   16→17, budget self-test 7/7; live on both reopen logs (t27: request-bound
   99.5 %, gen_tokens_8_reopen: request-bound 98.7 %). Dispatch + help lines in
   ~/.local/bin/tri (runlog's missing help line added too); SKILL.md section.
+- L2 batch protocol spec written (fire 6): `specs/trinet/tern_tc_batch_ax7203.t27`
+  + `conformance/tern_tc_batch_from_spec.mjs` + generated
+  `conformance/tern_tc_batch_params.py`; `tri fpga-specs` 16→17 clean. Design
+  only — no RTL, no runner, no board. Two design advances over the plan:
+  (1) SETX rides standard 24-B chunk frames (one x chunk per frame), so the
+  node's AA-55 hunt, the 22-B body and the flush-resync proof survive
+  unchanged — price 1440–3888 B upload per pass vs the plan's 480–1296 B
+  payload, per-pass saving 5.89× (>5× pinned); (2) the preimage rule settled:
+  DOT6's tag MACs the 48 B of pinned x READ FROM RAM for that frame's six
+  dots (preimage 73 B), so a receipt still covers exactly what the datapath
+  consumed, RAM drift included. The compiler caught two of my own arithmetic
+  errors in the draft (PREIMAGE_DOT6 74→73; 6×L2-per-pass-bytes is NOT <
+  now-bytes with upload overhead — honest pin is 5×). Generator readbacks:
+  constants from the reopen spec text, op codes from the harness + MAC32
+  source (0x03/0x04 must be absent from both), the AA-55/22-B RTL shape, and
+  the plan's projection anchors. TERN_TC_BATCH_PLAN.md got an update note:
+  first two implementation steps exist; where plan and spec disagree, the
+  spec wins. Option A is now a ready-to-pick: next steps would be the
+  BatchCell reference model and rehearsal pair — both still no-board work.
 
 ## READY (next work, in order)
 
@@ -104,12 +123,17 @@ live; the live run's log path will be recorded in the table above at launch.
    only: keep the anomaly scan running (`tri fpga-audit`, keycheck,
    `tri fpga-specs`), or do pure-design work in the same spirit (no board, no
    pods, no RTL). Do not start A/B/C alone.
-2. Pure-design candidates if another fire lands before the owner wakes: the
-   L2 batch spec draft (`specs/trinet/tern_tc_batch_ax7203.t27` — op codes,
-   frame layouts, K, the preimage rule as pinned tests) is the highest-value
-   no-RTL item left; writing it changes no hardware and hands the owner a
-   ready-to-pick A. Note TERN_TC_BATCH_PLAN.md already fixes the projections
-   the spec should pin.
+2. Pure-design candidates if another fire lands before the owner wakes (in
+   value order, all no-board / no-pod / no-RTL): (a) the **BatchCell
+   reference model** — a Python class extending the harness's `h.RefCell`
+   semantics that implements SETX/DOT6 against
+   `conformance/tern_tc_batch_params.py`, with the same negative-control
+   style as `tern_tc_retransmit.py` (bit-flip → wrong tag, nonce reuse →
+   caught, plane-mask bit clear → y stays 0); the whole protocol is testable
+   with no board, and this is the spec's first consumer; (b) an L1-answers
+   cost note inside the batch plan is already written — skip; (c) revisiting
+   `.claude/loop/research.md` for competitor movement is read-only and cheap.
+   The batch spec draft (previous item here) is DONE — do not rewrite it.
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
    fire 5 triage); document anything found there in this file instead.
 4. End-of-fire report + three collaboration options; self-critique and anomaly
@@ -160,3 +184,13 @@ live; the live run's log path will be recorded in the table above at launch.
   decode 17/17 + budget 7/7, live request-bound verdicts on both reopen logs,
   tri dispatch + help, SKILL.md). Board untouched, pods untouched, RTL
   untouched.
+- fire 6 (2026-09-29): the L2 batch protocol became an executable design —
+  specs/trinet/tern_tc_batch_ax7203.t27 (69 consts, 9 tests, 67 asserts, 0
+  failures) + conformance/tern_tc_batch_from_spec.mjs (sha pins, reopen-spec
+  readbacks, op-code freeness guards, RTL shape guards, plan anchors) +
+  generated tern_tc_batch_params.py; `tri fpga-specs` 17/17. Plan updated with
+  the spec's two revisions (SETX chunk frames; RAM-read preimage) and repinned.
+  The compiler caught three draft mistakes (DOT6 preimage 74→73, no parens in
+  .t27 asserts, the false 6×-with-upload claim → honest 5× pin). Design only:
+  board, pods, RTL untouched. READY rewritten: BatchCell reference model is the
+  next no-hardware item.

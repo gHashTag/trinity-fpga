@@ -1,0 +1,241 @@
+// SPDX-License-Identifier: Apache-2.0
+; specs/trinet/tern_tc_batch_ax7203.t27 -- protocol design: batched wire protocol for tern_tc
+; Design only. No RTL change exists, no runner exists, no rehearsal has run, nothing here has touched
+; the board. conformance/tern_tc_batch_from_spec.mjs compiles this file with the t27 compiler (wasm),
+; evaluates every test block below, checks the pinned files, reads the constants this spec repeats
+; from the t27 reopen spec back out of that spec's text, and writes
+; conformance/tern_tc_batch_params.py. `--check` fails on drift. Written 2026-09-29 from
+; conformance/TERN_TC_BATCH_PLAN.md (pinned below); ASCII, English.
+
+; WHY. The 7-token t27 run (specs/trinet/tern_tc_reopen_t27_ax7203.t27, pinned) sent 6,712,896 jobs
+; in 1414.5 s over the 1,144,744-baud UART: its request stream alone is 161,109,504 B, 99.7 % of the
+; wall clock at the adapter's wire rate (tri fpga-budget prints 99.5 % at the spec's BAUD and names
+; the ~0.2 % rounding). The run is request-bound; any speedup must shrink the request stream. Each
+; w chunk is sent 6 times, once per digit plane; pinning the activation vector x on the node removes
+; exactly that factor of 6.
+
+; WHAT CHANGES. Two new ops on the node, both inside the frame shape it already parses:
+;   OP_SETX (0x03) uploads one 8-byte x chunk of one digit plane, in a standard 24-byte request
+;   frame; the node writes it to x RAM at (plane, chunk) and answers the standard 19-byte frame.
+;   OP_DOT6 (0x04) carries one w chunk plus a chunk index and a 6-bit plane mask; the node reads the
+;   six pinned x chunks at that index, computes up to six 32-trit dot products, and answers one
+;   24-byte frame with all six y bytes. OP_MAC32 and OP_SETKEY are untouched.
+; This revises the plan's SETX sketch (one long upload frame of up to 1296 B payload) into 24-byte
+; chunk frames: the parser keeps hunting AA 55 and taking 22 body bytes, so FLUSH_BYTES zero bytes
+; still complete any partial frame and cannot start one, and the resync proof survives unchanged.
+; The price is upload overhead (1440 to 3888 B per pass against the plan's 480 to 1296 B payload),
+; pinned below and still under one percent of the pass it serves.
+
+; THE PREIMAGE RULE (the one cryptographic decision, settled here). Today's tag MACs the 26 bytes the
+; node consumed: op, nonce, w, x, y, node. The rule survives batching only if every tag still MACs
+; what the datapath consumed:
+;   SETX preimage (20 B): op, nonce, plane, chunk, x, y (the echoed chunk), node.
+;   DOT6 preimage (73 B): op, nonce, w, chunk, mask, the 48 bytes of pinned x READ FROM RAM for this
+;   frame's six dots, the six y bytes, node.
+; The DOT6 preimage MACs the RAM-read bytes, not sent bytes (none are sent): a receipt still proves
+; the node computed each dot over exactly the x bytes whose SETX receipt the host verified, by the
+; same standard as today -- the tag covers what was consumed, including any RAM drift after SETX.
+
+; L1, BATCHED RECEIPTS, IS DESIGNED BUT SECONDARY. An answer frame may cover K = WINDOW jobs:
+; A5 | status | nonce4 | node4 | K y-bytes | tag8, the tag over the batch's operands and answers in
+; order. Alone this shortens nothing (the wall is the request stream); it buys answer-duty headroom
+; and is pinned here so its frame arithmetic is fixed before anyone composes it with DOT6.
+
+; WHAT IT DOES NOT SAY. It does not say the x RAM, the six-dot datapath at six times the per-frame
+; work, or the 24-byte answer close timing: that is `tri fpga-cost`'s question to answer on the real
+; synthesis, not this spec's claim. It pins frames and bytes, not seconds: MODEL_LINK_S_MAX is the
+; link-arithmetic ceiling at this spec's BAUD; the plan's 235 s used the adapter's measured wire
+; rate, and a real run gets its own pre-registration with its own ceilings. No throughput claim
+; about the model or the project is made or implied.
+
+module trinet_tern_tc_batch_ax7203;
+
+pub const KIND : str = "protocol-design";
+pub const ID : str = "trinet/tern_tc_batch_ax7203";
+pub const GENERATED : [1]str = ["conformance/tern_tc_batch_params.py"];
+pub const PLAN_DOC : str = "conformance/TERN_TC_BATCH_PLAN.md";
+
+; --- Files of record: read, never edited ------------------------------------------------------
+pub const PLAN_SHA256 : str = "789527101ddb5aeb855996c64b09ee51a5e314791531faea87e2219b58696804";
+pub const REOPEN_SPEC_FILE : str = "specs/trinet/tern_tc_reopen_t27_ax7203.t27";
+pub const REOPEN_SPEC_SHA256 : str = "648451ffab50744219dc80e3f20b60979fcefa6066e6e07b7659af2ad49cd7b5";
+pub const HARNESS_FILE : str = "conformance/tern_tc_layer_ax7203.py";
+pub const HARNESS_SHA256 : str = "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa";
+pub const MAC32_FILE : str = "conformance/trinet_mac32_conformance_ax7203.py";
+pub const MAC32_SHA256 : str = "11fa651938a0e360a311f63ec4c04de15241ad9a7c6e26175ead084e07ababa2";
+pub const NODE_RTL_FILE : str = "fpga/portable/trinet_node_core.v";
+pub const NODE_RTL_SHA256 : str = "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1";
+
+; --- Today's protocol, repeated from the reopen spec; the generator reads each back ----------
+pub const JOBS_7T27 : u32 = 6712896;
+pub const REQ_LEN : u8 = 24;
+pub const RESP_LEN : u8 = 19;
+pub const BAUD : u32 = 1144744;
+pub const WINDOW : u8 = 24;
+pub const FIRST_JOB_NONCE : u32 = 65536;
+pub const RETRY_BASE : u32 = 536870912;
+pub const MAX_RETRANSMITS : u16 = 256;
+pub const FLUSH_BYTES : u8 = 24;
+
+; --- Ops (0x01 and 0x02 are live in the harness; 0x03 and 0x04 are this design) ---------------
+pub const OP_MAC32 : u8 = 1;
+pub const OP_SETKEY : u8 = 2;
+pub const OP_SETX : u8 = 3;
+pub const OP_DOT6 : u8 = 4;
+
+; --- Frames. Body is 22 bytes for every op; the parser's shape survives whole -----------------
+pub const REQ_BODY : u8 = 22;
+; SETX body: op(1) nonce(4) plane(1) chunk(1) x(8) reserved(7)
+pub const SETX_CHUNK_BYTES : u8 = 8;
+; DOT6 body: op(1) nonce(4) w(8) chunk(1) mask(1) reserved(7)
+pub const DOT6_MASK_ALL : u8 = 63;
+; DOT6 answer: A5 y(6) status(1) nonce(4) node(4) tag(8); masked-out planes answer y = 0
+pub const RESP_DOT6_LEN : u8 = 24;
+; L1 batched answer: A5 status(1) nonce(4) node(4) y(K) tag(8)
+pub const BATCH_K : u8 = 24;
+pub const BATCH_RESP_LEN : u8 = 42;
+
+; --- Preimages (what the tag MACs = what the datapath consumed) -------------------------------
+pub const PREIMAGE_MAC32 : u8 = 26;
+pub const PREIMAGE_SETX : u8 = 20;
+pub const PREIMAGE_DOT6 : u8 = 73;
+pub const PLANES : u8 = 6;
+pub const N_TRITS : u8 = 32;
+
+; --- Passes of one matrix pass (rows x in_dim; C = in_dim / 32) --------------------------------
+pub const R_WQ : u16 = 320;
+pub const C_WQ : u8 = 10;
+pub const R_GATE : u16 = 864;
+pub const C_GATE : u8 = 10;
+pub const R_DOWN : u16 = 320;
+pub const C_DOWN : u8 = 27;
+; frames now = R * PLANES * C; frames with x pinned = R * C; SETX uploads = PLANES * C.
+; The upload overhead keeps the per-pass byte saving just under 6x; over 5x it always stays
+; (5 * L2_BYTES < NOW_BYTES in the test below). The whole-run DOT projection stays exactly 6x.
+pub const WQ_NOW : u32 = 19200;
+pub const WQ_L2 : u32 = 3200;
+pub const SETX_WQ : u16 = 60;
+pub const GATE_NOW : u32 = 51840;
+pub const GATE_L2 : u32 = 8640;
+pub const SETX_GATE : u16 = 60;
+pub const DOWN_NOW : u32 = 51840;
+pub const DOWN_L2 : u32 = 8640;
+pub const SETX_DOWN : u16 = 162;
+pub const WQ_NOW_BYTES : u32 = 460800;
+pub const WQ_L2_BYTES : u32 = 78240;
+pub const GATE_NOW_BYTES : u32 = 1244160;
+pub const GATE_L2_BYTES : u32 = 208800;
+pub const DOWN_NOW_BYTES : u32 = 1244160;
+pub const DOWN_L2_BYTES : u32 = 211248;
+
+; --- Whole-run L2 projection from the t27 run's 6,712,896 jobs --------------------------------
+pub const DOT_FRAMES : u32 = 1118816;
+pub const DOT_BYTES : u32 = 26851584;
+pub const TODAY_REQ_BYTES : u32 = 161109504;
+pub const TODAY_RESP_BYTES : u32 = 127545024;
+; DOT frames plus every SETX upload fits the run's nonce space with room to spare
+pub const SETX_RUN_MAX : u32 = 11188;
+pub const MODEL_LINK_S_MAX : u16 = 235;
+
+; --- L1 projection (answers only; the request stream is untouched) ------------------------------
+pub const BATCH_ANSWER_FRAMES : u32 = 279704;
+pub const BATCH_ANSWER_BYTES : u32 = 11747568;
+; the measured loss bound is 1.83 events per 10^6 jobs (UART_LOSS_DIAG.md, 95 % Poisson):
+; 6,712,896 jobs expect 12.28 events, ceiling 13; each lost batch answer is one retransmit
+pub const EXPECTED_LOSS_EVENTS_MAX : u8 = 13;
+pub const BATCH_RETRANSMITS_MAX : u8 = 13;
+pub const REASK_JOBS_MAX : u16 = 312;
+
+test ops_disjoint {
+    assert OP_MAC32 == 1;
+    assert OP_SETKEY == 2;
+    assert OP_SETX == 3;
+    assert OP_DOT6 == 4;
+    assert OP_MAC32 != OP_SETX;
+    assert OP_SETKEY != OP_DOT6;
+    assert OP_DOT6 > OP_SETX;
+}
+
+test every_frame_keeps_the_parser_shape {
+    assert REQ_LEN == 2 + REQ_BODY;
+    assert REQ_BODY == 1 + 4 + 1 + 1 + SETX_CHUNK_BYTES + 7;
+    assert REQ_BODY == 1 + 4 + 8 + 1 + 1 + 7;
+    assert FLUSH_BYTES % REQ_LEN == 0;
+    assert DOT6_MASK_ALL == 2 * 2 * 2 * 2 * 2 * 2 - 1;
+    assert PLANES == 6;
+}
+
+test answer_shapes {
+    assert RESP_DOT6_LEN == 1 + PLANES + 1 + 4 + 4 + 8;
+    assert RESP_DOT6_LEN == REQ_LEN;
+    assert BATCH_K == WINDOW;
+    assert BATCH_RESP_LEN == 1 + 1 + 4 + 4 + BATCH_K + 8;
+}
+
+test preimages_mac_what_was_consumed {
+    assert PREIMAGE_MAC32 == 1 + 4 + 8 + 8 + 1 + 4;
+    assert PREIMAGE_SETX == 1 + 4 + 1 + 1 + 8 + 1 + 4;
+    assert PREIMAGE_DOT6 == 1 + 4 + 8 + 1 + 1 + PLANES * SETX_CHUNK_BYTES + PLANES + 4;
+    assert PLANES * SETX_CHUNK_BYTES == 48;
+    assert N_TRITS == 32;
+}
+
+test per_pass_six_x_redundancy_removed_exactly {
+    assert WQ_NOW == R_WQ * PLANES * C_WQ;
+    assert GATE_NOW == R_GATE * PLANES * C_GATE;
+    assert DOWN_NOW == R_DOWN * PLANES * C_DOWN;
+    assert WQ_NOW == PLANES * WQ_L2;
+    assert GATE_NOW == PLANES * GATE_L2;
+    assert DOWN_NOW == PLANES * DOWN_L2;
+    assert WQ_L2 == R_WQ * C_WQ;
+    assert GATE_L2 == R_GATE * C_GATE;
+    assert DOWN_L2 == R_DOWN * C_DOWN;
+}
+
+test setx_uploads_ride_standard_frames {
+    assert SETX_WQ == PLANES * C_WQ;
+    assert SETX_GATE == PLANES * C_GATE;
+    assert SETX_DOWN == PLANES * C_DOWN;
+    assert WQ_NOW_BYTES == WQ_NOW * REQ_LEN;
+    assert WQ_L2_BYTES == (WQ_L2 + SETX_WQ) * REQ_LEN;
+    assert GATE_NOW_BYTES == GATE_NOW * REQ_LEN;
+    assert GATE_L2_BYTES == (GATE_L2 + SETX_GATE) * REQ_LEN;
+    assert DOWN_NOW_BYTES == DOWN_NOW * REQ_LEN;
+    assert DOWN_L2_BYTES == (DOWN_L2 + SETX_DOWN) * REQ_LEN;
+    assert 5 * WQ_L2_BYTES < WQ_NOW_BYTES;
+    assert 5 * GATE_L2_BYTES < GATE_NOW_BYTES;
+    assert 5 * DOWN_L2_BYTES < DOWN_NOW_BYTES;
+}
+
+test whole_run_projection {
+    assert PLANES * DOT_FRAMES == JOBS_7T27;
+    assert DOT_BYTES == DOT_FRAMES * REQ_LEN;
+    assert TODAY_REQ_BYTES == JOBS_7T27 * REQ_LEN;
+    assert TODAY_RESP_BYTES == JOBS_7T27 * RESP_LEN;
+    assert TODAY_REQ_BYTES == PLANES * DOT_BYTES;
+    assert SETX_RUN_MAX * 100 <= DOT_FRAMES;
+    assert SETX_RUN_MAX * 100 + 100 > DOT_FRAMES;
+    assert SETX_RUN_MAX * REQ_LEN * 100 < DOT_BYTES;
+    assert FIRST_JOB_NONCE + DOT_FRAMES + SETX_RUN_MAX < RETRY_BASE;
+    assert DOT_BYTES * 10 > 234 * BAUD;
+    assert DOT_BYTES * 10 < 235 * BAUD;
+    assert MODEL_LINK_S_MAX == 235;
+}
+
+test l1_batch_answers_only {
+    assert JOBS_7T27 % BATCH_K == 0;
+    assert BATCH_ANSWER_FRAMES * BATCH_K == JOBS_7T27;
+    assert BATCH_ANSWER_BYTES == BATCH_ANSWER_FRAMES * BATCH_RESP_LEN;
+    assert BATCH_ANSWER_BYTES < TODAY_RESP_BYTES;
+    assert TODAY_REQ_BYTES == JOBS_7T27 * REQ_LEN;
+}
+
+test loss_and_reask_ceiling {
+    assert JOBS_7T27 * 183 > 12 * 100000000;
+    assert JOBS_7T27 * 183 < 13 * 100000000;
+    assert EXPECTED_LOSS_EVENTS_MAX == 13;
+    assert BATCH_RETRANSMITS_MAX == EXPECTED_LOSS_EVENTS_MAX;
+    assert BATCH_RETRANSMITS_MAX <= MAX_RETRANSMITS;
+    assert REASK_JOBS_MAX == EXPECTED_LOSS_EVENTS_MAX * BATCH_K;
+    assert REASK_JOBS_MAX * 1000 < DOT_FRAMES;
+}

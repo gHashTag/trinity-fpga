@@ -143,6 +143,16 @@ pair through `tri fpga-rehearse` → RTL change in `trinet_node_core.v` →
 `tri fpga-cost` on the x RAM → new bitstream → **reflash, which needs the
 owner's quoted «да»** and a fresh key (`--setkey`), since SRAM wipes.
 
+**Update 2026-09-29:** the spec and its generator now exist (the first two
+steps, 17/17 in `tri fpga-specs`). The spec revises two things in this plan:
+SETX rides standard 24-byte chunk frames instead of one long upload — the
+parser's AA-55 hunt and the flush-resync proof survive unchanged, at 1440–3888 B
+per pass instead of 480–1296 B — and the preimage rule is settled: the DOT6 tag
+MACs the 48 bytes of pinned x **read from RAM for that frame's dots**, so a
+receipt still covers exactly what the datapath consumed. The spec's tests are
+the executable form of this plan's arithmetic; where the two disagree, the
+spec wins.
+
 ## What this document does not say
 
 - No board run, no bitstream build, no RTL edit was made. Every speed number
