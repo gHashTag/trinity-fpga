@@ -1,7 +1,11 @@
-# Loop research — weak points + competitors (2026-09-29, fire 2)
+# Loop research — weak points + competitors (2026-09-29, fire 2; competitor
+# table refreshed fire 8)
 
 Swept through BrowserOS neo (Google → arXiv/GitHub). What the field looks like
 from the tern_tc/AX7203 vantage, and where this project honestly stands.
+Fire-8 refresh: TeLLMe and the nicholi.ai $130-board engine added after a
+re-sweep; none of the new entrants publishes receipted inference either —
+the wedge below is unchanged.
 
 ## Competitors (all verified live, September 2026)
 
@@ -13,6 +17,8 @@ from the tern_tc/AX7203 vantage, and where this project honestly stands.
 | **ELiTeFormer** (arXiv 2607.03652, Agostinelli 2026) | first Transformer unifying hybrid linear attention + ternary, co-designed for FPGA | architecture-level claim |
 | **VitaLLM** (arXiv 2604.27396, Lin & Chang) | dual-core (TINT ternary + BoothFlex mixed) with Leading-One-Prediction KV pruning | edge accelerator, prefill+decode |
 | **Bitnet.cpp** (Microsoft) | CPU edge inference for ternary LLMs | the baseline everyone cites |
+| **TeLLMe** (UCI-CORSA, FPGA 2026, ACM 3748173.3779191) | end-to-end ternary LLM prefill + decode on FPGA, course-turned-paper stack (TeLLMe_FPGA_2026 repo) | end-to-end (both phases), not just kernels |
+| nicholi.ai engine (June 2026; article title says "multiply-free" — the ternary network is what needs no multipliers) | ternary engine on a $130 FPGA board, write-up with numbers | floor price point |
 
 ## Where we actually stand (no varnish)
 
