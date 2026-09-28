@@ -113,6 +113,20 @@ live; the live run's log path will be recorded in the table above at launch.
   first two implementation steps exist; where plan and spec disagree, the
   spec wins. Option A is now a ready-to-pick: next steps would be the
   BatchCell reference model and rehearsal pair — both still no-board work.
+- BatchCell reference model written (fire 7): `conformance/tern_tc_batch_model.py`
+  — BatchCell subclasses the harness's RefCell (OP_MAC32/OP_SETKEY inherited
+  untouched) with OP_SETX and OP_DOT6 per the spec; BatchHost is the host half
+  against the link interface (the same host code will drive the real node
+  unchanged). Constants come only from `tern_tc_batch_params.py`. 24 self-test
+  checks PASS (`tri fpga-batch`, new tri dispatch + help line; SKILL.md
+  section). The preimage rule is demonstrated both ways: a corrupted RAM write
+  passes its SETX receipt and is caught by DOT6 ('tag'); RAM drift is caught
+  by the tag even when the dot cannot see it ('tag' vs 'damage', the pair
+  pinned with two crafted w vectors); plus lie/damage/nonce/wrong_key/drop/
+  replay negatives, mask semantics, the mask-0 readback probe, unkeyed/setkey
+  flows, and a mini end-to-end pass (8 rows × 320: every row dot bit-exact vs
+  the int8 oracle, 140 batched frames vs 480 today). Still design only — no
+  RTL, no runner, no board.
 
 ## READY (next work, in order)
 
@@ -124,16 +138,15 @@ live; the live run's log path will be recorded in the table above at launch.
    `tri fpga-specs`), or do pure-design work in the same spirit (no board, no
    pods, no RTL). Do not start A/B/C alone.
 2. Pure-design candidates if another fire lands before the owner wakes (in
-   value order, all no-board / no-pod / no-RTL): (a) the **BatchCell
-   reference model** — a Python class extending the harness's `h.RefCell`
-   semantics that implements SETX/DOT6 against
-   `conformance/tern_tc_batch_params.py`, with the same negative-control
-   style as `tern_tc_retransmit.py` (bit-flip → wrong tag, nonce reuse →
-   caught, plane-mask bit clear → y stays 0); the whole protocol is testable
-   with no board, and this is the spec's first consumer; (b) an L1-answers
-   cost note inside the batch plan is already written — skip; (c) revisiting
-   `.claude/loop/research.md` for competitor movement is read-only and cheap.
-   The batch spec draft (previous item here) is DONE — do not rewrite it.
+   value order, all no-board / no-pod / no-RTL): (a) a **batch runner** — a
+   windowed pipelined runner over BatchHost (nonce accounting across
+   SETX+DOT6, zero-plane skip semantics, retransmit on loss with the
+   SlipLink-style corrupting link, per-row recombination) so a model-level
+   rehearsal pair can run the way tern_tc_retransmit.py's did; the model,
+   spec and params exist — this is the missing consumer; (b) refreshing
+   `.claude/loop/research.md` competitor movement is read-only and cheap;
+   (c) L1 batched-answer arithmetic is already pinned in the spec — skip.
+   The BatchCell model (previous item here) is DONE — do not rewrite it.
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
    fire 5 triage); document anything found there in this file instead.
 4. End-of-fire report + three collaboration options; self-critique and anomaly
@@ -194,3 +207,9 @@ live; the live run's log path will be recorded in the table above at launch.
   .t27 asserts, the false 6×-with-upload claim → honest 5× pin). Design only:
   board, pods, RTL untouched. READY rewritten: BatchCell reference model is the
   next no-hardware item.
+- fire 7 (2026-09-29): BatchCell reference model shipped
+  (conformance/tern_tc_batch_model.py, 24 checks PASS) + `tri fpga-batch`
+  dispatch/help + SKILL.md section; loop-state updated. Three draft-test
+  mistakes caught by the first self-test run (inverted mask indices, damage-vs-
+  tag class mixup, wrong_key refusing at SETX). Preimage rule demonstrated
+  both ways. Board, pods, RTL untouched.
