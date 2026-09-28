@@ -152,6 +152,19 @@ live; the live run's log path will be recorded in the table above at launch.
   greens before any flash; reflash still needs the owner's «да» + fresh
   setkey; 235 s stays a model number). Design only — board, pods, RTL
   untouched.
+- fpga-cost baseline of the current core recorded (fire 10, measurement
+  only): `tri fpga-cost --top trinet_node_core --src
+  fpga/openxc7-synth/trinet_siphash24.v fpga/portable/trinet_node_core.v`
+  at commit e45e8269c, native yosys 0.67, 37-48 s per run —
+  builder LUT 2010 / FF 1082 / C4 0, abc9+carry LUT 1358 / C4 81,
+  abc,nocarry LUT 1998, abc+carry LUT 1389; DSP 0 and B36 0 B18 0 in every
+  flag set (the core has no RAM today — the "before" column of the RTL
+  plan's question 1). Verified twice: hand-grep of the /tmp stat logs equals
+  the printed rows, and the run after the tool edit below reproduced the
+  same numbers. `tri fpga-cost` now prints BRAM (B36/B18) in its row
+  (board.py cost; tri help line updated; SKILL.md notes it: an inferred RAM
+  is proven by the RAMB count rising, not by compiling — FF inflation means
+  the template is wrong). Logs in /tmp/fpga-cost-trinet_node_core/.
 - Batch runner written (fire 8): `conformance/tern_tc_batch_runner.py` — whole
   passes pipelined through BatchCell the way tern_tc_retransmit.py drove
   RefCell (one window, one nonce space, retries under fresh nonces, per-row
@@ -184,18 +197,15 @@ live; the live run's log path will be recorded in the table above at launch.
    only: keep the anomaly scan running (`tri fpga-audit`, keycheck,
    `tri fpga-specs`), or do pure-design work in the same spirit (no board, no
    pods, no RTL). Do not start A/B/C alone.
-2. Pure-design candidates if another fire lands before the owner wakes (in
-   value order, all no-board / no-pod / no-RTL): (a) **record the
-   `tri fpga-cost` baseline of the CURRENT core** — measurement only (yosys,
-   logs in /tmp, no repo edit): `tri fpga-cost --top trinet_node_core --src
-   fpga/openxc7-synth/trinet_siphash24.v fpga/portable/trinet_node_core.v`,
-   then one DONE line with LUT/FF/C4 per flag set + the RAMB counts read
-   from the /tmp logs. This front-loads half of the RTL plan's cost question
-   and gives the post-edit run its comparison column; (b) beyond that the
-   no-hardware queue for option A is EMPTY by design — spec, params, model,
-   runner, RTL plan all exist (fires 6-9). Do not invent make-work; an
-   audit-only fire is an honest fire. The RTL plan itself is DONE — do not
-   rewrite it.
+2. The no-hardware queue for option A is EMPTY as of fire 10 — spec, params,
+   model, runner, RTL plan (fires 6-9) and the fpga-cost baseline (fire 10)
+   all exist. The next real step is the RTL edit itself, which is option A
+   and needs the owner's «да». Until then a fire is audit-only: `tri
+   fpga-audit`, `tri fpga-keycheck`, `tri fpga-specs`, `git status` — do not
+   invent make-work; an audit-only fire is an honest fire. The only cheap
+   extra if the owner stays asleep for many fires: re-check
+   `.claude/loop/research.md` competitor movement (read-only, rare, last
+   refreshed fire 8).
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
    fire 5 triage); document anything found there in this file instead.
 4. End-of-fire report + three collaboration options; self-critique and anomaly
@@ -285,3 +295,10 @@ live; the live run's log path will be recorded in the table above at launch.
   (+expect=N for mixed 19/24-B answers). READY's queue for option A is now
   empty except the fpga-cost baseline measurement (next fire's default).
   Board, pods, RTL untouched.
+- fire 10 (2026-09-29): fpga-cost baseline recorded (LUT 1358-2010 / FF
+  1082 / C4 0-81 / DSP 0 / B36 0 B18 0, all four flag sets, native yosys
+  0.67, 37-48 s) — the "before" column of the RTL plan's cost question,
+  verified twice (hand-grep = printed rows = post-edit rerun). tri fpga-cost
+  now prints BRAM B36/B18 (board.py + help + SKILL.md). READY's no-hardware
+  queue for option A is now empty; next fires default to audit-only until
+  the owner picks A/B/C. Board, pods, RTL untouched.
