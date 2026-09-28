@@ -1,0 +1,2 @@
+81355717cd63d2d92f2d1553eee8e072c05cf49b41990d03b20e7898df0ed9d8  data8k_tokenizer.json (file)
+the model's own 8192-token tokenizer, copied from the RunPod network volume h6zg0ak7b6 (igla-coder-data, EU-RO-1, path data8k/tokenizer.json) on 2026-09-28 via pod tok8k3 (t74zgbk0zw5ttr); verified 8192 ids, max id 8191, and tri fpga-decode accepts it against model.bin (sha 3102abdf = spec MODEL_SHA256). Dataset provenance in data8k_manifest.json. With this copy in the repo, decoding a generation log no longer needs the RunPod key or a live volume.
