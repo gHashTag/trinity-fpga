@@ -811,7 +811,9 @@ The verdicts are tried in this order:
 | H2 (TX or BRAM broken) | `ar` or `er` rose, but the Mac got no reply |
 | OTHER | anything else; the judge lists the H1 conditions that failed |
 
-`ed`, `fe` and `ce` are printed as information only.
+`ed`, `fe` and `ce` are printed as information only. nextpnr's model
+predicts `ed` = 0 and a visible RX_ER; see "The RX side of the same model"
+above. That prediction moves no hypothesis here.
 
 H2 cannot tell a TX timing fault from a BRAM fault, because the reply's
 destination MAC is read out of the BRAM. The next step would be a build that
@@ -911,7 +913,10 @@ answers ARP or ping on a board. The nearest are:
 - The common advice for 10/100 RGMII is to sample on the rising edge. E3
   samples on the falling one. Its reason is that the KSZ9031 changes the
   nibble near the rising edge (RTL lines 11-21). The `ed` counter compares the
-  two samples on the board, so the board decides which reason held.
+  two samples on the board, so the board decides which reason held. In
+  nextpnr's model both samples agree (`ed` = 0), because the BUFG delays RXC by
+  2.4 ns against its data ("The RX side of the same model", above). If the
+  board agrees, it cannot tell the two reasons apart at 100 Mb/s.
 
 So an H1 would be worth a comment on openXC7/nextpnr#22 with the logs: fabric
 capture at 100M answered a ping. Two things limit the wording:
