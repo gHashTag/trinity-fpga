@@ -58,7 +58,9 @@ live; the live run's log path will be recorded in the table above at launch.
   decoding the T35 log cross-checked the BASE model sha and printed it as if
   the run had used it. Now decode reads the log's own `spec … sha256 …` header
   line (reopen specs resolve via GENERATE_SPEC_FILE), notes any drift, falls
-  back to GEN_SPEC only for logs without the line. decode self-test 11/11.
+  back to GEN_SPEC only for logs without the line. decode self-test 16/16
+  (decode_spec resolution itself now covered: reopen-log chain, own-spec,
+  drift-named, missing-spec fallback, no-spec-line fallback).
 
 ## READY (next work, in order)
 
