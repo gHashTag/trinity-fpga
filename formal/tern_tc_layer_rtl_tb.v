@@ -16,7 +16,8 @@
 //
 //   iverilog -g2012 -o tb formal/tern_tc_layer_rtl_tb.v \
 //       fpga/portable/trinet_node_core.v fpga/openxc7-synth/trinet_siphash24.v
-//   vvp tb +req=req.hex +resp=resp.hex
+//   vvp tb +req=req.hex +resp=resp.hex            (+expect=N total answer bytes;
+//                                                  default frames*19, today's one-answer-per-frame)
 //
 // Author: Dmitrii Vasilev (@gHashTag)
 //=============================================================================
@@ -81,7 +82,7 @@ module tern_tc_layer_rtl_tb;
         end
     end
 
-    integer frames, guard;
+    integer frames, guard, expect_total;
     initial begin
         if (!$value$plusargs("req=%s", req_file))   req_file  = "req.hex";
         if (!$value$plusargs("resp=%s", resp_file)) resp_file = "resp.hex";
@@ -94,8 +95,15 @@ module tern_tc_layer_rtl_tb;
             $finish;
         end
         frames = n_req / 24;
+        // Total response bytes the stream owes. Default: one 19-byte answer per
+        // frame (today's protocol) — byte-identical to the hard-coded version,
+        // so existing invocations are unchanged. +expect=N overrides for
+        // mixed-length streams: the batch ops answer 19 B per SETX and 24 B
+        // per DOT6, and the caller knows the split.
+        if (!$value$plusargs("expect=%d", expect_total)) expect_total = frames * 19;
         fd = $fopen(resp_file, "w");
-        $display("tern_tc_layer_rtl_tb: %0d frames, BAUD_DIV=%0d", frames, BAUD_DIV);
+        $display("tern_tc_layer_rtl_tb: %0d frames, BAUD_DIV=%0d, expect %0d response bytes",
+                 frames, BAUD_DIV, expect_total);
 
         repeat (20) @(posedge clk);
         rst = 1'b0;
@@ -108,14 +116,15 @@ module tern_tc_layer_rtl_tb;
         end
         sender_done = 1'b1;
 
-        // The last response needs 19 bytes of line time after its frame.
+        // The last response needs its line time after its frame (<= 24 bytes,
+        // well inside the 40-byte-time guard).
         guard = 0;
-        while (n_resp < frames * 19 && guard < 40 * 10 * BAUD_DIV) begin
+        while (n_resp < expect_total && guard < 40 * 10 * BAUD_DIV) begin
             @(posedge clk); guard = guard + 1;
         end
         $fclose(fd);
-        $display("tern_tc_layer_rtl_tb: %0d response bytes for %0d frames (%0s)",
-                 n_resp, frames, (n_resp == frames * 19) ? "complete" : "INCOMPLETE");
+        $display("tern_tc_layer_rtl_tb: %0d response bytes for %0d frames, %0d expected (%0s)",
+                 n_resp, frames, expect_total, (n_resp == expect_total) ? "complete" : "INCOMPLETE");
         $finish;
     end
 

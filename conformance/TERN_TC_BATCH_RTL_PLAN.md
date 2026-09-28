@@ -142,6 +142,35 @@ Sim time is the same order as the existing cosim (its 400 jobs ≈ 9.6 k
 request bytes; the wq pass is ≈ 5.3 k plus retransmits) — minutes at
 `TB_BAUD_DIV 8`, no board, test key only.
 
+**Status (fire 12, 2026-09-29): both halves exist and are pre-validated.**
+The TB generalisation (`+expect=N`, default `frames*19`) is in, with its
+drift control green: `tern_tc_retransmit_rtl_cosim.py --jobs 200` PASS on
+the edited TB, byte counts identical to before. The cosim script exists and
+its red side is recorded: against the current core the model run is green
+(wq 16/16 rows, 6 retransmits, 1 resync; 62 SETX + 162 DOT6 frames reached
+the cell), the equality fails at answer byte 30 — tag byte 0 of SETX #1;
+the y/status/nonce/node bytes can coincide, the 20-B vs 26-B preimage
+cannot — and the core's 4275 answer bytes (225 frames × 19) against the
+model's 5085 (62×19 + 162×24 + 19 setkey) is the missing-ops signature.
+`--passes both` is red the same way (818 frames × 19 out, 18 517 owed).
+The RTL session's remaining testbench work is therefore only: run
+`tri fpga-batch-cosim` (default wq, then `--passes both`) after the core
+edit and expect PASS, and rerun the retransmit cosim unchanged.
+
+**The phantom-frame finding (why the cosim has a precondition).** Under
+request-byte loss the hunting parser re-assembles misaligned bytes into
+*phantom* op frames — valid op byte, garbage fields. If a phantom's
+plane/chunk lands outside the model's RAM the model's assertion drops it
+(no answer) while the aliasing decision below makes the RTL answer it:
+the two answer streams can then never be byte-equal, and no amount of
+correct RTL makes this cosim green. The cosim therefore walks its own
+model answer stream first (every parsed frame must own an answer of the
+right length, A5 and nonce echo) and FAILS with that diagnosis instead of
+reporting a mystery diff; its drop positions are chosen so both variants
+are adjudicable, and the walk re-verifies that property on every run
+rather than trusting the choice. This couples the aliasing decision to
+the cosim contract — see Risks.
+
 ## What `tri fpga-cost` must answer before synthesis
 
 The command exists (`tri fpga-cost --top T --src F… [--param K=V1,V2]`; four
@@ -193,7 +222,19 @@ call.
 - The split-capture decode (`x8 = {x_b[1:0], w_b[7:2]}`) is the likeliest
   first-bug; the cosim's first-diff index is designed to point at it.
 - The out-of-range aliasing decision is made here and flagged; the owner can
-  overrule it into a guarded no-op before RTL is written.
+  overrule it into a guarded no-op before RTL is written. The phantom-frame
+  finding above couples this decision to the cosim: byte-exact equality under
+  loss requires model and RTL to agree on out-of-range frames. Three
+  consistent end-states, any one of which closes the gap — the choice is the
+  owner's, before RTL is written:
+  1. the model adopts aliasing too — spec edit, the assertion becomes the
+     same truncation — and every stream becomes adjudicable;
+  2. the RTL refuses out-of-range frames (guarded no-op, no answer), so
+     model-drop == RTL-no-answer — every stream adjudicable, at the cost of
+     an extra guard the current plan doesn't carry;
+  3. the cosim stays restricted to adjudicable streams (today's state: both
+     variants configured adjudicable, and the walk re-proves it on every
+     run rather than trusting the configuration).
 - BRAM vs distributed RAM at 162×64 is a measurement outcome, not a choice;
   both close on an XC7A200T.
 - The portability header rewrite is mandatory, not cosmetic.

@@ -187,6 +187,31 @@ live; the live run's log path will be recorded in the table above at launch.
   (lie/duplicate/status stop; wrong_key/ram_drift exhaust). Design only —
   board, pods, RTL untouched. Option A now has spec + params + model +
   runner; the RTL and the reflash remain.
+- Batch cosim pre-built red + TB generalisation (fire 12): option A's
+  testbench half now EXISTS ahead of the RTL edit, test-first.
+  `formal/tern_tc_layer_rtl_tb.v` gained `+expect=N` (default frames*19,
+  byte-identical to the old hard-code — proven by the retransmit cosim
+  `--jobs 200` PASS with identical byte counts after the edit).
+  `conformance/tern_tc_batch_rtl_cosim.py` (dispatch: `tri fpga-batch-cosim`,
+  `--passes wq|both`, `--keep`) follows the retransmit cosim's four steps:
+  recorded lossy rehearsal stream → TB under iverilog → byte-equal fresh
+  HuntingBatchCell → blind-framing negative control. Red side validated on
+  both variants: model green (wq 16/16 rows, 6 retransmits, 1 resync,
+  62 SETX + 162 DOT6; both 32/32 rows), RTL differs from answer byte 30
+  (tag byte 0 of SETX #1 — 20-B vs 26-B preimage) and emits 19 B per frame
+  (wq 4275 vs 5085 owed; both 15542 vs 18517). THE FINDING: after a tx drop
+  the hunting parser can re-assemble a *phantom* op frame whose plane/chunk
+  lands out of range — the model's assertion drops it, the plan's
+  truncate-and-alias RTL would answer it, so those streams can never be
+  byte-equal. Not a cosim bug: a real semantic gap caught before any RTL.
+  The cosim carries `walk_answers` (every parsed frame must own its answer:
+  length, A5, nonce echo) and refuses non-adjudicable streams with that
+  diagnosis instead of a mystery diff; both variants are configured
+  adjudicable (`both` = first drop +6) and the walk re-proves it every run.
+  Three resolutions pinned in the plan's Risks — model adopts aliasing /
+  RTL guarded no-op / adjudicable-only cosim — owner's pick, before RTL.
+  Regressions green: batch 24/24, rehearsal 26/26, keycheck 0 hits.
+  Board, pods, RTL design untouched (TB is test fixture, explicitly allowed).
 
 ## READY (next work, in order)
 
@@ -197,15 +222,20 @@ live; the live run's log path will be recorded in the table above at launch.
    only: keep the anomaly scan running (`tri fpga-audit`, keycheck,
    `tri fpga-specs`), or do pure-design work in the same spirit (no board, no
    pods, no RTL). Do not start A/B/C alone.
-2. The no-hardware queue for option A is EMPTY as of fire 10 — spec, params,
-   model, runner, RTL plan (fires 6-9) and the fpga-cost baseline (fire 10)
-   all exist. The next real step is the RTL edit itself, which is option A
-   and needs the owner's «да». Until then a fire is audit-only: `tri
-   fpga-loopcheck` (fire 11 packaged the whole sweep — git + specs + keycheck
-   + audit + one verdict line; exit 1 with exactly the two igla-coder-gpu
-   anomalies is the known floor, anything beyond is new) — do not
-   invent make-work; an audit-only fire is an honest fire. The only cheap
-   extra if the owner stays asleep for many fires: re-check
+2. The no-hardware queue for option A is EMPTY as of fire 12 — spec, params,
+   model, runner, RTL plan, fpga-cost baseline (fires 6-10) AND the
+   testbench half (fire 12: TB `+expect=N` + the pre-built-red cosim `tri
+   fpga-batch-cosim`). An RTL session that starts after the owner's «да» is
+   now purely: core edit per TERN_TC_BATCH_RTL_PLAN.md, then `tri
+   fpga-batch-cosim` (wq, `--passes both`) expecting PASS + the retransmit
+   cosim unchanged. The owner also owes one pick before RTL: which of the
+   three phantom-frame resolutions in the plan's Risks (model adopts
+   aliasing / RTL guarded no-op / adjudicable-only cosim). Until then a fire
+   is audit-only: `tri fpga-loopcheck` (fire 11 packaged the whole sweep —
+   git + specs + keycheck + audit + one verdict line; exit 1 with exactly
+   the two igla-coder-gpu anomalies is the known floor, anything beyond is
+   new) — do not invent make-work; an audit-only fire is an honest fire.
+   The only cheap extra if the owner stays asleep for many fires: re-check
    `.claude/loop/research.md` competitor movement (read-only, rare, last
    refreshed fire 8).
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
@@ -315,3 +345,15 @@ live; the live run's log path will be recorded in the table above at launch.
   exit 1 is the known floor while the sibling session lives, not a new
   finding; anything beyond those two lines is new and gets read first.
   Board, pods, RTL untouched.
+- fire 12 (2026-09-29): option A's testbench half built test-first.
+  `formal/tern_tc_layer_rtl_tb.v` `+expect=N` (default frames*19
+  byte-identical; retransmit cosim --jobs 200 PASS post-edit) +
+  `conformance/tern_tc_batch_rtl_cosim.py` (`tri fpga-batch-cosim`), red
+  validated on wq and both: model green, RTL differs from byte 30, 19
+  B/frame vs the mixed 19/24 stream owed. FINDING: phantom out-of-range
+  op-frames after a tx drop are model-dropped but alias-RTL-answered —
+  byte equality impossible on such streams; cosim gained walk_answers (loud
+  refusal, both variants configured adjudicable) and the plan's Risks now
+  pin the three resolutions for the owner's pre-RTL pick. Regressions:
+  batch 24/24, rehearsal 26/26, keycheck 0 hits. Board, pods, RTL design
+  untouched.
