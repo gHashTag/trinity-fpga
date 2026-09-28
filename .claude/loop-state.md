@@ -201,7 +201,9 @@ live; the live run's log path will be recorded in the table above at launch.
    model, runner, RTL plan (fires 6-9) and the fpga-cost baseline (fire 10)
    all exist. The next real step is the RTL edit itself, which is option A
    and needs the owner's «да». Until then a fire is audit-only: `tri
-   fpga-audit`, `tri fpga-keycheck`, `tri fpga-specs`, `git status` — do not
+   fpga-loopcheck` (fire 11 packaged the whole sweep — git + specs + keycheck
+   + audit + one verdict line; exit 1 with exactly the two igla-coder-gpu
+   anomalies is the known floor, anything beyond is new) — do not
    invent make-work; an audit-only fire is an honest fire. The only cheap
    extra if the owner stays asleep for many fires: re-check
    `.claude/loop/research.md` competitor movement (read-only, rare, last
@@ -302,3 +304,14 @@ live; the live run's log path will be recorded in the table above at launch.
   now prints BRAM B36/B18 (board.py + help + SKILL.md). READY's no-hardware
   queue for option A is now empty; next fires default to audit-only until
   the owner picks A/B/C. Board, pods, RTL untouched.
+- fire 11 (2026-09-29): audit-only fire. Regression sweep green (batch model
+  24/24, runner 26/26, spec generator check PASS, cron 25699f12 alive). The
+  sweep itself is now a tool: `tri fpga-loopcheck` (board.py cmd_loopcheck +
+  tri dispatch + help + SKILL.md note) runs git status (informational; the
+  cron lock is recognised) + specs + keycheck + audit and prints one greppable
+  verdict line; exit is the OR of the three real components. First live run
+  reproduced the individual commands exactly: specs 17/17, keycheck 72 files
+  0 hits, audit 56 logs with only the two known igla-coder-gpu anomalies —
+  exit 1 is the known floor while the sibling session lives, not a new
+  finding; anything beyond those two lines is new and gets read first.
+  Board, pods, RTL untouched.
