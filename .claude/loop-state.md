@@ -127,6 +127,28 @@ live; the live run's log path will be recorded in the table above at launch.
   flows, and a mini end-to-end pass (8 rows × 320: every row dot bit-exact vs
   the int8 oracle, 140 batched frames vs 480 today). Still design only — no
   RTL, no runner, no board.
+- Batch runner written (fire 8): `conformance/tern_tc_batch_runner.py` — whole
+  passes pipelined through BatchCell the way tern_tc_retransmit.py drove
+  RefCell (one window, one nonce space, retries under fresh nonces, per-row
+  recombination vs the int8 oracle). 26 self-test checks PASS
+  (`tri fpga-batch-rehearsal`, new dispatch + help; SKILL.md section). The
+  runner's own two findings: (1) the answer stream is length-ambiguous — 19-B
+  SETX and 24-B DOT6 answers share the A5 magic with no length field; the
+  runner shapes each read by which nonce position names an issued nonce and
+  lets the tag break ties, and ties are NOT rare: 8 natural y-nonce
+  collisions in the honest 814-frame rehearsal (~1% of DOT6 frames), every
+  one settled by tag, while a fixed-length parse would false-stop on each
+  ('status' from the y byte). The self-test also crafts one deterministically.
+  (2) retries must stay inside their pass — a retry after the next pass's
+  SETX would read overwritten RAM, fail its tag and burn the receipt space;
+  run_pass runs to completion per pass, one Budget shared across passes.
+  Also pinned: recovery over RxLoss/TxLoss and the RTL hunting parser
+  (HuntingParser mixin; out-of-range garbage frames drop — the model raises,
+  the spec leaves the real behaviour to the RTL), zero-plane skip (identical
+  rows, R fewer DOT6 frames per all-zero chunk), every hard stop kept
+  (lie/duplicate/status stop; wrong_key/ram_drift exhaust). Design only —
+  board, pods, RTL untouched. Option A now has spec + params + model +
+  runner; the RTL and the reflash remain.
 
 ## READY (next work, in order)
 
@@ -138,15 +160,17 @@ live; the live run's log path will be recorded in the table above at launch.
    `tri fpga-specs`), or do pure-design work in the same spirit (no board, no
    pods, no RTL). Do not start A/B/C alone.
 2. Pure-design candidates if another fire lands before the owner wakes (in
-   value order, all no-board / no-pod / no-RTL): (a) a **batch runner** — a
-   windowed pipelined runner over BatchHost (nonce accounting across
-   SETX+DOT6, zero-plane skip semantics, retransmit on loss with the
-   SlipLink-style corrupting link, per-row recombination) so a model-level
-   rehearsal pair can run the way tern_tc_retransmit.py's did; the model,
-   spec and params exist — this is the missing consumer; (b) refreshing
+   value order, all no-board / no-pod / no-RTL): (a) an **RTL testbench plan
+   for the batch ops** — the design side of option A is complete (spec +
+   params + BatchCell + runner, fires 6-8); the next pure-design artifact is
+   the plan a future RTL session executes: the trinet_node_core.v changes
+   (SETX/DOT6 decode, the x RAM block, the 6-dot datapath, the 24-B answer
+   builder), what the testbench drives (the runner's frame builders are
+   importable), what `tri fpga-cost` must answer before synthesis, and the
+   pre-registration the board run will cite; (b) refreshing
    `.claude/loop/research.md` competitor movement is read-only and cheap;
    (c) L1 batched-answer arithmetic is already pinned in the spec — skip.
-   The BatchCell model (previous item here) is DONE — do not rewrite it.
+   The batch runner (previous item here) is DONE — do not rewrite it.
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
    fire 5 triage); document anything found there in this file instead.
 4. End-of-fire report + three collaboration options; self-critique and anomaly
@@ -213,3 +237,14 @@ live; the live run's log path will be recorded in the table above at launch.
   mistakes caught by the first self-test run (inverted mask indices, damage-vs-
   tag class mixup, wrong_key refusing at SETX). Preimage rule demonstrated
   both ways. Board, pods, RTL untouched.
+- fire 8 (2026-09-29): batch runner shipped
+  (conformance/tern_tc_batch_runner.py, 26 checks PASS) + `tri
+  fpga-batch-rehearsal` + SKILL.md section. Two findings worth keeping: the
+  answer stream is length-ambiguous and ties are common (8 natural y-nonce
+  collisions in the honest 814-frame rehearsal, ~1% of DOT6 frames —
+  shape-by-issued-nonce + tag-tiebreak is a requirement, not polish), and
+  retries must stay inside their pass or they read the next pass's x RAM.
+  One real bug found by the first run (issued[] gave a job index where a job
+  was expected) plus two draft mistakes caught on review (a leftover buffer
+  for bytes the link itself holds, a hand-rolled replay fault the model
+  already ships). Board, pods, RTL untouched.
