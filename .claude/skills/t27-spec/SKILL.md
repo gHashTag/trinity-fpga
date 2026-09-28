@@ -8791,3 +8791,46 @@ Companion caveat from the same pass, stated in the PR rather than glossed: `vvp`
 on FAIL as well as PASS — measured, not assumed. So the harness is **reporting, not a gate**,
 and calling it a gate would have been the overclaim. Check your runner's exit semantics
 before describing anything as blocking.
+
+## Pin doctrine for files of record (the trinet arms, 2026-09)
+
+A pre-registration spec pins every file it depends on by sha256. Two kinds of
+pin, and the difference bit for real:
+
+- **Run-time-read files** (harness, MAC32, the model bin) — **strict
+  working-tree pins**: the bytes on disk must hash to the spec's sha, because
+  the run reads them.
+- **References of record** (e.g. `~/igla-coder-gpu/c_infer/tc_infer.c`, a C
+  reference the runner never reads — its `--mode c` is its own Python float sum
+  in the C file's order) — the pin is satisfied by an **on-disk match OR the
+  pinned bytes being reachable from the reference repo's git history**
+  (`git log --all` over the file, hash each `git show` blob). The owner's
+  parallel session added two portability header lines to tc_infer.c
+  (igla-coder-gpu 52be443) after two arms had pinned the old bytes; zero
+  arithmetic changed, and the history is the archive of record. Completed
+  arms' specs and params are run-time records and are **never edited** — the
+  fix went into the generators only (`gitBlobSha` in
+  `conformance/tern_tc_generate*_from_spec.mjs`).
+
+Two rules follow: a file that is *read by the run* must exist and match — no
+history escape hatch; and when a pin breaks, fix the **checker**, repin only
+**not-yet-run** specs, and leave completed records untouched.
+
+Git pathspec trap while implementing this: `git -C <subdir> log --all -- <path>`
+resolves the pathspec relative to the `-C` dir, so a toplevel-relative path
+silently matches nothing. Resolve `rev-parse --show-toplevel` first and run
+log/show with `-C <root>`.
+
+## When the model chooses the arm's length (T35, 2026-09)
+
+The t27-fine-tuned model emits EOT (id 0) at token 7 — the first generation
+arm whose length the model, not the host, chose. Record that as a **test, not
+a comment**: `N_TOKENS == 7; STOP_TOKEN == 0; CPU_INT_IDS[6] == STOP_TOKEN;
+CPU_INT_IDS[5] != STOP_TOKEN`, and pin the non-existence of the longer
+continuation — "asked for 128 tokens the greedy path stops at token 7 all the
+same (ids identical, counts identical)" — with the 128-token CPU log beside
+the 7-token one. A rehearsal schedule that partially lies outside the run's
+streams gets the same treatment: the fact that one scheduled rx hole lies past
+the answer stream and *never fires* is asserted
+(`RX_HOLE_AT[1] > JOBS_EXPECTED * RESP_LEN`), so the pinned runner's generic
+"5 scheduled losses" RESULT wording is read against the spec's honest 4-of-5.
