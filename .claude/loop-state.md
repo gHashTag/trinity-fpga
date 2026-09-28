@@ -16,6 +16,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | fire 17: tri fpga-tools (tool self-test sweep) as loopcheck's 4th component | DONE | sweep 6/6 green after catching real decode rot (hardcoded fire-2 sha, stale after the fire-14/15 cascades — decode was right, the test was wrong; fixed hermetically 18/18 + the once-real-stale-sha fixture pinned), loopcheck now 4 components, tools meta 9/9; competitor re-check skipped (fire 16 refreshed it hours ago); specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 | fire 18: tri fpga-loopstate (loop-state.md integrity linter) as loopcheck 5th component | DONE | self-test 9/9 (8/9 on first run — its own live check caught the loop's mid-fire log window; protocol fixed: stub+row together at start); loopcheck now 5 components, live sound; specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 | fire 19: audit sweep + sibling engine-semantics check (did igla-coder-gpu's engine change turn semantic?) | DONE | answer: NO — tc_infer.c has 0 commits and 0 diff since 52be443; sibling engine work is tc_fast (separate bench harness) + research scripts; C_REF pin doctrine and C_GREEDY_IDS unaffected, no re-pin decision pends; loopcheck floor = exactly the 2 igla anomalies (LEDGER.md, ahead 19); specs 17/17, keycheck 0, tools 6/6, loopstate sound; read-only on sibling; no board/pods/RTL |
+| fire 20: pin-target existence — do the /tmp-pinned E3 inputs survive, and does specs fail loudly if a pinned file is missing? | DONE | empirical map: specs --check = output-drift + REPO pins (loud, both modes); /tmp pins deliberately the runner's (generator comment); tmpcheck GONE loud, --restore heals (live-proven, sha matched); audit prints info line for gone-but-kept — my mid-fire claim that audit missed it was a too-narrow grep, corrected by full-output retest; NEW standing rule: a fire that sees the audit gone-line runs tmpcheck --restore; gates green to floor 2; no tool change needed — the gap was protocol; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -265,6 +266,9 @@ live; the live run's log path will be recorded in the table above at launch.
 - RunPod key `/tmp/rpk2.txt`: never print, only masked; values file→env inside
   one Bash call. Token stays.
 - Board logs are committed only after `tri fpga-keycheck` passes (0 key hits).
+- If audit prints "N pinned /tmp inputs gone, kept copies exist", the SAME
+  fire runs `tri fpga-tmpcheck --restore` (idempotent; restores from kept
+  blobs, never over a CHANGED file). A reboot must not outlive the next fire.
 - English for all repo code/docs/commits; Russian only in chat.
 - Self-check each fire: `git status` should contain only this cycle's files;
   `tri fpga-specs` after any spec edit; if something is broken, fix the root
@@ -534,3 +538,26 @@ live; the live run's log path will be recorded in the table above at launch.
   host-side tooling queue over fires 16–18; a sixth component now would be
   make-work, which READY forbids. Competitor re-check skipped (fire 16
   refreshed it, rule says rare). Board, pods, RTL untouched.
+- fire 20 (2026-09-29): started — weak-spot scan flagged ephemeral pin targets:
+  commit de8ceec7d keeps E3 model inputs pinned in /tmp, and /tmp does not
+  survive a reboot; checking whether the specs gate would notice a missing
+  pinned file loudly or pass silently. Stub written with the lock row.
+  Full entry — the ephemeral-pin question closed empirically, layer by layer,
+  with one self-caught error on the way. (1) `specs --check` with the pinned
+  SDF hidden: rc=0 — by DESIGN, not a hole: the generator verifies REPO pins
+  in both modes (semanticProblems, missing = PROBLEM) and the comment at
+  e3_rx_capture_from_spec.mjs:42 says the /tmp files are "the runner's to
+  check". (2) tmpcheck with the SDF hidden: `GONE kept` row, and
+  `tri fpga-tmpcheck --restore` put it back from the kept blob — live-proven,
+  restored sha == pinned sha b429acfb. (3) audit with the SDF hidden: my
+  first test grepped only "lost|ANOMALY|e3z" and I claimed audit missed it —
+  WRONG, the line says "gone"; the full-output retest shows
+  `info 1 pinned /tmp inputs gone, kept copies exist (audit --heal restores)`.
+  Lesson pinned in SKILL.md: a negative claim needs the full output, not a
+  filtered one. (4) The one genuine gap was protocol: after a reboot the six
+  inputs sit GONE-but-kept, audit reports info, loopcheck stays at the known
+  floor — and until fire 20 nothing OBLIGED a fire to restore them. New
+  standing rule below. No tool changed — every tool already did the right
+  thing; the fix is a rule, not code. Gates after restore: specs 17/17,
+  keycheck 0, tools 6/6, loopstate sound, loopcheck floor = the two igla
+  anomalies (ahead 19→20, sibling still working). Board, pods, RTL untouched.
