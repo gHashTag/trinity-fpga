@@ -1,0 +1,14 @@
+# CPU counts for the t27-tuned arm: 7 int, 7 c, 128 int, 128 c (asked for 128, the host stops at token 7; the spec pre-registered this)
+INT  n=  7 ids : 204 264 397 226 21 277 0
+INT  n=  7 jobs 6712896 skipped 1754304 rows 118272 calls 168 margin_milli 210 elapsed 0.1 s
+C    n=  7 ids : 204 264 397 226 21 277 0
+C    n=  7 jobs 0 skipped 0 rows 0 calls 0 margin_milli 190 elapsed 0.3 s
+int7 == spec CPU_INT_IDS: True
+c7   == int7            : True
+INT  n=128 ids : 204 264 397 226 21 277 0
+INT  n=128 jobs 6712896 skipped 1754304 rows 118272 calls 168 margin_milli 210 elapsed 0.1 s
+C    n=128 ids : 204 264 397 226 21 277 0
+C    n=128 jobs 0 skipped 0 rows 0 calls 0 margin_milli 190 elapsed 0.3 s
+int128 == the 7 ids (EOT stops the host): True
+c128   == the 7 ids (EOT stops the host): True
+# exit 0

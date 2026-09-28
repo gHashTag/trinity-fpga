@@ -1,0 +1,11 @@
+# 128-token t27-tuned integer reference (the model emits EOT at token 7; the host stops asking)
+model ~/igla-coder-gpu/c_infer/t27_tuned/model.bin: 6 layers, d 320, ff 864, vocab 8192
+token 0: id 204  (0.0 s)
+token 1: id 264  (0.0 s)
+token 2: id 397  (0.0 s)
+token 3: id 226  (0.0 s)
+token 4: id 21  (0.0 s)
+token 5: id 277  (0.0 s)
+token 6: id 0  (0.0 s)
+ids 204 264 397 226 21 277 0
+# exit 0

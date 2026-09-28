@@ -15,7 +15,8 @@
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs'
 import { createHash } from 'node:crypto'
-import { dirname, join, resolve } from 'node:path'
+import { execFileSync } from 'node:child_process'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { homedir } from 'node:os'
 
@@ -40,13 +41,41 @@ async function helpers() {
 // Relations the test evaluator cannot state (no powers, no file reads). The harness is imported by
 // the runner, never edited: its bytes are pinned, and the constants this spec repeats from it are
 // read back out of its source here, so the two cannot drift apart.
+// The commit whose version of absPath hashes to wantSha, or null. A C_REF pin may outlive the
+// reference repo's working tree (tc_infer.c gained two portability header lines on 2026-09-28,
+// igla-coder-gpu 52be443, with no arithmetic line changed); its history is the archive of record.
+function gitBlobSha(absPath, wantSha) {
+  try {
+    const dir = dirname(absPath)
+    const root = execFileSync('git', ['-C', dir, 'rev-parse', '--show-toplevel']).toString().trim()
+    const rel = relative(root, absPath)
+    const commits = execFileSync('git', ['-C', root, 'log', '--all', '--format=%H', '--', rel]).toString().trim()
+    for (const c of commits.split('\n').filter(Boolean)) {
+      const blob = execFileSync('git', ['-C', root, 'show', `${c}:${rel}`], { maxBuffer: 1 << 26 })
+      if (sha256(blob) === wantSha) return c
+    }
+  } catch { /* not a git repo, or git failed: the caller reports the pin as unreachable */ }
+  return null
+}
+
 function semanticProblems(f) {
   const p = []
   const where = (file) => (file.startsWith('~/') ? join(homedir(), file.slice(2)) : join(REPO, file))
   for (const [file, sha] of [[f.HARNESS_FILE, f.HARNESS_SHA256], [f.MAC32_FILE, f.MAC32_SHA256],
-    [f.MODEL, f.MODEL_SHA256], [f.C_REF_FILE, f.C_REF_SHA256]]) {
+    [f.MODEL, f.MODEL_SHA256]]) {
     if (!existsSync(where(file))) p.push(`${file} missing`)
     else if (sha256(readFileSync(where(file))) !== sha) p.push(`${file}: sha256 differs from the spec`)
+  }
+  // C_REF is a reference of record, never read at run time: the runner's --mode c is its own
+  // Python float sum in tc_infer.c's order. HARNESS, MAC32 and MODEL are read or imported at run
+  // time and stay strict. The record stays checkable while the pinned C bytes are on disk or
+  // recoverable from the reference repo's history.
+  {
+    const abs = where(f.C_REF_FILE)
+    const onDisk = existsSync(abs) && sha256(readFileSync(abs)) === f.C_REF_SHA256
+    if (!onDisk && !gitBlobSha(abs, f.C_REF_SHA256)) {
+      p.push(`${f.C_REF_FILE}: sha256 differs from the spec and the pinned bytes are not in the file's git history`)
+    }
   }
   const harness = existsSync(where(f.HARNESS_FILE)) ? readFileSync(where(f.HARNESS_FILE), 'utf8') : ''
   const num = (name) => {
