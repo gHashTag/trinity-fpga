@@ -1,0 +1,34 @@
+# start 2026-09-28T07:10:58Z
+# usb DIRECT ['0x100000']
+# usb clients 10 {'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+# usb driver AppleUSBSLCOM (com.apple.DriverKit-AppleUSBSLCOM) -> /dev/cu.usbserial-10
+# load 3.2 3.3 3.5 on 8 cpus
+# cmd python3 -u uart_loss_hubfree_ax7203.py --run --setkey --port /dev/cu.usbserial-10 --keys ../trinet-keys.txt --json board_runs/uart_loss_hubfree_w24_retry1.json
+# limit 7500 s
+USB ok: AppleT6000USBXHCI -> CP2102N USB to UART Bridge Controller 10c4:ea60 @ 0x00100000; no hub in the path
+spec specs/trinet/uart_loss_hubfree_ax7203.t27 sha256 470a1d8d5832f774; counter 85657a39bb38cf76, harness 8a9a5f6ef57fdad6 (pins checked)
+arm: window 24, 23385600 jobs (58 x 403200), limit 7200 s, port /dev/cu.usbserial-10 @ 1144744
+setkey: key installed on node 0x5452494e; ack tag verifies
+------------------------------------------------------------------
+window                      : 24 (456 B in flight)
+jobs sent                   : 23385600 of 23385600 planned
+answers accepted (tag + y)  : 23385600
+wrong y under a valid tag   : 0
+answers lost                : 0
+events                      : 0 
+loss events (bytes/whole/unresolved): 0
+loss rate                   : none; 95 % interval [0.000, 0.158] per 10^6 jobs
+hole sizes (bytes)          : -
+longest host pause          : 75.5 ms (after 10148879 answers)
+elapsed                     : 4912.31 s
+instrument check            : ok (accepted + wrong y + lost + in flight = 23385600, sent = 23385600)
+------------------------------------------------------------------
+one-sided 95 % bound: 0.1281 loss events per 10^6 answers, 0.984 per generation run of 7682304 answers
+CLAIM_BELOW_ONE_PER_GENERATION_RUN: yes
+record: board_runs/uart_loss_hubfree_w24_retry1.json
+real 4914.31
+user 1041.21
+sys 256.66
+# exit=0
+# load 5.3 5.0 5.0 on 8 cpus
+# end 2026-09-28T08:32:52Z

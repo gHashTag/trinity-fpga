@@ -1,0 +1,18 @@
+# start 2026-09-28T05:45:00Z
+# usb DIRECT ['0x100000']
+# usb clients 38 {'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 36}
+# usb driver AppleUSBSLCOM (com.apple.DriverKit-AppleUSBSLCOM) -> /dev/cu.usbserial-10
+# load 5.0 4.8 5.6 on 8 cpus
+# cmd python3 -u uart_loss_hubfree_ax7203.py --run --setkey --port /dev/cu.usbserial-10 --keys ../trinet-keys.txt --json board_runs/uart_loss_hubfree_w24.json
+# limit 7500 s
+USB ok: AppleT6000USBXHCI -> CP2102N USB to UART Bridge Controller 10c4:ea60 @ 0x00100000; no hub in the path
+spec specs/trinet/uart_loss_hubfree_ax7203.t27 sha256 470a1d8d5832f774; counter 85657a39bb38cf76, harness 8a9a5f6ef57fdad6 (pins checked)
+arm: window 24, 23385600 jobs (58 x 403200), limit 7200 s, port /dev/cu.usbserial-10 @ 1144744
+setkey: no answer
+setkey failed before the first job (a retry is allowed once, both logs kept)
+real 3.83
+user 1.62
+sys 0.07
+# exit=3
+# load 5.0 4.8 5.6 on 8 cpus
+# end 2026-09-28T05:45:04Z

@@ -111,4 +111,28 @@ tri fpga-run uart_loss_hubfree_w24 --limit 7500 -- python3 -u uart_loss_hubfree_
 
 ## Results
 
-None yet.
+**First attempt** (`uart_loss_hubfree_w24`, log kept): the preflight passed
+(quiet, `DIRECT`, pins) but `setkey: no answer`, exit 3 before the first job.
+The Artix-7 had lost its config in the power event; the node was reflashed
+with `trinet_node0_ci30762491794.bit` (`node0_restore_before_t28c.log`,
+LOADED in 778 s) after the owner power-cycled the board and replugged the
+JTAG cable. Neither log is a run.
+
+**The retry** (`uart_loss_hubfree_w24_retry1`, the one allowed; start
+2026-09-28T07:10:58Z, end 2026-09-28T08:32:52Z, 4912 s of arm): the claim
+`CLAIM_BELOW_ONE_PER_GENERATION_RUN` is **yes**.
+
+| | |
+|---|---|
+| sent = accepted | 23,385,600 (all) |
+| loss events, wrong y | 0, 0 |
+| in flight at end, holes | 0, none |
+| stopped at limit / aborted | no / no |
+| instrument check | ok |
+| rate 95 % upper bound per answer | 1.5774149e-07 |
+| USB path at the run | `AppleT6000USBXHCI -> CP2102N … @ 0x00100000; no hub` |
+| spec sha256 | `470a1d8d…` (as pre-registered) |
+
+The prediction — 0 loss events, 0 wrong y, instrument ok — held. The worst
+pause was 75.5 ms at answer 10,148,879, a latency hiccup, not a loss.
+`tri fpga-keycheck`: 62 files, 0 key hits.

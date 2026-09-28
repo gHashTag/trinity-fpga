@@ -1,0 +1,9 @@
+# start 2026-09-28T06:22:15Z
+# bit /Users/playra/trinity-fpga/artifacts/bitstreams/trinet_node0_ci30762491794.bit payload ee75d97bb5438a8fb9d50d57a079b2653dcc02293f4f5058a613bdcbb3f39f03
+# owner yes: Да, прошиваем и повторяем (владелец: делай, 2026-09-28)
+# usb DIRECT ['0x100000']
+# cmd sudo /opt/homebrew/bin/openocd -f fpga/openxc7-synth/ax7203_al321.cfg -c init -c pld load 0 /Users/playra/trinity-fpga/artifacts/bitstreams/trinet_node0_ci30762491794.bit -c runtest 2000 -c shutdown
+sudo: a terminal is required to read the password; either use the -S option to read from standard input or configure an askpass helper
+sudo: a password is required
+# exit=1
+# end 2026-09-28T06:22:15Z

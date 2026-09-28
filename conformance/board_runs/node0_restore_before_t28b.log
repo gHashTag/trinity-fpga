@@ -1,0 +1,20 @@
+# start 2026-09-28T06:33:34Z
+# bit /Users/playra/trinity-fpga/artifacts/bitstreams/trinet_node0_ci30762491794.bit payload ee75d97bb5438a8fb9d50d57a079b2653dcc02293f4f5058a613bdcbb3f39f03
+# owner yes: да прошивай сам (owner, 2026-09-28)
+# usb DIRECT ['0x100000']
+# cmd sudo /opt/homebrew/bin/openocd -f fpga/openxc7-synth/ax7203_al321.cfg -c init -c pld load 0 /Users/playra/trinity-fpga/artifacts/bitstreams/trinet_node0_ci30762491794.bit -c runtest 2000 -c shutdown
+Open On-Chip Debugger 0.12.0
+Licensed under GNU GPL v2
+For bug reports, read
+	http://openocd.org/doc/doxygen/bugs.html
+xc7_program
+Info : clock speed 100 kHz
+Info : TAP xc7.tap does not have valid IDCODE (idcode=0xffff60fa)
+Info : JTAG tap: auto0.tap tap/device found: 0xffffb07d (mfg: 0x03e (Oracle Corporation), part: 0xfffb, ver: 0xf)
+Error: xc7.tap: IR capture error; saw 0x3f not 0x01
+Warn : Bypassing JTAG setup events due to errors
+Warn : gdb services need one or more targets defined
+Error: libusb_handle_events() failed with LIBUSB_ERROR_INTERRUPTED
+Assertion failed: (ctx->write_count == 0 && ctx->read_count == 0), function mpsse_flush, file mpsse.c, line 839.
+# exit=-6
+# end 2026-09-28T06:40:03Z

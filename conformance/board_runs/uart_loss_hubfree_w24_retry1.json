@@ -1,0 +1,28 @@
+{
+ "window": 24,
+ "planned": 23385600,
+ "sent": 23385600,
+ "accepted": 23385600,
+ "wrong_y": 0,
+ "lost": 0,
+ "in_flight_at_end": 0,
+ "events": [],
+ "aborted": null,
+ "stopped_at_limit": false,
+ "max_pause_ms": 75.5,
+ "pause_at": 10148879,
+ "elapsed_s": 4912.31,
+ "summary": {
+  "loss_events": 0,
+  "rate_ci_per_job": [
+   0.0,
+   1.5774149280385943e-07
+  ],
+  "kinds": {},
+  "holes": [],
+  "instrument_ok": true
+ },
+ "claim": "yes",
+ "usb_path": "AppleT6000USBXHCI -> CP2102N USB to UART Bridge Controller 10c4:ea60 @ 0x00100000; no hub in the path",
+ "spec_sha256": "470a1d8d5832f774ad66bb5d12184ce96f0ea2c1db04bca1fd7a3404b5768d0d"
+}
