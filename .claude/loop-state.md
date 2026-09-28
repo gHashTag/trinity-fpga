@@ -72,18 +72,47 @@ live; the live run's log path will be recorded in the table above at launch.
   (rejected). All of L1/L2 are RTL changes — research.md's earlier "RTL
   unchanged" guess retracted in place. Design only: no RTL edit, no bitstream,
   no board work; projections are model arithmetic, labelled as such.
+- Fire 4 output committed and pushed (c06816a49): batch plan, research fix,
+  loop-state. `tri fpga-budget` (fire 5) later printed the same budget with the
+  spec's BAUD (1,144,744) instead of the adapter's wire rate: 99.5 % / 4,769.8
+  ceiling — same verdict, and the ~0.2 % rounding is now named in the output.
+- Fire 5 audit triage: 4 anomalies → 4 causes. (1) `*.clients_tail.log`
+  handoff-watcher logs falsely demanded `# exit=` — the checker now accepts
+  `# end` alone for them (they end at the run's end and have no exit of their
+  own); re-audit clean. (2) Stale `loop` claim lock — `--heal` could not
+  reclaim a claim lock (only a UART lock), cleared via claim+release. (3)+(4)
+  The two igla-coder-gpu anomalies (unpushed commits, uncommitted records) are
+  a LIVE sibling session's active workstream (tc_fast sampling speedup, commits
+  minutes old, LEDGER.md +228) — left entirely to it; this loop never commits
+  or pushes there while that session is alive.
+- tri CLI new command (fire 5): `tri fpga-budget [NAME] | --self-test` — wire
+  budget of a finished run (streams, shares of wall, jobs/s vs ceiling,
+  request-bound/answer-bound verdict). Constants come from the log-cited spec:
+  `decode_spec` gained a `need` parameter (resolution stops at the first chain
+  spec pinning the wanted constants; reopen specs pin REQ_LEN/RESP_LEN/BAUD
+  themselves, so a reopen log's budget no longer refuses). decode self-test
+  16→17, budget self-test 7/7; live on both reopen logs (t27: request-bound
+  99.5 %, gen_tokens_8_reopen: request-bound 98.7 %). Dispatch + help lines in
+  ~/.local/bin/tri (runlog's missing help line added too); SKILL.md section.
 
 ## READY (next work, in order)
 
-1. Commit + push fire 4's output (batch plan, research fix, loop-state) —
-   branch `claude/peaceful-noether-dperdx`, English commits.
-2. Fire 4 finished the cheap item (batch plan). The remaining options all need
-   the owner awake: A (implement the batch protocol — RTL change + reflash,
-   owner's «да»), B (Ethernet receipt path), C (corpus round 2 — spends pod
-   money). Until the owner picks, a fire can only: keep the anomaly scan
-   running (`tri fpga-audit`, keycheck, specs 16/16), or do pure-design work
-   in the same spirit (no board, no pods, no RTL). Do not start A/B/C alone.
-3. End-of-fire report + three collaboration options; self-critique and anomaly
+1. Fire 4 committed (c06816a49) and fire 5's cheap item (fpga-budget) is done.
+   The remaining options all need the owner awake: A (implement the batch
+   protocol — RTL change + reflash, owner's «да»), B (Ethernet receipt path),
+   C (corpus round 2 — spends pod money). Until the owner picks, a fire can
+   only: keep the anomaly scan running (`tri fpga-audit`, keycheck,
+   `tri fpga-specs`), or do pure-design work in the same spirit (no board, no
+   pods, no RTL). Do not start A/B/C alone.
+2. Pure-design candidates if another fire lands before the owner wakes: the
+   L2 batch spec draft (`specs/trinet/tern_tc_batch_ax7203.t27` — op codes,
+   frame layouts, K, the preimage rule as pinned tests) is the highest-value
+   no-RTL item left; writing it changes no hardware and hands the owner a
+   ready-to-pick A. Note TERN_TC_BATCH_PLAN.md already fixes the projections
+   the spec should pin.
+3. Never commit or push igla-coder-gpu while its live session works (see DONE,
+   fire 5 triage); document anything found there in this file instead.
+4. End-of-fire report + three collaboration options; self-critique and anomaly
    scan; append fire log line.
 
 ## Standing rules (every fire)
@@ -124,3 +153,10 @@ live; the live run's log path will be recorded in the table above at launch.
   A corrected (RTL change, not "RTL unchanged"); skill got the request-bound
   line; READY rewritten — A/B/C all need the owner, pure-design or audit-only
   until then.
+- fire 5 (2026-09-29): fire 4 committed+pushed (c06816a49); audit triaged —
+  clients_tail checker fixed (handoff logs end at `# end`), stale claim lock
+  cleared, igla-coder-gpu anomalies identified as a live sibling session and
+  left to it; `tri fpga-budget` built (decode_spec `need` parameter, self-tests
+  decode 17/17 + budget 7/7, live request-bound verdicts on both reopen logs,
+  tri dispatch + help, SKILL.md). Board untouched, pods untouched, RTL
+  untouched.
