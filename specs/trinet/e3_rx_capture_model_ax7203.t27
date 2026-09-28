@@ -1,0 +1,157 @@
+// SPDX-License-Identifier: Apache-2.0
+; specs/trinet/e3_rx_capture_model_ax7203.t27 -- pre-registration: the E3 receive capture timing at
+; the FPGA's RX flip-flops, in nextpnr-xilinx's own delay model, for the routed e3z netlist
+; The one source for this check. conformance/e3_rx_capture_from_spec.mjs compiles this file with the
+; t27 compiler (wasm), evaluates every test block below, checks the pinned repo files, reads back the
+; constants it repeats from the E3 spec, the TX model's spec and log, the RTL and the XDC, and writes
+; conformance/e3_rx_capture_params.py, which the runner conformance/e3_rx_capture_model.py reads.
+; `--check` fails on drift. Written 2026-09-28T00:08:34Z (date -u), before the runner existed and
+; before any RX delay was read out of the SDF: its layout was read with every digit masked. ASCII,
+; English.
+
+; WHY. E3 captures RGMII in fabric flip-flops, because IDDR does not capture through the open flow
+; (openXC7/nextpnr#22). The RTL header says the falling edge of RXC is mid-nibble, "about +-20 ns of
+; margin whatever that delay really is", and that a rising-edge sample "would have 1-2 ns and no
+; constraint in this flow to hold it"; the `ed` counter compares the two on the board. RGMII puts
+; RX_DV on RX_CTL for the rising edge and RX_DV xor RX_ER for the falling one, so the falling-edge
+; RX_CTL sample, which E3 relies on to end a frame at an RX_ER (plan, liteeth#232 note), sits at
+; that change, not mid-nibble: it has the rising-edge sample's 1-2 ns, not the +-20 ns. The TX model
+; (e3_tx_hold_model_ax7203.t27, PASS) left an SDF of the routed e3z whose FASM equals the flashed
+; build's. The RX side of the same file has not been read.
+
+; WHAT RUNS. No tool. The runner reads SDF_FILE, ROUTED_FILE and FASM_FILE, all written by the TX
+; model's one run (its log records the SDF's sha prefix and size and "fasm ... = e3z"), and refuses
+; unless all three and the TX runner it imports match their pinned sha256. It checks the structure:
+; each RXD pad's input buffer drives the D pin of its rxd_n and rxd_p1 flip-flops directly, the
+; RX_CTL buffer drives rxctl_n directly, all nine flip-flops are clocked from the BUFGCTRL that drives
+; RXC_NET, that buffer's I0 comes from the RXC pad's input buffer, and exactly rxd_n and rxctl_n are
+; on the inverted clock. For each flip-flop f:
+;   C_f   = net(RXC buffer -> BUFG.I0) + BUFG(I0 -> O) + net(BUFG.O -> f.CK)
+;   D_f   = net(data pad's buffer -> f.D)
+;   Delta = C_f - D_f
+;   Tsu, Th = the largest setup and hold of f's (posedge D) and (negedge D) SETUPHOLD checks.
+; The input buffers carry no delay in this SDF; the six are the same cell with the same IOSTANDARD
+; and are taken to cancel (an assumption, not measured).
+
+; THE PHY SIDE, fixed before the numbers. At the FPGA pads a data change lies x ps from the RXC edge
+; it belongs to: x = s - P. P is the KSZ9031's RX clock delay at its reset pad skews, nominal
+; PHY_DELAY_NOM_PS (Linux micrel.c: "internal RGMII_IDRX = 1.2ns"), taken as PHY_DELAY_LO_PS to
+; PHY_DELAY_HI_PS. s is the board's RXC-to-data skew plus the PHY's output skew, within +-SKEW_PS
+; (RGMII v2.0 TskewT). So x runs from -X_EARLY_MAX_PS (data before the edge) to +X_LATE_MAX_PS. The
+; RTL header says the PHY changes RXD only near the rising edge at 100M; that is assumed here too.
+
+; THE CHECK, the mid-nibble samples: rxd_n[0..3], and rxctl_n for nibbles without RX_ER.
+;   setup = RXC_HIGH_MIN_PS + Delta - Tsu - X_LATE_MAX_PS     must be >= MARGIN_MIN_PS
+;   hold  = RXC_LOW_MIN_PS - X_EARLY_MAX_PS - Delta - Th      must be >= MARGIN_MIN_PS
+; (the falling edge at its earliest and latest within RGMII's 40-60 % duty cycle, the data change at
+; its latest and earliest). MARGIN_MIN_PS is an allowance for what the model leaves out, chosen here.
+;   PASS       all five meet both.
+;   FAIL       one misses: the model says the +-20 ns claim does not hold for that pin.
+;   NO VERDICT a pinned file differs, the structure is not the one above, or a flip-flop has no D
+;              SETUPHOLD. Nothing is concluded then.
+
+; INFORMATION, printed and not judged. A sample taken at a change (rxd_p1 at the rising edge; rxctl_n
+; at the falling edge of an RX_ER nibble) takes the new value if Delta - Tsu >= x, the old one if
+; Delta + Th <= x, and is undetermined in between. Over the whole x range:
+;   rxd_p1[i]  new on all four -> `ed` stays 0 on the board; old on any -> `ed` counts; else
+;              undetermined, and the board's `ed` then places x against the model's window.
+;   rxctl_n    new -> RX_DV xor RX_ER is seen and an RX_ER ends the frame, as the plan assumes;
+;              old -> RX_DV is seen and RX_ER never reaches the frame logic; else undetermined.
+; The same is printed at the nominal x = -PHY_DELAY_NOM_PS.
+
+; PREDICTION. PASS. Guesses, information only: `ed` and RX_ER undetermined over the whole range, and
+; both on the "new" side at the nominal point.
+
+; WHAT IT DOES NOT SAY. Anything measured: one corner, one number per arc, no clock jitter, no input
+; buffer or pad delay, no board traces; P and s are assumed ranges, not the PHY's datasheet. The
+; KSZ9031's RX pad-skew registers stay at reset values in E3. A PASS says that in the tool's own
+; numbers the falling-edge capture keeps the margin the RTL comment claims; the information lines
+; say which way the edge-sitting samples fall if the assumed ranges hold. It moves nothing in the E3
+; spec and changes no E3 verdict; the board's `ed` is the test of the information lines.
+
+module trinet_e3_rx_capture_model_ax7203;
+
+pub const KIND : str = "offboard-model-preregistration";
+pub const ID : str = "trinet/e3_rx_capture_model_ax7203";
+pub const GENERATED : [1]str = ["conformance/e3_rx_capture_params.py"];
+pub const RUNNER : str = "conformance/e3_rx_capture_model.py";
+pub const RUNNER_SHA256 : str = "c751d2d0f16305a8840de99562f5203a099aaf19aafcadac294b943b8ccbddb4";
+pub const RECORD_DOC : str = "conformance/NODE_ETHERNET_PLAN.md";
+pub const WRITTEN_UTC : str = "2026-09-28T00:08:34Z";
+
+; --- Repo files of record: pinned, and the constants below read back out of them ------------
+pub const E3_SPEC_FILE : str = "specs/trinet/eth_arp_icmp_e3_ax7203.t27";
+pub const E3_SPEC_SHA256 : str = "9f15f35540ee9fa56a0d23a436b907127b5d8638f9f8b863c05155540124bf4d";
+pub const RTL_FILE : str = "fpga/vivado/eth_arp_icmp_ax7203.v";
+pub const RTL_SHA256 : str = "72ccbf907ef6e2b38570f71bd5da6fa492cec0baf547501b50eca9cfd1edb763";
+pub const XDC_FILE : str = "specs/fpga/constraints/eth_arp_icmp_ax7203.xdc";
+pub const XDC_SHA256 : str = "8921492b31f5e34f28d0d10b59a59e431c9f6f449a2d694713ac9781b8f5535e";
+pub const TX_SPEC_FILE : str = "specs/trinet/e3_tx_hold_model_ax7203.t27";
+pub const TX_SPEC_SHA256 : str = "12b3480e92d86f3f6534fb10054d681723bec780010483b11f227e1eb1a22835";
+; the SDF reader and its NoVerdict are imported from the TX runner, not copied
+pub const TX_RUNNER_FILE : str = "conformance/e3_tx_hold_model.py";
+pub const TX_RUNNER_SHA256 : str = "fbb01db6e9c5b2c96dd7e3f6e1c9312f10578565d83a6dc34ffcf8b18abdcf02";
+pub const TX_LOG_FILE : str = "conformance/model_runs/e3_tx_hold_model.log";
+pub const TX_LOG_SHA256 : str = "e75343839f04c8aadaaf7679414268b2a2d3892209e817555a18e03e14e02cc0";
+
+; --- The TX model's output on this Mac: checked by the runner, not by the generator ---------
+pub const SDF_FILE : str = "/tmp/e3txhold/e3z.sdf";
+pub const SDF_SHA256 : str = "b429acfb8b371e32d415683de10f6f9896ebce905864072defc0042bb1d7cf85";
+pub const SDF_BYTES : u32 = 3574156;
+pub const ROUTED_FILE : str = "/tmp/e3txhold/node_routed.json";
+pub const ROUTED_SHA256 : str = "125e1ba6dc210edfcc69c27535af1b8a5ad1a34f5dd40ed10bba3bd2741864a7";
+pub const FASM_FILE : str = "/tmp/e3txhold/node.fasm";
+pub const FASM_SHA256 : str = "95809a97d96c563ebb02c954d24d1848d1e5ef3a85c7af1668a666dffc5fb265";
+
+; --- The design, read back from the RTL -----------------------------------------------------
+pub const CLOCK_PORT : str = "eth_rxc";
+pub const RXC_NET : str = "rxc";
+pub const DATA_PORTS : [4]str = ["eth_rxd[0]", "eth_rxd[1]", "eth_rxd[2]", "eth_rxd[3]"];
+pub const CTL_PORT : str = "eth_rxctl";
+pub const MID_NET : str = "rxd_n";
+pub const START_NET : str = "rxd_p1";
+pub const CTL_MID_NET : str = "rxctl_n";
+
+; --- Timing, picoseconds --------------------------------------------------------------------
+; 100BASE-TX RGMII: 25 MHz, 40 ns period; RXC duty cycle 40 to 60 % at 10/100 (RGMII v2.0)
+pub const PERIOD_PS : u16 = 40000;
+pub const RXC_HIGH_MIN_PS : u16 = 16000;
+pub const RXC_LOW_MIN_PS : u16 = 16000;
+pub const MARGIN_MIN_PS : u16 = 1000;
+; KSZ9031 RX clock delay at reset pad skews; the driver's register step is 60 ps (KSZ9031_PS_TO_REG)
+pub const PHY_DELAY_LO_PS : u16 = 0;
+pub const PHY_DELAY_NOM_PS : u16 = 1200;
+pub const PHY_DELAY_HI_PS : u16 = 2000;
+pub const PAD_SKEW_STEP_PS : u16 = 60;
+pub const SKEW_PS : u16 = 500;
+pub const X_EARLY_MAX_PS : u16 = 2500;
+pub const X_LATE_MAX_PS : u16 = 500;
+pub const GUESS_VERDICT : str = "PASS";
+pub const GUESS_ED_RANGE : str = "undetermined";
+pub const GUESS_ED_NOMINAL : str = "new";
+pub const GUESS_RXER_RANGE : str = "undetermined";
+pub const GUESS_RXER_NOMINAL : str = "new";
+
+test duty_cycle_bound {
+    assert 100 * RXC_HIGH_MIN_PS == 40 * PERIOD_PS;
+    assert RXC_LOW_MIN_PS == RXC_HIGH_MIN_PS;
+    assert RXC_HIGH_MIN_PS + RXC_LOW_MIN_PS < PERIOD_PS;
+}
+
+test x_range_from_phy {
+    assert X_EARLY_MAX_PS == PHY_DELAY_HI_PS + SKEW_PS;
+    assert X_LATE_MAX_PS + PHY_DELAY_LO_PS == SKEW_PS;
+    assert PHY_DELAY_LO_PS <= PHY_DELAY_NOM_PS;
+    assert PHY_DELAY_NOM_PS <= PHY_DELAY_HI_PS;
+    assert PHY_DELAY_NOM_PS == 20 * PAD_SKEW_STEP_PS;
+}
+
+test window_is_open {
+    assert X_EARLY_MAX_PS + X_LATE_MAX_PS + 2 * MARGIN_MIN_PS < RXC_HIGH_MIN_PS;
+    assert X_EARLY_MAX_PS + X_LATE_MAX_PS < RXC_LOW_MIN_PS;
+}
+
+test pinned_sizes {
+    assert SDF_BYTES > 1000000;
+    assert SDF_BYTES < 4000000;
+}

@@ -654,8 +654,41 @@ RAMB36**, no CARRY4, no DSP.
     `tri fpga-tristate` guards the FASM. Builds from now on also record the
     resolved path and sha256 of `yosys` and `nextpnr-xilinx`, under
     `tools.*-bin` in `manifest.json`.
-  - **An anomaly with no cause found:** the re-run took 151 s, against 36.1 s
-    in the e3z build.
+  - **An anomaly, since explained: the re-run took 151 s, against 36.1 s in
+    the e3z build.** It was the same computation run slower. All three
+    checksums in the two nextpnr logs are equal (`0x34fd7298`, `0xd63bb9b3`,
+    `0x79235acf`). SA placement took 1.21 s in the build and 7.22 s in the
+    re-run, and Router1 took 15.13 s and 75.90 s: every phase was 5 to 6 times
+    slower. That is what a busy host does to a `nice -n 19` process. The load
+    at the time was not recorded, so the cause is inferred, not measured.
+    Runners from the RX model on print `os.getloadavg()` at start and end.
+
+  **The RX side of the same model, pre-registered at 00:08Z on 2026-09-28,
+  before any RX delay was read.** The check is in
+  `specs/trinet/e3_rx_capture_model_ax7203.t27`, and its runner is
+  `conformance/e3_rx_capture_model.py`, pinned by sha in the spec. It reads the
+  SDF, routed netlist and FASM that the TX run left in `/tmp/e3txhold/`, each
+  pinned by sha. It runs no tool. For each RX flip-flop it takes the clock path
+  (RXC buffer, BUFG, clock pin) minus the data path (pad buffer straight to D),
+  and the flip-flop's own setup and hold from the SDF's SETUPHOLD checks.
+  - **Judged:** the five falling-edge samples, `rxd_n[0..3]` and `rxctl_n`,
+    need 1 ns of setup and of hold. The limits are RGMII's 40 to 60 % duty
+    cycle, and a data change between 2.5 ns before and 0.5 ns after its RXC
+    edge. That range is the KSZ9031's 0 to 2 ns RX clock delay (nominal 1.2 ns,
+    from Linux `micrel.c`) and 0.5 ns of skew.
+  - **Printed, not judged:** which way the samples that sit on a change fall.
+    These are `rxd_p1` at the rising edge, which decides whether the board's
+    `ed` counter stays 0, and `rxctl_n` at an RX_ER nibble.
+  - **A finding from writing the spec, before any number.** RGMII sends RX_DV
+    on the rising edge and RX_DV xor RX_ER on the falling one. So in an RX_ER
+    nibble RX_CTL changes at the falling edge, which is where E3 samples it.
+    The "±20 ns" of the falling-edge design covers RXD and RX_CTL without
+    errors. It does not cover an RX_ER. Whether an RX_ER ends the frame, as
+    this plan assumes, rests on the same 1 to 2 ns as a rising-edge sample.
+  - **Guess:** PASS. `ed` and RX_ER are undetermined over the whole range,
+    and both come out "new" at the nominal 1.2 ns.
+  - **Outside the model:** the board, the input buffers and pads, clock
+    jitter, and the PHY's datasheet timing.
 - **BRAM on this board.** No bitstream from this flow has used a block RAM
   here. `e3z` writes it as two RAMB18 halves at width 4 plus the RAMB36 bit for
   width 9, READ_FIRST, as nextpnr-xilinx's `fasm.cc` does. The mock checks the
