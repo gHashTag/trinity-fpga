@@ -1,0 +1,314 @@
+# start 2026-09-28T17:02:44Z
+# load 4.9 4.5 4.8 on 8 cpus
+# cmd python3 -u tern_tc_generate_reopen_t27_ax7203.py --refcell
+# rehearsal (no board)
+spec specs/trinet/tern_tc_reopen_t27_ax7203.t27 sha256 648451ffab507442; reopen 4bfd81b3ae1974a3, protocol eda9f8bced1a0f25, harness 8a9a5f6ef57fdad6, node RTL 920a0842dbdaec9f (pins checked)
+model ~/igla-coder-gpu/c_infer/t27_tuned/model.bin: 6 layers, d 320, ff 864, vocab 8192
+preflight (CPU integer path): ids 204 264 397 226 21 277 0; jobs 6712896, skipped 1754304, rows 118272, calls 168, smallest logit margin 0.2108
+rehearsal losses: answer stream [(19008, 16), (137468535, 56), (57000000, 19)], request stream [120000010, 144000023]; stalls: answer stream at 109326049, request stream at 48000005
+  t0 L0/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t0 L0/wo         jobs   19200  skipped      0  receipts   19200/19200   rows   320/320      1.0 s
+  t0 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t0 L0/down       jobs   37440  skipped  14400  receipts   37440/37440   rows   320/320      1.9 s
+  t0 L1/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t0 L1/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t0 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t0 L1/down       jobs   34240  skipped  17600  receipts   34240/34240   rows   320/320      1.7 s
+  t0 L2/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t0 L2/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t0 L2/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t0 L2/down       jobs   26240  skipped  25600  receipts   26240/26240   rows   320/320      1.3 s
+  t0 L3/qkv        jobs   21952  skipped   4928  receipts   21952/21952   rows   448/448      1.1 s
+  t0 L3/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t0 L3/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t0 L3/down       jobs   26880  skipped  24960  receipts   26880/26880   rows   320/320      1.3 s
+  t0 L4/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t0 L4/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t0 L4/gate+up    jobs   91584  skipped  12096  receipts   91584/91584   rows  1728/1728     4.6 s
+  t0 L4/down       jobs   30720  skipped  21120  receipts   30720/30720   rows   320/320      1.5 s
+  t0 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t0 L5/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t0 L5/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t0 L5/down       jobs   40960  skipped  10880  receipts   40960/40960   rows   320/320      2.0 s
+token 0: id 204  (49.1 s)
+  t1 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t1 L0/wo         jobs   18560  skipped    640  receipts   18560/18560   rows   320/320      0.9 s
+  t1 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t1 L0/down       jobs   32000  skipped  19840  receipts   32000/32000   rows   320/320      1.6 s
+  t1 L1/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      1.0 s
+  t1 L1/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      0.8 s
+  t1 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t1 L1/down       jobs   38400  skipped  13440  receipts   38400/38400   rows   320/320      1.9 s
+  t1 L2/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t1 L2/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t1 L2/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t1 L2/down       jobs   33920  skipped  17920  receipts   33920/33920   rows   320/320      1.7 s
+  t1 L3/qkv        jobs   20160  skipped   6720  receipts   20160/20160   rows   448/448      1.0 s
+  t1 L3/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t1 L3/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t1 L3/down       jobs   34880  skipped  16960  receipts   34880/34880   rows   320/320      1.7 s
+  t1 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t1 L4/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t1 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t1 L4/down       jobs   32640  skipped  19200  receipts   32640/32640   rows   320/320      1.6 s
+  t1 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t1 L5/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t1 L5/gate+up    jobs   91584  skipped  12096  receipts   91584/91584   rows  1728/1728     4.6 s
+  t1 L5/down       jobs   36480  skipped  15360  receipts   36480/36480   rows   320/320      1.8 s
+token 1: id 264  (48.9 s)
+  t2 L0/qkv        jobs   23744  skipped   3136  receipts   23744/23744   rows   448/448      1.2 s
+  t2 L0/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  reopen 1: flush 3 after 0 bytes since the last flush; port closed, 2 s, opened again (0.00 s)
+  t2 L0/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t2 L0/down       jobs   29120  skipped  22720  receipts   29120/29120   rows   320/320      1.4 s
+  t2 L1/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      1.0 s
+  t2 L1/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t2 L1/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t2 L1/down       jobs   32640  skipped  19200  receipts   32640/32640   rows   320/320      1.6 s
+  t2 L2/qkv        jobs   21952  skipped   4928  receipts   21952/21952   rows   448/448      1.1 s
+  t2 L2/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t2 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t2 L2/down       jobs   30400  skipped  21440  receipts   30400/30400   rows   320/320      1.5 s
+  t2 L3/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      1.0 s
+  t2 L3/wo         jobs   17600  skipped   1600  receipts   17600/17600   rows   320/320      0.9 s
+  t2 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t2 L3/down       jobs   29440  skipped  22400  receipts   29440/29440   rows   320/320      1.5 s
+  t2 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t2 L4/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t2 L4/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t2 L4/down       jobs   36160  skipped  15680  receipts   36160/36160   rows   320/320      1.8 s
+  t2 L5/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t2 L5/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t2 L5/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.6 s
+  t2 L5/down       jobs   34240  skipped  17600  receipts   34240/34240   rows   320/320      1.7 s
+token 2: id 397  (48.2 s)
+  t3 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t3 L0/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t3 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t3 L0/down       jobs   31360  skipped  20480  receipts   31360/31360   rows   320/320      1.6 s
+  t3 L1/qkv        jobs   18816  skipped   8064  receipts   18816/18816   rows   448/448      0.9 s
+  t3 L1/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t3 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t3 L1/down       jobs   29120  skipped  22720  receipts   29120/29120   rows   320/320      1.5 s
+  t3 L2/qkv        jobs   21056  skipped   5824  receipts   21056/21056   rows   448/448      1.1 s
+  t3 L2/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t3 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t3 L2/down       jobs   32000  skipped  19840  receipts   32000/32000   rows   320/320      1.6 s
+  t3 L3/qkv        jobs   18816  skipped   8064  receipts   18816/18816   rows   448/448      1.0 s
+  t3 L3/wo         jobs   17280  skipped   1920  receipts   17280/17280   rows   320/320      0.9 s
+  t3 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t3 L3/down       jobs   32960  skipped  18880  receipts   32960/32960   rows   320/320      1.7 s
+  t3 L4/qkv        jobs   22400  skipped   4480  receipts   22400/22400   rows   448/448      1.1 s
+  t3 L4/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      0.9 s
+  t3 L4/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.6 s
+  t3 L4/down       jobs   29440  skipped  22400  receipts   29440/29440   rows   320/320      1.5 s
+  t3 L5/qkv        jobs   22400  skipped   4480  receipts   22400/22400   rows   448/448      1.1 s
+  t3 L5/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t3 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.5 s
+  t3 L5/down       jobs   39680  skipped  12160  receipts   39680/39680   rows   320/320      2.0 s
+token 3: id 226  (48.0 s)
+  t4 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t4 L0/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.9 s
+  t4 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t4 L0/down       jobs   22080  skipped  29760  receipts   22080/22080   rows   320/320      1.1 s
+  t4 L1/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      1.0 s
+  t4 L1/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t4 L1/gate+up    jobs   91584  skipped  12096  receipts   91584/91584   rows  1728/1728     4.6 s
+  t4 L1/down       jobs   26560  skipped  25280  receipts   26560/26560   rows   320/320      1.3 s
+  t4 L2/qkv        jobs   21952  skipped   4928  receipts   21952/21952   rows   448/448      1.1 s
+  t4 L2/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t4 L2/gate+up    jobs   91584  skipped  12096  receipts   91584/91584   rows  1728/1728     4.6 s
+  t4 L2/down       jobs   33600  skipped  18240  receipts   33600/33600   rows   320/320      1.7 s
+  t4 L3/qkv        jobs   19712  skipped   7168  receipts   19712/19712   rows   448/448      1.0 s
+  t4 L3/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t4 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t4 L3/down       jobs   36800  skipped  15040  receipts   36800/36800   rows   320/320      1.8 s
+  t4 L4/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t4 L4/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t4 L4/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.5 s
+  t4 L4/down       jobs   36800  skipped  15040  receipts   36800/36800   rows   320/320      1.8 s
+  t4 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t4 L5/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t4 L5/gate+up    jobs   91584  skipped  12096  receipts   91584/91584   rows  1728/1728     4.6 s
+  t4 L5/down       jobs   32960  skipped  18880  receipts   32960/32960   rows   320/320      1.6 s
+token 4: id 21  (48.1 s)
+  t5 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t5 L0/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t5 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t5 L0/down       jobs   20800  skipped  31040  receipts   20800/20800   rows   320/320      1.0 s
+  t5 L1/qkv        jobs   19264  skipped   7616  receipts   19264/19264   rows   448/448      1.0 s
+  t5 L1/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t5 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t5 L1/down       jobs   25920  skipped  25920  receipts   25920/25920   rows   320/320      1.3 s
+  t5 L2/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t5 L2/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t5 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t5 L2/down       jobs   31040  skipped  20800  receipts   31040/31040   rows   320/320      1.5 s
+  t5 L3/qkv        jobs   19712  skipped   7168  receipts   19712/19712   rows   448/448      1.0 s
+  t5 L3/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.8 s
+  t5 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t5 L3/down       jobs   34240  skipped  17600  receipts   34240/34240   rows   320/320      1.7 s
+  t5 L4/qkv        jobs   23296  skipped   3584  receipts   23296/23296   rows   448/448      1.2 s
+  t5 L4/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t5 L4/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.7 s
+  t5 L4/down       jobs   39040  skipped  12800  receipts   39040/39040   rows   320/320      2.1 s
+  t5 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.2 s
+  t5 L5/wo         jobs   15680  skipped   3520  receipts   15680/15680   rows   320/320      0.9 s
+  t5 L5/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.3 s
+  reopen 2: flush 6 after 0 bytes since the last flush; port closed, 4 s, opened again (0.00 s)
+  t5 L5/down       jobs   30080  skipped  21760  receipts   30080/30080   rows   320/320      2.0 s
+token 5: id 277  (49.2 s)
+  t6 L0/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.3 s
+  t6 L0/wo         jobs   16320  skipped   2880  receipts   16320/16320   rows   320/320      0.9 s
+  t6 L0/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     5.3 s
+  t6 L0/down       jobs   28480  skipped  23360  receipts   28480/28480   rows   320/320      1.6 s
+  t6 L1/qkv        jobs   18816  skipped   8064  receipts   18816/18816   rows   448/448      1.1 s
+  t6 L1/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      1.0 s
+  t6 L1/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.9 s
+  t6 L1/down       jobs   34240  skipped  17600  receipts   34240/34240   rows   320/320      1.8 s
+  t6 L2/qkv        jobs   19712  skipped   7168  receipts   19712/19712   rows   448/448      1.1 s
+  t6 L2/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      0.9 s
+  t6 L2/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t6 L2/down       jobs   25600  skipped  26240  receipts   25600/25600   rows   320/320      1.3 s
+  t6 L3/qkv        jobs   18368  skipped   8512  receipts   18368/18368   rows   448/448      0.9 s
+  t6 L3/wo         jobs   16640  skipped   2560  receipts   16640/16640   rows   320/320      0.8 s
+  t6 L3/gate+up    jobs   88128  skipped  15552  receipts   88128/88128   rows  1728/1728     4.4 s
+  t6 L3/down       jobs   32000  skipped  19840  receipts   32000/32000   rows   320/320      1.6 s
+  t6 L4/qkv        jobs   21952  skipped   4928  receipts   21952/21952   rows   448/448      1.1 s
+  t6 L4/wo         jobs   16960  skipped   2240  receipts   16960/16960   rows   320/320      0.9 s
+  t6 L4/gate+up    jobs   91584  skipped  12096  receipts   91584/91584   rows  1728/1728     4.6 s
+  t6 L4/down       jobs   38720  skipped  13120  receipts   38720/38720   rows   320/320      1.9 s
+  t6 L5/qkv        jobs   22848  skipped   4032  receipts   22848/22848   rows   448/448      1.1 s
+  t6 L5/wo         jobs   15680  skipped   3520  receipts   15680/15680   rows   320/320      0.8 s
+  t6 L5/gate+up    jobs   89856  skipped  13824  receipts   89856/89856   rows  1728/1728     4.6 s
+  t6 L5/down       jobs   31360  skipped  20480  receipts   31360/31360   rows   320/320      1.6 s
+token 6: id 0  (50.2 s)
+------------------------------------------------------------------
+calls                   : 168 of 168 (4 per layer per token)
+jobs                    : 6712896 of 6712896 (+ 1754304 chunks skipped: activation digit plane all zero)
+requests written        : 6712999 (103 of them retransmits under nonces from 0x20000000)
+reference-cell receipts : 6712896/6712896 under node 0x5452494e
+rows bit-exact          : 118272/118272  (int8 activations from the model's own forward pass)
+transport               : retransmitted jobs 103 (ceiling 256), resyncs 6 (ceiling 32), lost 103, unverified 2, foreign frames 1, late answers 0, bytes skipped while scanning 49
+link                    : reopens 2 (ceiling 4), flushes seen 6, waits [2, 4] s
+  event  call 1: nonce 0x000103e8 (job 1000) answered with a tag that does not verify; job queued again
+  event  call 1: resync (unframed read 78 5d ad a5 fd 01 ea 03): 440 bytes collected, 24 in flight
+  event  call 1: nonce 0x000103e9 (job 1001) had no answer before nonce 0x000103ea; job queued again
+  event  call 51: resync (short read, 0 bytes): 0 bytes collected, 24 in flight
+  event  call 51: nonce 0x001f847d (job 1853) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f847e (job 1854) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f847f (job 1855) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8480 (job 1856) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8481 (job 1857) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8482 (job 1858) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8483 (job 1859) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8484 (job 1860) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8485 (job 1861) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8486 (job 1862) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8487 (job 1863) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8488 (job 1864) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8489 (job 1865) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f848a (job 1866) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f848b (job 1867) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f848c (job 1868) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f848d (job 1869) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f848e (job 1870) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f848f (job 1871) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8490 (job 1872) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8491 (job 1873) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8492 (job 1874) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8493 (job 1875) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x001f8494 (job 1876) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: resync (short read, 0 bytes): 19 bytes collected, 24 in flight
+  event  call 51: nonce 0x20000002 (job 1876) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000003 (job 1875) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000004 (job 1874) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000005 (job 1873) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000006 (job 1872) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000007 (job 1871) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000008 (job 1870) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000009 (job 1869) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x2000000a (job 1868) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x2000000b (job 1867) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x2000000c (job 1866) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x2000000d (job 1865) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x2000000e (job 1864) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x2000000f (job 1863) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000010 (job 1862) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000011 (job 1861) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000012 (job 1860) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000013 (job 1859) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000014 (job 1858) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000015 (job 1857) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000016 (job 1856) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000017 (job 1855) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000018 (job 1854) had no verifiable answer by the end of a resync; job queued again
+  event  call 51: nonce 0x20000019 (job 1853) had no verifiable answer by the end of a resync; job queued again
+  event  call 75: nonce 0x002ec6bd (job 44541) had no answer before nonce 0x002ec6be; job queued again
+  event  call 126: resync (frame with a nonce this call never wrote, 0x90004b3b): 437 bytes collected, 24 in flight
+  event  call 126: nonce 0x004d4b3b (job 6459) had no answer before nonce 0x004d4b3d; job queued again
+  event  call 126: nonce 0x004d4b3c (job 6460) had no answer before nonce 0x004d4b3d; job queued again
+  event  call 144: resync (short read, 8 bytes): 8 bytes collected, 24 in flight
+  event  call 144: nonce 0x0058cc8f (job 19279) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc90 (job 19280) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc91 (job 19281) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc92 (job 19282) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc93 (job 19283) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc94 (job 19284) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc95 (job 19285) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc96 (job 19286) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc97 (job 19287) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc98 (job 19288) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc99 (job 19289) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc9a (job 19290) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc9b (job 19291) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc9c (job 19292) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc9d (job 19293) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc9e (job 19294) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cc9f (job 19295) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cca0 (job 19296) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cca1 (job 19297) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cca2 (job 19298) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cca3 (job 19299) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cca4 (job 19300) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cca5 (job 19301) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x0058cca6 (job 19302) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: resync (short read, 0 bytes): 0 bytes collected, 24 in flight
+  event  call 144: nonce 0x20000035 (job 19302) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000036 (job 19301) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000037 (job 19300) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000038 (job 19299) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000039 (job 19298) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000003a (job 19297) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000003b (job 19296) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000003c (job 19295) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000003d (job 19294) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000003e (job 19293) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000003f (job 19292) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000040 (job 19291) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000041 (job 19290) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000042 (job 19289) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000043 (job 19288) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000044 (job 19287) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000045 (job 19286) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000046 (job 19285) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000047 (job 19284) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000048 (job 19283) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x20000049 (job 19282) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000004a (job 19281) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000004b (job 19280) had no verifiable answer by the end of a resync; job queued again
+  event  call 144: nonce 0x2000004c (job 19279) had no verifiable answer by the end of a resync; job queued again
+  event  call 151: nonce 0x005c8d46 (job 43910) answered with a tag that does not verify; job queued again
+  event  call 151: nonce 0x005c8d47 (job 43911) had no answer before nonce 0x005c8d48; job queued again
+  link   reopen 1: flush 3 after 0 bytes since the last flush; port closed, 2 s, opened again (0.00 s)
+  link   reopen 2: flush 6 after 0 bytes since the last flush; port closed, 4 s, opened again (0.00 s)
+events kept             : 109 (cap 512); lost 103 + resyncs 6 = 109
+elapsed                 : 341.6 s of 3600 (19684 answers/s in run())
+longest host pause      : 34.3 ms
+------------------------------------------------------------------
+ids refcell: 204 264 397 226 21 277 0
+CPU_INT_IDS: 204 264 397 226 21 277 0
+RESULT: REHEARSAL OK - 7 tokens through the reference cell with 5 scheduled losses recovered and 2 stalls cleared by one reopen each; the board was not used.
+# exit=0
+# load 6.2 5.8 5.3 on 8 cpus
+# end 2026-09-28T17:08:26Z
