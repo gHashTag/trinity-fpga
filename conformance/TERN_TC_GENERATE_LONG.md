@@ -171,15 +171,62 @@ stop on the line is what the board run tests.
 
 ## Board run
 
-Not run at the time this pre-registration was committed. The plan, after
-`tri fpga-quiet` and with `tri fpga-watch-clients gen_tokens_32_reopen` beside
-it:
+Run after the rehearsal pair, under the owner's explicit go — «все три»
+(rehearsal, board run, post-processing, all three without stopping). The host
+passed `tri fpga-quiet --wait 600` first (load ≤ 16 held 120 s), and
+`tri fpga-watch-clients gen_tokens_32_reopen` sampled the USB client list
+beside it:
 
 ```
 tri fpga-run gen_tokens_32_reopen --limit 13800 -- python3 -u tern_tc_generate_reopen_long_ax7203.py --setkey --port /dev/cu.usbserial-110 --keys ../trinet-keys.txt
 ```
 
-The owner's standing directive covers this run. After it, `tri fpga-keycheck`,
-then `tri fpga-decode board_runs/gen_tokens_32_reopen.log --tokenizer
-artifacts/tokenizers/data8k_tokenizer.json` — the first generation record
-decodable with the tokenizer pinned in this repo.
+`board_runs/gen_tokens_32_reopen.log`, 11:48:51Z to 13:38:22Z on 2026-09-28.
+USB DIRECT, AppleUSBSLCOM on `/dev/cu.usbserial-110`. The node arrived keyless
+and `--setkey` installed the key; the ack tag verified.
+
+**RESULT: PASS.**
+
+- ids board equal `CPU_INT_IDS` id for id: the entry into the period-8 loop at
+  token 16 and two full periods of it, all on the board.
+- 30,762,752 of 30,762,752 jobs credited by exactly one answer whose tag
+  verified under node 0x5452494e; 540,672 of 540,672 rows bit-exact; every
+  per-call line receipts-exact.
+- Transport: 0 retransmits, 0 resyncs, 0 lost, 0 unverified, 0 foreign frames,
+  0 late answers, 0 bytes skipped while scanning. Link: 0 reopens, 0 flushes.
+  Every ceiling untouched — the outcome table's first row: 32 tokens finished;
+  the chain holds at 4x the length of any earlier run, without needing the
+  recovery machinery.
+- Elapsed 6569.7 s of 13,500 (4686 answers/s), against the 6529 s the plan
+  predicted at 4712/s.
+- No stop happened, so this run does not test whether a reopen clears one —
+  the same sentence the runner prints. What it does establish is that at 4x
+  the volume of any earlier run, 1.32x the hub-free loss-free evidence
+  itself, nothing stopped.
+
+**Clients.** The watcher's 90-minute maximum ended at 13:19:24Z with the run
+still open (180 samples, min 6, max 11 clients); a tail watcher then sampled
+every 30 s to the end (`board_runs/gen_tokens_32_reopen.clients_tail.log`).
+The list grew from 6 to 11 the same way it did in the 8-token run —
+FwUpdateManagerd 4 to 8 — and held 11 for the last 16 minutes. No transport
+event moved with any of it.
+
+**Decode.** `tri fpga-keycheck`: 68 files, 0 key hits. Then
+
+```
+tri fpga-decode board_runs/gen_tokens_32_reopen.log --tokenizer artifacts/tokenizers/data8k_tokenizer.json
+```
+
+— the first generation record decoded with the tokenizer pinned in this repo
+(vocab 8192, sha `81355717…`):
+
+```
+<fim_prefix><fim_suffix>
+        self._parameters = {
+            "name": "parameters",
+            "type": "parameters",
+            "type": "p
+```
+
+A Python attribute assignment degenerating into the loop the CPU section
+records; readable as text, and not a claim about the model's quality.
