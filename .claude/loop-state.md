@@ -12,6 +12,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | T35 rehearsal pair | DONE | PASS x2, committed c24d25b7a; ids equal CPU_INT_IDS, 2 reopens, key hits 0 |
 | T35 board run | DONE, PASS | 2026-09-28T17:13–17:36Z; 6712896/6712896 receipts, ids == CPU_INT_IDS, 0 reopens; record conformance/TERN_TC_GENERATE_T27.md; no live board work remains |
 | fire 15: C_REF git-fallback in wrapper pins_ok + tri fpga-repin | DONE | selftest 16/16 (5 refusals green), specs 17/17, cascade via the new tool, host-side only; no board/pods/RTL |
+| fire 16: repin cycle-CAP self-test + tri fpga-pins (blast-radius query) + competitor re-check | DONE | repin 17/17 (new G), pins self-test 5/5 after a live-caught diamond false-positive fix, live radii verified vs the fire-15 cascade, competitor table refreshed (ternfpga open-sourced; wedge intact), specs 17/17, host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -433,3 +434,29 @@ live; the live run's log path will be recorded in the table above at launch.
   fpga-repin --check probed but did NOT apply the tc_infer.c re-pin —
   that stays the owner's. Specs 17/17, keycheck 0 hits. Board, pods, RTL
   untouched.
+- fire 16 (2026-09-29): the pin-graph pair completed — repin's CAP path got a
+  self-test, and its planning half became a command. (1) Scenario G in
+  repin_self_test: two specs pinning each other by file sha oscillate forever
+  in principle; the walk must stop at MAX_REPIN_PASSES with a loud `CAP:` line
+  and rc=2, not hang — 17/17. (2) `tri fpga-pins FILE` (board.py pin_pinner_map
+  + print_pin_radius + pins_self_test): the transitive blast radius of editing
+  FILE through the pin graph — L1 direct pinners, L2 pinners of those specs,
+  fixpoint — plus the params generators reading any spec inside the radius:
+  the exact set fpga-repin then walks, queryable BEFORE the edit. Its first
+  live run (harness radius: 10 specs, 10 generators, rc=0) caught a real bug
+  in my own cycle detection: it printed CYCLE for `reopen pins generate
+  again`, but two paths reaching one spec is a diamond (reopens pin BOTH the
+  generate spec and the harness — the corpus is layered like that), not a
+  cycle; a true cycle is mutual pinning (a node whose pinner chain leads back
+  to itself), now detected by reachability and printed as CYCLE rc=1. The
+  diamond class is pinned in the self-test (5/5). Live verification against
+  known truth: harness → 10 specs 1 level; retransmit spec → 3 reopens + batch
+  on 2 levels; reopen_t27 → batch only — exactly the fire-15 cascade shape.
+  (3) Competitor re-check (targeted, from fire 13): nicholi.ai's engine went
+  open source (Neumann-Labs/ternfpga, Apache-2.0, Arty A7-35T, BitNet-2B-4T,
+  energy partly Vivado-derived and self-flagged as such) — the floor entry
+  hardened, still no receipts; zkML newcomers (ZK-Tracer, deep-prove)
+  accelerate proof GENERATION on GPU/ASIC — they sharpen the complement line
+  rather than close the on-silicon-receipts gap. research.md table updated.
+  Specs 17/17, keycheck 0 hits, loopcheck floor = exactly the two known igla
+  anomalies. Board, pods, RTL untouched.
