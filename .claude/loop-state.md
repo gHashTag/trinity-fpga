@@ -14,6 +14,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | fire 15: C_REF git-fallback in wrapper pins_ok + tri fpga-repin | DONE | selftest 16/16 (5 refusals green), specs 17/17, cascade via the new tool, host-side only; no board/pods/RTL |
 | fire 16: repin cycle-CAP self-test + tri fpga-pins (blast-radius query) + competitor re-check | DONE | repin 17/17 (new G), pins self-test 5/5 after a live-caught diamond false-positive fix, live radii verified vs the fire-15 cascade, competitor table refreshed (ternfpga open-sourced; wedge intact), specs 17/17, host-side only; no board/pods/RTL |
 | fire 17: tri fpga-tools (tool self-test sweep) as loopcheck's 4th component | DONE | sweep 6/6 green after catching real decode rot (hardcoded fire-2 sha, stale after the fire-14/15 cascades — decode was right, the test was wrong; fixed hermetically 18/18 + the once-real-stale-sha fixture pinned), loopcheck now 4 components, tools meta 9/9; competitor re-check skipped (fire 16 refreshed it hours ago); specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
+| fire 18: tri fpga-loopstate (loop-state.md integrity linter) as loopcheck 5th component | DONE | self-test 9/9 (8/9 on first run — its own live check caught the loop's mid-fire log window; protocol fixed: stub+row together at start); loopcheck now 5 components, live sound; specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -268,6 +269,11 @@ live; the live run's log path will be recorded in the table above at launch.
   `tri fpga-specs` after any spec edit; if something is broken, fix the root
   cause (never skip tests, never delete past evidence).
 - End of every fire: append a short line to `## Fire log` below.
+- Fire protocol (fire 18, now enforced by `tri fpga-loopstate`): the lock row
+  AND a fire-log stub are written together at fire START (the file must be
+  consistent at every instant — the linter caught the old row-at-start/
+  log-at-end window); the stub becomes the full entry at fire end; the row
+  flips to DONE in the same edit.
 
 ## Fire log
 
@@ -487,3 +493,22 @@ live; the live run's log path will be recorded in the table above at launch.
   rare. Gates: specs 17/17, keycheck 0 hits, tools 6/6, loopcheck floor =
   exactly the two known igla anomalies (ahead 18→19, sibling still working).
   Board, pods, RTL untouched.
+- fire 18 (2026-09-29): the coordination file got its own guard, and the guard
+  paid for itself before it was even finished. `tri fpga-loopstate` (board.py
+  lint_loopstate + cmd_loopstate + loopstate_self_test 9/9) lints
+  .claude/loop-state.md — the file every fire reads first — structurally, read
+  only, never a status opinion: required sections, the UART lock paragraph,
+  exactly one IN-PROGRESS lock with a started date (abandoned = older than a
+  day), every table fire present in the fire log, no unknown statuses. Its
+  first live run (mid-fire, 8/9 self-test) caught the LOOP's own protocol gap:
+  my lock row was written at fire start but the fire-log line only at fire
+  end, so mid-fire the table named a fire the log didn't — the exact window a
+  future cron cycle could misread. Protocol fixed in the same edit: lock row
+  AND fire-log stub written together at fire start (recorded in Standing
+  rules); the linter stays strict because the file is now consistent at every
+  instant. `tri fpga-loopcheck` gained it as the FIFTH component (specs,
+  keycheck, tools, loopstate, audit). The self-test ends by linting the live
+  file — a linter that fails the file it protects would be worse than none.
+  SKILL.md notes both the command and the protocol rule. Gates: specs 17/17,
+  keycheck 0 hits, tools 6/6, loopstate 9/9 + live sound, loopcheck floor =
+  the two known igla anomalies. Board, pods, RTL untouched.
