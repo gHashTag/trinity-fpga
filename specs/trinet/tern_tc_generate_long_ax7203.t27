@@ -1,0 +1,214 @@
+// SPDX-License-Identifier: Apache-2.0
+; specs/trinet/tern_tc_generate_long_ax7203.t27 -- pre-registration: igla-coder generates 32 tokens
+; with its ternary dot products computed on the AX7203 node; the CPU paths are compared at 32 and
+; 128
+; The one source for this run. conformance/tern_tc_generate_long_from_spec.mjs compiles this file
+; with the t27 compiler (wasm), evaluates every test block below, checks the pinned files and the
+; model header, and writes conformance/tern_tc_generate_long_params.py. The runner is the 8-token
+; arm's conformance/tern_tc_generate_ax7203.py, imported unchanged and pinned by sha256 below: the
+; wrapper conformance/tern_tc_generate_long_ax7203.py only installs these parameters under the
+; module name the runner reads, so every --self-test, --cpu and preflight runs the pinned code. No
+; number below is typed a second time; `--check` fails on drift. Written 2026-09-28 before any run
+; of it. ASCII, English.
+
+; WHY. The 8-token run (conformance/TERN_TC_GENERATE.md, FAIL: 56 answer bytes lost behind the
+; Genesys hub) and its reopen variant (conformance/TERN_TC_REOPEN.md, PASS 7682304/7682304, 0 lost)
+; proved the chain for 8 tokens. T34 asks for longer generation with a CPU comparison: 32 tokens on
+; the board, the CPU paths compared at 32 and 128. This is a new claim with its own record,
+; conformance/TERN_TC_GENERATE_LONG.md, not a second attempt at the 8-token one.
+
+; WHAT RUNS WHERE. Unchanged from the 8-token run: per token the board computes every row of wq wk
+; wv wo gate up down in all 6 layers times the int8 activation that feeds it, in 32-trit chunks,
+; one signed receipt per chunk; the host does embedding, RMSNorm, the 8-bit absmax quantiser, RoPE,
+; attention, SiLU, the fp32 tied head and the greedy argmax. Only the length changes, and with it
+; the counts: 4x the jobs (30762752), 584492288 answer bytes, the longest stream this stand has
+; been asked to deliver over UART. The board arm therefore runs through the reopen harness
+; (specs/trinet/tern_tc_reopen_long_ax7203.t27): at this length a lost byte is expected somewhere
+; behind any adapter, and the reopen link is the only harness that survived one.
+
+; WHAT IS FIXED BEFORE THE RUN.
+;   C_GREEDY_IDS: the runner's own float mode (--mode c, tc_infer.c's order), 32 tokens from
+;     token 0. Its first 24 ids equal the 24 tc_infer.c printed (TERN_TC_GENERATE.md), its first 8
+;     equal the 8-token spec's C_GREEDY_IDS.
+;   CPU_INT_IDS: the runner's integer path (--cpu), 32 tokens. Equals C_GREEDY_IDS id for id.
+;   JOBS_EXPECTED, SKIPPED_EXPECTED: counted on that CPU path. Jobs per token are not constant
+;     (30762752 is not 32 x 960288): which digit planes are all zero depends on the activations,
+;     so the counts are counted, not extrapolated.
+;   MIN_MARGIN_MILLI: the smallest top-1 minus top-2 logit gap over the 32 tokens, times 1000:
+;     24 (token 15, at the entry into the repeat loop). It says how close the nearest tie is; it
+;     is not a tolerance.
+;   THE 128-TOKEN CONTINUATION, CPU only, recorded here because it shapes what 32 tokens mean:
+;     from token 16 the greedy path repeats the 8 ids 1516 740 306 317 705 779 317 85 with period
+;     8, through token 127: jobs 122788544, skipped 32040256, rows 2162688, calls 3072, margin 24
+;     milli, ids equal to the int and c paths. A 9M-parameter model degenerates under greedy
+;     sampling; 32 tokens on the board cover the crossover into the loop and two full periods of it.
+
+; PREDICTION. Board token ids == CPU_INT_IDS, every receipt verified under the node key, every row
+; bit-exact, jobs == JOBS_EXPECTED, elapsed <= LIMIT_S. The board sum replaces the host sum in the
+; forward pass, so one wrong accepted sum could change a token after token 8, where no CPU
+; reference existed until this spec fixed one; the run aborts at the first rejected receipt or
+; inexact row instead, and then no token from it is cited.
+; WHAT IT DOES NOT SAY. It is not text quality: the ids fall into a repeat loop, and the 8K
+; tokenizer pinned in artifacts/tokenizers/ is for reading them, not a claim about what they spell.
+; It is not speed: about 4.7 k answers per second over UART puts 32 tokens near two hours. It is
+; one run of 32 tokens from one start token, greedy.
+
+module trinet_tern_tc_generate_long_ax7203;
+
+pub const KIND : str = "board-run-preregistration";
+pub const ID : str = "trinet/tern_tc_generate_long_ax7203";
+pub const GENERATED : [1]str = ["conformance/tern_tc_generate_long_params.py"];
+pub const RUNNER : str = "conformance/tern_tc_generate_long_ax7203.py";
+pub const RECORD_DOC : str = "conformance/TERN_TC_GENERATE_LONG.md";
+pub const LOG_NAME : str = "gen_tokens_32";
+
+; --- Code and data of record: imported or read, never edited --------------------------------
+pub const HARNESS_FILE : str = "conformance/tern_tc_layer_ax7203.py";
+pub const HARNESS_SHA256 : str = "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa";
+pub const MAC32_FILE : str = "conformance/trinet_mac32_conformance_ax7203.py";
+pub const MAC32_SHA256 : str = "11fa651938a0e360a311f63ec4c04de15241ad9a7c6e26175ead084e07ababa2";
+pub const MODEL : str = "~/igla-coder-gpu/c_infer/model.bin";
+pub const MODEL_SHA256 : str = "3102abdf35057924e077a86db4fdac726e4fe1f6574df47f39a638ba99a3ce9c";
+pub const C_REF_FILE : str = "~/igla-coder-gpu/c_infer/tc_infer.c";
+pub const C_REF_SHA256 : str = "33a7f98d8a1df5a6f634a96154b3d005425daa1f82952739105d0cabb24be963";
+
+; --- Model shape (read back from the model header by the generator) -------------------------
+pub const N_LAYER : u8 = 6;
+pub const N_HEAD : u8 = 5;
+pub const N_KV : u8 = 1;
+pub const D_MODEL : u16 = 320;
+pub const D_FF : u16 = 864;
+pub const HEAD_DIM : u8 = 64;
+pub const VOCAB : u16 = 8192;
+
+; --- Encoding (the harness's) ---------------------------------------------------------------
+pub const N_TRITS : u8 = 32;
+pub const INT8_DIGITS : u8 = 6;
+pub const ROWS_PER_LAYER : u16 = 2816;
+pub const ROWS_PER_TOKEN : u16 = 16896;
+pub const JOBS_PER_TOKEN_FULL : u32 = 1209600;
+; four harness calls per layer: q/k/v share one activation, then wo, gate/up, down
+pub const CALLS_PER_LAYER : u8 = 4;
+
+; --- The run --------------------------------------------------------------------------------
+pub const START_TOKEN : u16 = 0;
+pub const STOP_TOKEN : u16 = 0;
+pub const N_TOKENS : u8 = 32;
+pub const SKIP_ZERO_X_CHUNKS : u8 = 1;
+pub const WINDOW : u8 = 24;
+pub const BAUD : u32 = 1144744;
+pub const NODE_ID : u32 = 1414678862;
+pub const RESP_LEN : u8 = 19;
+pub const MAGIC_RESP : u8 = 165;
+pub const CP2102N_RX_BYTES : u16 = 512;
+pub const FIRST_JOB_NONCE : u32 = 65536;
+pub const SETKEY_NONCE : u32 = 2122186753;
+; the 8-token arm's 3600 s ceiling is 4x too small for 4x the tokens; the change is stated here,
+; not hidden. 30762752 answers at the measured 4712/s are about 6529 s; the limit holds every
+; ceiling of the reopen arm spent at the 2500/s floor with room to spare.
+pub const LIMIT_S : u16 = 13500;
+; throughput floor the limit assumes; the W24 reload after E2 measured 403200 answers in 85.81 s
+pub const MIN_ANSWERS_PER_S : u16 = 2500;
+
+; --- Fixed before the run (see above) -------------------------------------------------------
+pub const C_GREEDY_IDS : [32]u16 = [1, 3, 204, 276, 405, 659, 85, 1516, 278, 320, 306, 317, 445, 779, 317, 85, 1516, 740, 306, 317, 705, 779, 317, 85, 1516, 740, 306, 317, 705, 779, 317, 85];
+pub const CPU_INT_IDS : [32]u16 = [1, 3, 204, 276, 405, 659, 85, 1516, 278, 320, 306, 317, 445, 779, 317, 85, 1516, 740, 306, 317, 705, 779, 317, 85, 1516, 740, 306, 317, 705, 779, 317, 85];
+pub const JOBS_EXPECTED : u32 = 30762752;
+pub const SKIPPED_EXPECTED : u32 = 7944448;
+pub const ROWS_EXPECTED : u32 = 540672;
+pub const CALLS_EXPECTED : u16 = 768;
+pub const MIN_MARGIN_MILLI : u16 = 24;
+
+test node_id_is_trin {
+    assert NODE_ID == 84 * 16777216 + 82 * 65536 + 73 * 256 + 78;
+    assert MAGIC_RESP == 10 * 16 + 5;
+}
+
+test model_shape {
+    assert N_HEAD * HEAD_DIM == D_MODEL;
+    assert D_MODEL == 10 * N_TRITS;
+    assert D_FF == 27 * N_TRITS;
+    assert ROWS_PER_LAYER == N_HEAD * HEAD_DIM + 2 * N_KV * HEAD_DIM + D_MODEL + 2 * D_FF + D_MODEL;
+    assert ROWS_PER_TOKEN == ROWS_PER_LAYER * N_LAYER;
+}
+
+test six_digits_cover_int8_and_five_do_not {
+    assert 3 * 3 * 3 * 3 * 3 * 3 - 1 >= 2 * 128;
+    assert 3 * 3 * 3 * 3 * 3 - 1 < 2 * 128;
+    assert INT8_DIGITS == 6;
+}
+
+test jobs_per_token {
+    assert JOBS_PER_TOKEN_FULL == INT8_DIGITS * N_LAYER * ((N_HEAD * HEAD_DIM + 2 * N_KV * HEAD_DIM + D_MODEL + 2 * D_FF) * 10 + D_MODEL * 27);
+    assert JOBS_PER_TOKEN_FULL == 1209600;
+}
+
+test run_totals {
+    assert JOBS_EXPECTED + SKIPPED_EXPECTED == JOBS_PER_TOKEN_FULL * N_TOKENS;
+    assert ROWS_EXPECTED == ROWS_PER_TOKEN * N_TOKENS;
+    assert CALLS_EXPECTED == CALLS_PER_LAYER * N_LAYER * N_TOKENS;
+}
+
+test jobs_per_token_are_not_constant {
+    assert JOBS_EXPECTED != 960288 * N_TOKENS;
+    assert JOBS_EXPECTED > 960288 * N_TOKENS;
+}
+
+test nonces_stay_clear_of_setkey {
+    assert FIRST_JOB_NONCE + JOBS_PER_TOKEN_FULL * N_TOKENS < SETKEY_NONCE;
+    assert SETKEY_NONCE == 126 * 16777216 + 126 * 65536 + 1;
+}
+
+test window_under_the_uart_buffer {
+    assert RESP_LEN * WINDOW < CP2102N_RX_BYTES;
+    assert WINDOW == 24;
+}
+
+test run_fits_its_limit {
+    assert LIMIT_S * MIN_ANSWERS_PER_S >= JOBS_EXPECTED;
+    assert LIMIT_S == 13500;
+}
+
+test the_repeat_loop_of_the_cpu_paths {
+    assert CPU_INT_IDS[16] == CPU_INT_IDS[24];
+    assert CPU_INT_IDS[17] == CPU_INT_IDS[25];
+    assert CPU_INT_IDS[23] == CPU_INT_IDS[31];
+}
+
+test ids_are_in_the_vocabulary_and_agree {
+    assert C_GREEDY_IDS[0] == CPU_INT_IDS[0];
+    assert C_GREEDY_IDS[1] == CPU_INT_IDS[1];
+    assert C_GREEDY_IDS[2] == CPU_INT_IDS[2];
+    assert C_GREEDY_IDS[3] == CPU_INT_IDS[3];
+    assert C_GREEDY_IDS[4] == CPU_INT_IDS[4];
+    assert C_GREEDY_IDS[5] == CPU_INT_IDS[5];
+    assert C_GREEDY_IDS[6] == CPU_INT_IDS[6];
+    assert C_GREEDY_IDS[7] == CPU_INT_IDS[7];
+    assert C_GREEDY_IDS[8] == CPU_INT_IDS[8];
+    assert C_GREEDY_IDS[9] == CPU_INT_IDS[9];
+    assert C_GREEDY_IDS[10] == CPU_INT_IDS[10];
+    assert C_GREEDY_IDS[11] == CPU_INT_IDS[11];
+    assert C_GREEDY_IDS[12] == CPU_INT_IDS[12];
+    assert C_GREEDY_IDS[13] == CPU_INT_IDS[13];
+    assert C_GREEDY_IDS[14] == CPU_INT_IDS[14];
+    assert C_GREEDY_IDS[15] == CPU_INT_IDS[15];
+    assert C_GREEDY_IDS[16] == CPU_INT_IDS[16];
+    assert C_GREEDY_IDS[17] == CPU_INT_IDS[17];
+    assert C_GREEDY_IDS[18] == CPU_INT_IDS[18];
+    assert C_GREEDY_IDS[19] == CPU_INT_IDS[19];
+    assert C_GREEDY_IDS[20] == CPU_INT_IDS[20];
+    assert C_GREEDY_IDS[21] == CPU_INT_IDS[21];
+    assert C_GREEDY_IDS[22] == CPU_INT_IDS[22];
+    assert C_GREEDY_IDS[23] == CPU_INT_IDS[23];
+    assert C_GREEDY_IDS[24] == CPU_INT_IDS[24];
+    assert C_GREEDY_IDS[25] == CPU_INT_IDS[25];
+    assert C_GREEDY_IDS[26] == CPU_INT_IDS[26];
+    assert C_GREEDY_IDS[27] == CPU_INT_IDS[27];
+    assert C_GREEDY_IDS[28] == CPU_INT_IDS[28];
+    assert C_GREEDY_IDS[29] == CPU_INT_IDS[29];
+    assert C_GREEDY_IDS[30] == CPU_INT_IDS[30];
+    assert C_GREEDY_IDS[31] == CPU_INT_IDS[31];
+    assert CPU_INT_IDS[31] < VOCAB;
+    assert CPU_INT_IDS[15] < VOCAB;
+    assert CPU_INT_IDS[0] != STOP_TOKEN;
+}
