@@ -689,6 +689,50 @@ RAMB36**, no CARRY4, no DSP.
     and both come out "new" at the nominal 1.2 ns.
   - **Outside the model:** the board, the input buffers and pads, clock
     jitter, and the PHY's datasheet timing.
+
+  **Run once at 00:21:02Z, after the push of `cd44ba6df` (00:20:48Z, git
+  TZ=UTC): PASS, as predicted. The information lines missed the guess. This
+  is the tool's model, not the board.** The record is
+  `conformance/model_runs/e3_rx_capture_model.log`. All six pinned files
+  matched. The load average was 9.49 at the start, on 8 cpus, and the run
+  took 5 s.
+
+  | sample | edge | D, ps | Delta = C - D, ps | setup, ps | hold, ps |
+  |---|---|---|---|---|---|
+  | rxd_n[0] | fall | 1194 | 2486 | 17886 | 10914 |
+  | rxd_n[1] | fall | 1247 | 2433 | 17833 | 10967 |
+  | rxd_n[2] | fall | 1290 | 2390 | 17790 | 11010 |
+  | rxd_n[3] | fall | 1293 | 2387 | 17787 | 11013 |
+  | rxctl_n | fall | 1180 | 2500 | 17900 | **10900** |
+
+  C is 3680 ps for all nine flip-flops: 2296 ps from the RXC input buffer to
+  the BUFG, 200 ps through the BUFG, and 1184 ps to the clock pins. Tsu and Th
+  are 100 ps on every flip-flop.
+  - **The falling-edge design holds with at least 10.9 ns of margin.** That
+    is about half the RTL comment's "±20 ns". The comment assumes a 50 % duty
+    cycle and no delays. The check takes RGMII's 40 to 60 % and the full PHY
+    range.
+  - **The FPGA delays RXC by about 2.4 ns against its data.** The clock goes
+    through a BUFG and the data does not. So a sample at the rising edge takes
+    the new nibble for any data change up to 2.19 ns after the edge (rxd_p1[2],
+    the tightest). The assumed range ends at +0.5 ns.
+  - **Information lines: "new" over the whole range, not "undetermined" as
+    guessed.** The board's `ed` counter should stay 0. An RX_ER nibble's
+    RX_CTL change is caught, so RX_ER ends a frame as this plan assumes.
+    `ed > 0` on the board would mean a data change more than 2.2 ns after RXC
+    at the pads (outside the assumed range), or a clock path unlike the model.
+  - **A defect in the log's labels, not its numbers.** The loop that prints
+    the rising-edge lines also ran over `rxctl_n`, so one line reads
+    "rxctl_n at the rising edge". `rxctl_n` is a falling-edge flip-flop. The
+    line's numbers are the same as the next line, which is labelled
+    correctly, and the `ed` result uses only rxd_p1[0..3]. The runner is
+    one-shot and its sha is pinned, so the log stays as written.
+  - **Not pre-registered, arithmetic on the same numbers: this clocking is
+    for 100 Mb/s only.** A sample lands Delta + P after its data change, about
+    3.6 ns at the nominal P of 1.2 ns. At 1000 Mb/s RGMII the next change comes
+    4 ns later, which leaves 0.3 ns. At P = 2 ns the margin is below zero. A
+    gigabit node on this path would need the PHY's RX delay off, or a
+    different clock path.
 - **BRAM on this board.** No bitstream from this flow has used a block RAM
   here. `e3z` writes it as two RAMB18 halves at width 4 plus the RAMB36 bit for
   width 9, READ_FIRST, as nextpnr-xilinx's `fasm.cc` does. The mock checks the
