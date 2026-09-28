@@ -230,14 +230,23 @@ live; the live run's log path will be recorded in the table above at launch.
    fpga-batch-cosim` (wq, `--passes both`) expecting PASS + the retransmit
    cosim unchanged. The owner also owes one pick before RTL: which of the
    three phantom-frame resolutions in the plan's Risks (model adopts
-   aliasing / RTL guarded no-op / adjudicable-only cosim). Until then a fire
+   aliasing / RTL guarded no-op / adjudicable-only cosim). As of fire 14
+   option B's no-hardware half is ALSO done: E5 host half (`--udp` +
+   UdpCellBridge, self-tested on loopback) built ahead of E4; what remains
+   on B is E3's board run (pre-registered 19:36Z, needs «да» + sudo) and
+   E4 (RTL — owner's pick of LiteEth/verilog-ethernet/minimal responder).
+   Until then a fire
    is audit-only: `tri fpga-loopcheck` (fire 11 packaged the whole sweep —
    git + specs + keycheck + audit + one verdict line; exit 1 with exactly
    the two igla-coder-gpu anomalies is the known floor, anything beyond is
-   new) — do not invent make-work; an audit-only fire is an honest fire.
+   new; NOTE fire 14: loopcheck itself does not run selftest, but `tri
+   fpga-selftest` now shows 5 tc_infer.c-pin refusals from the sibling's
+   2026-09-28 20:59 file change — external, pre-existing at HEAD,
+   documented in the fire-14 entry; not a new anomaly) — do not invent
+   make-work; an audit-only fire is an honest fire.
    The only cheap extra if the owner stays asleep for many fires: re-check
    `.claude/loop/research.md` competitor movement (read-only, rare, last
-   refreshed fire 8).
+   refreshed fire 13).
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
    fire 5 triage); document anything found there in this file instead.
 4. End-of-fire report + three collaboration options; self-critique and anomaly
@@ -368,3 +377,27 @@ live; the live run's log path will be recorded in the table above at launch.
   wedge intact, claim now scoped "on-hardware receipts" against zkML
   collision. Options section refreshed to post-fire-12 reality (A =
   phantom pick + core edit + reflash only). Board, pods, RTL untouched.
+- fire 14 (2026-09-29): option B's E5 host half, built ahead of E4 (pure
+  host-side Python — READY's "same spirit" class). `--udp HOST:PORT` in
+  tern_tc_layer_ax7203.py: same TRI-NET frames, one datagram per request
+  with a 4-B sequence echoed on answers, read() strips it (runner
+  classifies by nonce, order free), `--setkey` refused on UDP per E4's
+  rule. Self-test + UdpCellBridge (loopback software cell, the byte-exact
+  peer E4's cosim will reuse): clean 222/222 receipts all rows exact
+  echo_bad 0; one whole dropped datagram = 221/222 credited, honest short
+  read at the end, only that job's row incomplete — loss costs one job,
+  never a wrong row (measured, my first window-stall prediction was wrong
+  and was corrected against the debug run, not asserted). The harness edit
+  repinned in the open, five layers: HARNESS_SHA256 x10 specs → cross-spec
+  sha chain bottom-up (retransmit←generate, reopens←generate+retransmit,
+  batch←reopen_t27, hubfree←diag) → regenerated *_params.py → params
+  sha pins in the pinning specs → later generators again; tri fpga-specs
+  17/17. ANOMALY (external, pre-existing at HEAD, not from this fire's
+  edit): sibling repo's ~/igla-coder-gpu/c_infer/tc_infer.c changed
+  2026-09-28 20:59 (commit 52be443 "Fast engine") after our specs pinned
+  it (33a7f98d…); 5 selftest runners refuse on that pin exactly as the
+  doctrine wants — C_GREEDY_IDS/CPU_INT_IDS are fixed against the OLD
+  engine, so re-pinning is semantic work for the owner + sibling session,
+  not for a night fire. 11/16 runners PASS incl. the full harness
+  self-test. SKILL.md: --udp + the five-layer re-pin trap. Board, pods,
+  RTL untouched.

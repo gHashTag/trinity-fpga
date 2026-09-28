@@ -2,7 +2,7 @@
 """Hub-free UART loss arm parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/uart_loss_hubfree_ax7203.t27"
-SPEC_SHA256 = "470a1d8d5832f774ad66bb5d12184ce96f0ea2c1db04bca1fd7a3404b5768d0d"
+SPEC_SHA256 = "7e6a339be9f697e888038669f368c397bcc2d9fcb7c39ee6dca4461b7f890b47"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -10,17 +10,17 @@ SPEC = {
     "DIAG_ARM": 1,
     "DIAG_JOBS_PER_ARM": 2016000,
     "DIAG_PARAMS_FILE": "conformance/uart_loss_diag_params.py",
-    "DIAG_PARAMS_SHA256": "4f4881797c56474bf5685120e652a95d26e3f216d5e9f74007db4a04984d0817",
+    "DIAG_PARAMS_SHA256": "93399e50b9732d1794bae1e2280ef9631a57f8bbccc20bf086680ee3346354e1",
     "DIAG_RUNNER_FILE": "conformance/uart_loss_diag_ax7203.py",
     "DIAG_RUNNER_SHA256": "85657a39bb38cf7670c50ae1ed237d1c913eb063c12dc9af52e41c4c10f17036",
     "DIAG_SPEC_FILE": "specs/trinet/uart_loss_diag_ax7203.t27",
-    "DIAG_SPEC_SHA256": "5d8587dd09d313118af3313edde9b3b6cbb18de9494b041c239ab7f28eaf52cd",
+    "DIAG_SPEC_SHA256": "6a118acd6c90fe50f53e565055245ed5676df6b6d859acf56cc0f66975c0a024",
     "FIRST_JOB_NONCE": 65536,
     "GENERATED": ["conformance/uart_loss_hubfree_params.py"],
     "GENERATE_PARAMS_FILE": "conformance/tern_tc_generate_params.py",
-    "GENERATE_PARAMS_SHA256": "2688743591171e56c9ae37d2de1f04e3c3a244a2c803fd57f45d78b6976f0ee4",
+    "GENERATE_PARAMS_SHA256": "5885a6bd9cf079284683bd18e9f64c74220fb65ceb9e76f8d1eef5ea3ca9ba93",
     "HARNESS_FILE": "conformance/tern_tc_layer_ax7203.py",
-    "HARNESS_SHA256": "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa",
+    "HARNESS_SHA256": "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8",
     "HUBS_ALLOWED": 0,
     "HUB_CLASS": 9,
     "ID": "trinet/uart_loss_hubfree_ax7203",

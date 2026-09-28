@@ -275,6 +275,106 @@ class ReplayLink:
         return out
 
 
+class UdpLink:
+    """E5's Ethernet transport (NODE_ETHERNET_PLAN.md, "What the port could
+    carry"): one datagram per write, 4-byte little-endian sequence in front.
+    The peer echoes the request's sequence on its answer datagram; read()
+    strips it and hands out payload bytes in arrival order — the runner
+    classifies by nonce, so order is free, and a lost datagram surfaces as
+    the honest short read the runner already stops on. The whole read waits
+    at most `timeout` seconds, like SerialLink's per-read timeout.
+    K-frames-per-datagram is E4's wire optimisation and lands with its
+    cosim, not here. `echo_bad` counts answer datagrams whose sequence names
+    nothing we sent — a peer bug, diagnosed not trusted away.
+    """
+
+    def __init__(self, host, port, timeout=2.0):
+        import socket
+        self._s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._timeout = timeout
+        self.addr = (host, port)
+        self.seq = 0
+        self.pending = bytearray()
+        self.echo_ok = 0
+        self.echo_bad = 0
+
+    def write(self, b):
+        self._s.sendto(self.seq.to_bytes(4, "little") + b, self.addr)
+        self.seq += 1
+
+    def _recv_one(self, timeout):
+        """One datagram into pending; False when nothing arrived in time."""
+        import socket
+        self._s.settimeout(timeout)
+        try:
+            dgram, _peer = self._s.recvfrom(65535)
+        except (TimeoutError, BlockingIOError, socket.timeout):
+            return False
+        if len(dgram) >= 4:
+            echo = int.from_bytes(dgram[:4], "little")
+            if 0 <= echo < self.seq:
+                self.echo_ok += 1
+            else:
+                self.echo_bad += 1
+            self.pending += dgram[4:]
+        return True
+
+    def read(self, n):
+        deadline = time.monotonic() + self._timeout
+        while len(self.pending) < n:
+            if not self._recv_one(max(0.0, deadline - time.monotonic())):
+                break
+        out, self.pending = bytes(self.pending[:n]), self.pending[n:]
+        return out
+
+    def waiting(self):
+        while self._recv_one(0.0):
+            pass
+        return len(self.pending)
+
+
+class UdpCellBridge:
+    """A software cell served over UDP: the self-test's stand-in for E4's
+    node, and the byte-exact peer E4's cosim will reuse. One datagram per
+    request batch, the sequence echoed, the cell's answers in the payload.
+    `drop_at` (1-based, counting every datagram) loses one request datagram
+    whole — the way a real datagram link can — so a test can show the
+    receipt machinery meets that loss the same way it meets a serial slip.
+    """
+
+    def __init__(self, cell, host="127.0.0.1"):
+        import socket, threading
+        self.cell = cell
+        self.s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self.s.bind((host, 0))
+        self.addr = self.s.getsockname()
+        self.n = 0
+        self.drop_at = None
+        self._stop = False
+        self.t = threading.Thread(target=self._serve, daemon=True)
+        self.t.start()
+
+    def _serve(self):
+        import socket
+        self.s.settimeout(0.2)
+        while not self._stop:
+            try:
+                dgram, peer = self.s.recvfrom(65535)
+            except (TimeoutError, socket.timeout):
+                continue
+            self.n += 1
+            if len(dgram) >= 4 and self.n != self.drop_at:
+                self.cell.write(dgram[4:])
+                out = self.cell.read(1 << 20)
+                if out:
+                    self.s.sendto(dgram[:4] + out, peer)
+
+    def stop(self):
+        self._stop = True
+        self.t.join(timeout=1.0)
+        self.s.close()
+
+
 class RefCell:
     """A Python model of fpga/portable/trinet_node_core.v, for negative controls.
 
@@ -602,6 +702,38 @@ def self_test(scratch):
     check(install_key(cell, bytes(16 - i for i in range(16)), log=lambda *_: None)
           is not None and run(cell, jobs, ref, TEST_KEY, log=lambda *_: None)["exact"]
           == res["rows"], "a second setkey is refused (0x03) and the first key holds")
+
+    # E5's host half, ahead of E4 (NODE_ETHERNET_PLAN.md): the same receipt
+    # machinery over UDP, one datagram per frame, against a software cell on
+    # loopback — the peer E4's cosim will reuse.
+    bridge = UdpCellBridge(RefCell(key=None))
+    ulink = UdpLink(*bridge.addr)
+    keyed = install_key(ulink, TEST_KEY, log=lambda *_: None) is not None
+    res = run(ulink, jobs, ref, TEST_KEY, log=lambda *_: None)
+    check(keyed and res["exact"] == res["rows"]
+          and res["counts"]["accepted"] == len(jobs)
+          and ulink.echo_ok == len(jobs) + 1 and ulink.echo_bad == 0,
+          f"UDP transport: setkey + {res['counts']['accepted']}/{len(jobs)} receipts, "
+          f"every row exact, every sequence echoed")
+    bridge.stop()
+
+    # A whole request datagram lost: no partial frame, no fabricated answer.
+    # The sliding window does not stall on it — 221 of 222 credited — and the
+    # run ends on the honest short read with exactly the dropped job's row
+    # incomplete. Loss costs one job, never a wrong row.
+    bridge = UdpCellBridge(RefCell(key=TEST_KEY))
+    bridge.drop_at = 6                       # datagram 6 = request #4 (0-based)
+    ulink = UdpLink(*bridge.addr)
+    res = run(ulink, jobs, ref, TEST_KEY, log=lambda *_: None)
+    check(res["counts"]["short"] == 1
+          and res["counts"]["accepted"] == len(jobs) - 1
+          and res["counts"]["missing"] == 1
+          and res["exact"] == res["rows"] - 1 and ulink.echo_bad == 0,
+          f"one lost request datagram: {res['counts']['accepted']} of {len(jobs)} "
+          f"credited, {res['exact']}/{res['rows']} rows — the run ends on the "
+          f"honest short read, the dropped job's row alone incomplete")
+    bridge.stop()
+
     print(f"self-test: {'PASS' if ok else 'FAIL'}")
     return ok
 
@@ -622,6 +754,10 @@ def main():
     a = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     a.add_argument("--port", default="/dev/cu.usbserial-130")
     a.add_argument("--baud", type=int, default=1144744)
+    a.add_argument("--udp", metavar="HOST:PORT",
+                   help="E5's Ethernet transport (NODE_ETHERNET_PLAN.md): TRI-NET "
+                        "frames over UDP, one datagram per frame with a 4-byte "
+                        "sequence, instead of the serial port")
     a.add_argument("--keys", default="../trinet-keys.txt",
                    help="key file, or 'test' for the public SipHash test key")
     a.add_argument("--node", default="node0", help="key name in the key file")
@@ -684,7 +820,18 @@ def main():
               + (" + setkey" if args.setkey else "") + f") to {args.emit_requests}")
         return 0
 
-    link = ReplayLink(args.responses) if args.responses else SerialLink(args.port, args.baud)
+    if args.responses:
+        link = ReplayLink(args.responses)
+    elif args.udp:
+        if args.setkey:
+            print("OP_SETKEY is refused on UDP (NODE_ETHERNET_PLAN.md, E4: the key\n"
+                  "is set over the serial port only). Setkey once over serial, then\n"
+                  "run --udp without --setkey.")
+            return 1
+        host, _, port = args.udp.rpartition(":")
+        link = UdpLink(host, int(port))
+    else:
+        link = SerialLink(args.port, args.baud)
     if args.setkey and install_key(link, key) is None:
         return 1
     t0 = time.time()

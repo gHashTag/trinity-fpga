@@ -2,7 +2,7 @@
 """Reopen generation run parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_reopen_ax7203.t27"
-SPEC_SHA256 = "49faa6070fbb7f41461eb6035c094061494a23944f288b93a3a603832f620da7"
+SPEC_SHA256 = "e90083643ad15ab8358e686ca6abd9abd3744cc78dd8876841c0796a6b59ee15"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -11,13 +11,13 @@ SPEC = {
     "FLUSH_BYTES": 24,
     "GENERATED": ["conformance/tern_tc_reopen_params.py"],
     "GENERATE_PARAMS_FILE": "conformance/tern_tc_generate_params.py",
-    "GENERATE_PARAMS_SHA256": "2688743591171e56c9ae37d2de1f04e3c3a244a2c803fd57f45d78b6976f0ee4",
+    "GENERATE_PARAMS_SHA256": "5885a6bd9cf079284683bd18e9f64c74220fb65ceb9e76f8d1eef5ea3ca9ba93",
     "GENERATE_RUNNER_FILE": "conformance/tern_tc_generate_ax7203.py",
     "GENERATE_RUNNER_SHA256": "5d769dd87b761a996d65c3d400f272186a413ecb8cb60159c2992145882bb3c0",
     "GENERATE_SPEC_FILE": "specs/trinet/tern_tc_generate_ax7203.t27",
-    "GENERATE_SPEC_SHA256": "d5734c826b769acae09b911005de2371d52be4b1abc3250551b51ea51bcf5a69",
+    "GENERATE_SPEC_SHA256": "7a1304d4a91c3479eecb62f69e2cb211e942794634da9a8ee358a20b2d54adc5",
     "HARNESS_FILE": "conformance/tern_tc_layer_ax7203.py",
-    "HARNESS_SHA256": "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa",
+    "HARNESS_SHA256": "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8",
     "ID": "trinet/tern_tc_reopen_ax7203",
     "JOBS_EXPECTED": 7682304,
     "JOBS_PER_TOKEN_FULL": 1209600,
@@ -51,11 +51,11 @@ SPEC = {
     "RETRY_BASE": 536870912,
     "RT_MAX_ATTEMPTS": 3,
     "RT_PARAMS_FILE": "conformance/tern_tc_retransmit_params.py",
-    "RT_PARAMS_SHA256": "e89ed828ba0c9c75cddcc75f42717888c4c75846d411112257ef9cc1446a13bf",
+    "RT_PARAMS_SHA256": "2b461a64a5c8a3034e96f0e168f401603002e723ccba0f4856b5c91a374e3be3",
     "RT_RUNNER_FILE": "conformance/tern_tc_generate_rt_ax7203.py",
     "RT_RUNNER_SHA256": "b42ab095684d7019a51b4e5ef0fc92ee4d543a4c0a7f120d8be8736e6d833492",
     "RT_SPEC_FILE": "specs/trinet/tern_tc_retransmit_ax7203.t27",
-    "RT_SPEC_SHA256": "4dbdee3431c85e6b4ab99239750c4bac02adcd228c051e71c14a216c3dc36678",
+    "RT_SPEC_SHA256": "0330bc8e8c4f12d0df17e37271eb06552231536f9759cfe504dbe380fe7d9854",
     "RUNNER": "conformance/tern_tc_generate_reopen_ax7203.py",
     "RX_HOLE_AT": [19008, 137468535, 57000000],
     "RX_HOLE_LEN": [16, 56, 19],

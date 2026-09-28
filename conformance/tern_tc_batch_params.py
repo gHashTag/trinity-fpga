@@ -2,7 +2,7 @@
 """Batched wire protocol design parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_batch_ax7203.t27"
-SPEC_SHA256 = "553b5066eb1bce17bc35536812f96123bb408cbc83ef31a99647b0e69179f0ee"
+SPEC_SHA256 = "e48bfc4e23b2dc4c435a554fbb384f2e280f0d80ad6e94fd2463d23c4961a40d"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -31,7 +31,7 @@ SPEC = {
     "GATE_NOW_BYTES": 1244160,
     "GENERATED": ["conformance/tern_tc_batch_params.py"],
     "HARNESS_FILE": "conformance/tern_tc_layer_ax7203.py",
-    "HARNESS_SHA256": "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa",
+    "HARNESS_SHA256": "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8",
     "ID": "trinet/tern_tc_batch_ax7203",
     "JOBS_7T27": 6712896,
     "KIND": "protocol-design",
@@ -54,7 +54,7 @@ SPEC = {
     "PREIMAGE_SETX": 20,
     "REASK_JOBS_MAX": 312,
     "REOPEN_SPEC_FILE": "specs/trinet/tern_tc_reopen_t27_ax7203.t27",
-    "REOPEN_SPEC_SHA256": "648451ffab50744219dc80e3f20b60979fcefa6066e6e07b7659af2ad49cd7b5",
+    "REOPEN_SPEC_SHA256": "dac385b2590c5ea28052d8b3cd6b3e3cb6ecdc60ba5a6f3037df7ff327edb6da",
     "REQ_BODY": 22,
     "REQ_LEN": 24,
     "RESP_DOT6_LEN": 24,

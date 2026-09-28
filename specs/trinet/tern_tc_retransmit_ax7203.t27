@@ -53,13 +53,13 @@ pub const LOG_NAME : str = "gen_tokens_8_rt";
 
 ; --- Code and data of record: imported or read, never edited --------------------------------
 pub const GENERATE_SPEC_FILE : str = "specs/trinet/tern_tc_generate_ax7203.t27";
-pub const GENERATE_SPEC_SHA256 : str = "d5734c826b769acae09b911005de2371d52be4b1abc3250551b51ea51bcf5a69";
+pub const GENERATE_SPEC_SHA256 : str = "7a1304d4a91c3479eecb62f69e2cb211e942794634da9a8ee358a20b2d54adc5";
 pub const GENERATE_PARAMS_FILE : str = "conformance/tern_tc_generate_params.py";
-pub const GENERATE_PARAMS_SHA256 : str = "2688743591171e56c9ae37d2de1f04e3c3a244a2c803fd57f45d78b6976f0ee4";
+pub const GENERATE_PARAMS_SHA256 : str = "5885a6bd9cf079284683bd18e9f64c74220fb65ceb9e76f8d1eef5ea3ca9ba93";
 pub const GENERATE_RUNNER_FILE : str = "conformance/tern_tc_generate_ax7203.py";
 pub const GENERATE_RUNNER_SHA256 : str = "5d769dd87b761a996d65c3d400f272186a413ecb8cb60159c2992145882bb3c0";
 pub const HARNESS_FILE : str = "conformance/tern_tc_layer_ax7203.py";
-pub const HARNESS_SHA256 : str = "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa";
+pub const HARNESS_SHA256 : str = "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8";
 pub const NODE_RTL_FILE : str = "fpga/portable/trinet_node_core.v";
 pub const NODE_RTL_SHA256 : str = "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1";
 pub const PROTOCOL_FILE : str = "conformance/tern_tc_retransmit.py";

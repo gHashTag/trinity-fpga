@@ -92,7 +92,7 @@ owner's yes.
 | E2 | PHY bring-up: release `phy_rst_n`, advertise 100M only over MDIO, report in-band status on UART | Icarus testbench on a KSZ9031 status model; build | yes, 1 flash |
 | E3 | ARP + ICMP responder at 192.168.1.222 | Icarus testbench on frames generated in Python; build; board step pre-registered in `specs/trinet/eth_arp_icmp_e3_ax7203.t27` | ping from the Mac, judged by `eth_arp_icmp_ax7203.py --judge` |
 | E4 | UDP bridge: K TRI-NET frames per datagram into the unchanged node core. **OP_SETKEY is refused on UDP**; the key is set over UART only. | co-sim with `formal/tern_tc_layer_rtl_tb.v`-style streams; build | pre-registered 640-job check, then `--all` |
-| E5 | Harness transport `--udp HOST:PORT` in `tern_tc_layer_ax7203.py`, with no change to the checks | self-test with a software cell over loopback UDP | with E4 |
+| E5 | Harness transport `--udp HOST:PORT` in `tern_tc_layer_ax7203.py`, with no change to the checks | self-test with a software cell over loopback UDP — host half done 2026-09-29, ahead of E4 | with E4 |
 
 ### E1 build, 04:09 UTC (checked; not flashed)
 
@@ -1036,6 +1036,34 @@ not kept in the repo.
 `conformance/E3_DRAFT_SECTION.md` and merged here. The comment in
 `specs/fpga/constraints/eth_arp_icmp_ax7203.xdc` still names the draft. That
 file stays as built, because the spec pins it.
+
+### E5's host half, 2026-09-29 (built ahead of E4; no board)
+
+The harness half of E5 exists before E4's RTL: `tern_tc_layer_ax7203.py --udp
+HOST:PORT` speaks the same TRI-NET frames over UDP instead of the serial port
+— one datagram per request frame with a 4-byte little-endian sequence in
+front; the peer echoes that sequence on its answer datagram; `read()` strips
+it and hands out payload bytes in arrival order (the runner classifies by
+nonce, so order is free). No check changed: `run()` is the same code as over
+serial.
+
+- `--setkey` is refused on UDP at the CLI, per E4's rule above — the key is
+  set over the serial port only. The refusal prints the rule and stops.
+- The self-test's stand-in node is `UdpCellBridge`: a software cell
+  (`RefCell`) served over loopback UDP, one datagram per request batch, the
+  sequence echoed. It is the byte-exact peer E4's cosim will reuse.
+- Clean link: 222/222 receipts, every row exact, every sequence echoed
+  (`echo_bad` 0). One whole request datagram lost (`drop_at`): 221 of 222
+  credited, the run ends on the honest short read, the dropped job's row
+  alone incomplete. A lost datagram costs one job, never a wrong row — the
+  same property the serial slips showed.
+- The harness edit was repinned in the open: the ten `.t27` specs that pin
+  the harness by sha256, the cross-pinned spec chain (retransmit ← generate,
+  the three reopens ← their generate and retransmit, batch ← reopen_t27,
+  hubfree ← diag), and the regenerated `*_params.py` all moved together.
+  `tri fpga-specs` 17/17; the harness self-test PASS.
+- What is still E4's: K frames per datagram (the wire optimisation), the
+  RTL, and the board. E5's board gate stays "with E4".
 
 ## Security notes for E4
 

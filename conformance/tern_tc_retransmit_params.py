@@ -2,7 +2,7 @@
 """Retransmit generation run parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_retransmit_ax7203.t27"
-SPEC_SHA256 = "4dbdee3431c85e6b4ab99239750c4bac02adcd228c051e71c14a216c3dc36678"
+SPEC_SHA256 = "0330bc8e8c4f12d0df17e37271eb06552231536f9759cfe504dbe380fe7d9854"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -11,13 +11,13 @@ SPEC = {
     "FLUSH_BYTES": 24,
     "GENERATED": ["conformance/tern_tc_retransmit_params.py"],
     "GENERATE_PARAMS_FILE": "conformance/tern_tc_generate_params.py",
-    "GENERATE_PARAMS_SHA256": "2688743591171e56c9ae37d2de1f04e3c3a244a2c803fd57f45d78b6976f0ee4",
+    "GENERATE_PARAMS_SHA256": "5885a6bd9cf079284683bd18e9f64c74220fb65ceb9e76f8d1eef5ea3ca9ba93",
     "GENERATE_RUNNER_FILE": "conformance/tern_tc_generate_ax7203.py",
     "GENERATE_RUNNER_SHA256": "5d769dd87b761a996d65c3d400f272186a413ecb8cb60159c2992145882bb3c0",
     "GENERATE_SPEC_FILE": "specs/trinet/tern_tc_generate_ax7203.t27",
-    "GENERATE_SPEC_SHA256": "d5734c826b769acae09b911005de2371d52be4b1abc3250551b51ea51bcf5a69",
+    "GENERATE_SPEC_SHA256": "7a1304d4a91c3479eecb62f69e2cb211e942794634da9a8ee358a20b2d54adc5",
     "HARNESS_FILE": "conformance/tern_tc_layer_ax7203.py",
-    "HARNESS_SHA256": "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa",
+    "HARNESS_SHA256": "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8",
     "ID": "trinet/tern_tc_retransmit_ax7203",
     "JOBS_EXPECTED": 7682304,
     "JOBS_PER_TOKEN_FULL": 1209600,

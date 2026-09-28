@@ -2,7 +2,7 @@
 """7-token generation run parameters (t27-tuned model); the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_generate_t27_ax7203.t27"
-SPEC_SHA256 = "6cd04860230e498c679b21a0ce66437169b19d16af6f111f504e1ba7b2f424f5"
+SPEC_SHA256 = "cbb75b4a026a3c923a3694b83bf8aa5e388f67941f9871f88a17d17e00fb08ba"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -19,7 +19,7 @@ SPEC = {
     "FIRST_JOB_NONCE": 65536,
     "GENERATED": ["conformance/tern_tc_generate_t27_params.py"],
     "HARNESS_FILE": "conformance/tern_tc_layer_ax7203.py",
-    "HARNESS_SHA256": "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa",
+    "HARNESS_SHA256": "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8",
     "HEAD_DIM": 64,
     "ID": "trinet/tern_tc_generate_t27_ax7203",
     "INT8_DIGITS": 6,

@@ -2,7 +2,7 @@
 """UART loss diagnostic parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/uart_loss_diag_ax7203.t27"
-SPEC_SHA256 = "5d8587dd09d313118af3313edde9b3b6cbb18de9494b041c239ab7f28eaf52cd"
+SPEC_SHA256 = "6a118acd6c90fe50f53e565055245ed5676df6b6d859acf56cc0f66975c0a024"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -21,7 +21,7 @@ SPEC = {
     "FIRST_JOB_NONCE": 65536,
     "GENERATED": ["conformance/uart_loss_diag_params.py"],
     "HARNESS_FILE": "conformance/tern_tc_layer_ax7203.py",
-    "HARNESS_SHA256": "8a9a5f6ef57fdad6e1f6afddb3cbdb1b8f806fbf3e3cb5c11b2c060e1b3729aa",
+    "HARNESS_SHA256": "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8",
     "ID": "trinet/uart_loss_diag_ax7203",
     "JOBS_PER_ARM": 2016000,
     "JOBS_PER_PASS": 403200,
