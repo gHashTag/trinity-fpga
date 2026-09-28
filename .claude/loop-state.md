@@ -127,6 +127,31 @@ live; the live run's log path will be recorded in the table above at launch.
   flows, and a mini end-to-end pass (8 rows × 320: every row dot bit-exact vs
   the int8 oracle, 140 batched frames vs 480 today). Still design only — no
   RTL, no runner, no board.
+- RTL testbench plan written (fire 9): `conformance/TERN_TC_BATCH_RTL_PLAN.md` —
+  the plan a future RTL session executes, read from the real sources
+  (trinet_node_core.v at e45e8269c, tern_tc_batch_model.py,
+  tern_tc_retransmit_rtl_cosim.py, formal/tern_tc_layer_rtl_tb.v,
+  build_trinet_node.py, board.py's cost). Core findings the plan pins: the
+  UART RX and the frame parser change ZERO lines (both ops re-read the
+  existing w_b/x_b capture; SETX's x8 spans the register boundary as
+  {x_b[1:0], w_b[7:2]} — named as the likeliest first bug); three additions
+  only — a 162x64 inferred x RAM (one SETX frame = one word), the six-dot
+  datapath as a mux + 6-cycle walk reusing the existing dot network, and a
+  SECOND trinet_siphash24 instance at MSG_BYTES=73 (MAC32's 26-B engine
+  untouched; ~46 clocks vs ~22, both noise vs 210 us of line time). The
+  answer builder grows to 24 B behind a resp_len register. The cosim follows
+  the retransmit cosim's four steps (Recorder-wrapped runner pass -> TB ->
+  byte-equal HuntingBatchCell -> negative controls); the TB needs exactly one
+  change — line 113 hard-codes 19 B/frame, generalised to +expect=N with the
+  19xB default byte-identical. Out-of-range addressing decided: truncate-and-
+  alias (receipts never lie about what they MAC; self-harm only) — flagged
+  for the owner. The portability header's "no inferred RAM" line must be
+  rewritten when the RAM lands. fpga-cost questions fixed: RAM infers
+  (RAMB36E1 0 -> >=1), small named LUT/FF delta, DSP stays 0; timing is
+  nextpnr's question, not cost's. Pre-registration skeleton included (three
+  greens before any flash; reflash still needs the owner's «да» + fresh
+  setkey; 235 s stays a model number). Design only — board, pods, RTL
+  untouched.
 - Batch runner written (fire 8): `conformance/tern_tc_batch_runner.py` — whole
   passes pipelined through BatchCell the way tern_tc_retransmit.py drove
   RefCell (one window, one nonce space, retries under fresh nonces, per-row
@@ -160,17 +185,17 @@ live; the live run's log path will be recorded in the table above at launch.
    `tri fpga-specs`), or do pure-design work in the same spirit (no board, no
    pods, no RTL). Do not start A/B/C alone.
 2. Pure-design candidates if another fire lands before the owner wakes (in
-   value order, all no-board / no-pod / no-RTL): (a) an **RTL testbench plan
-   for the batch ops** — the design side of option A is complete (spec +
-   params + BatchCell + runner, fires 6-8); the next pure-design artifact is
-   the plan a future RTL session executes: the trinet_node_core.v changes
-   (SETX/DOT6 decode, the x RAM block, the 6-dot datapath, the 24-B answer
-   builder), what the testbench drives (the runner's frame builders are
-   importable), what `tri fpga-cost` must answer before synthesis, and the
-   pre-registration the board run will cite; (b) refreshing
-   `.claude/loop/research.md` competitor movement is read-only and cheap;
-   (c) L1 batched-answer arithmetic is already pinned in the spec — skip.
-   The batch runner (previous item here) is DONE — do not rewrite it.
+   value order, all no-board / no-pod / no-RTL): (a) **record the
+   `tri fpga-cost` baseline of the CURRENT core** — measurement only (yosys,
+   logs in /tmp, no repo edit): `tri fpga-cost --top trinet_node_core --src
+   fpga/openxc7-synth/trinet_siphash24.v fpga/portable/trinet_node_core.v`,
+   then one DONE line with LUT/FF/C4 per flag set + the RAMB counts read
+   from the /tmp logs. This front-loads half of the RTL plan's cost question
+   and gives the post-edit run its comparison column; (b) beyond that the
+   no-hardware queue for option A is EMPTY by design — spec, params, model,
+   runner, RTL plan all exist (fires 6-9). Do not invent make-work; an
+   audit-only fire is an honest fire. The RTL plan itself is DONE — do not
+   rewrite it.
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
    fire 5 triage); document anything found there in this file instead.
 4. End-of-fire report + three collaboration options; self-critique and anomaly
@@ -251,3 +276,12 @@ live; the live run's log path will be recorded in the table above at launch.
   nicholi.ai $130-board engine; claim-guard rejected my first wording of
   "Multiply-Free" <!-- claim-guard: ignore-line --> as a title-shaped claim — reworded to attribute the
   multiplier-freedom to the network). Board, pods, RTL untouched.
+- fire 9 (2026-09-29): RTL testbench plan shipped
+  (conformance/TERN_TC_BATCH_RTL_PLAN.md), written from the real sources —
+  the parser needs zero changes (SETX/DOT6 re-read w_b/x_b; x8 spans the
+  boundary as {x_b[1:0], w_b[7:2]}), three additions only (162x64 x RAM,
+  muxed six-dot walk, second siphash at 73 B), the cosim pattern reuses the
+  retransmit cosim + formal/tern_tc_layer_rtl_tb.v with one generalisation
+  (+expect=N for mixed 19/24-B answers). READY's queue for option A is now
+  empty except the fpga-cost baseline measurement (next fire's default).
+  Board, pods, RTL untouched.
