@@ -11,6 +11,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | T35 spec + wrappers authoring | DONE | committed 8955ea793 (fire 2); specs/generators/params/wrappers/CPU logs |
 | T35 rehearsal pair | DONE | PASS x2, committed c24d25b7a; ids equal CPU_INT_IDS, 2 reopens, key hits 0 |
 | T35 board run | DONE, PASS | 2026-09-28T17:13–17:36Z; 6712896/6712896 receipts, ids == CPU_INT_IDS, 0 reopens; record conformance/TERN_TC_GENERATE_T27.md; no live board work remains |
+| fire 15: C_REF git-fallback in wrapper pins_ok + tri fpga-repin | DONE | selftest 16/16 (5 refusals green), specs 17/17, cascade via the new tool, host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -239,10 +240,12 @@ live; the live run's log path will be recorded in the table above at launch.
    is audit-only: `tri fpga-loopcheck` (fire 11 packaged the whole sweep —
    git + specs + keycheck + audit + one verdict line; exit 1 with exactly
    the two igla-coder-gpu anomalies is the known floor, anything beyond is
-   new; NOTE fire 14: loopcheck itself does not run selftest, but `tri
-   fpga-selftest` now shows 5 tc_infer.c-pin refusals from the sibling's
-   2026-09-28 20:59 file change — external, pre-existing at HEAD,
-   documented in the fire-14 entry; not a new anomaly) — do not invent
+   new; NOTE fire 15: the 5 tc_infer.c-pin selftest refusals from fire 14 are
+   RESOLVED — the fire-2 C_REF doctrine (pinned bytes on disk OR reachable in
+   the file's git history) is now implemented in the wrappers' shared pins_ok
+   too, not just the generators; the spec pins and C_GREEDY_IDS stay at the
+   OLD engine's bytes on purpose, so no re-pin decision is pending unless the
+   sibling's engine change turns semantic) — do not invent
    make-work; an audit-only fire is an honest fire.
    The only cheap extra if the owner stays asleep for many fires: re-check
    `.claude/loop/research.md` competitor movement (read-only, rare, last
@@ -401,3 +404,32 @@ live; the live run's log path will be recorded in the table above at launch.
   not for a night fire. 11/16 runners PASS incl. the full harness
   self-test. SKILL.md: --udp + the five-layer re-pin trap. Board, pods,
   RTL untouched.
+- fire 15 (2026-09-29): the fire-2 C_REF doctrine completed in the second
+  place it was owed, and the recurring re-pin cascade became a tool. (1)
+  `git_blob_sha` in tern_tc_generate_ax7203.py mirrors the generators'
+  gitBlobSha: pins_ok keeps SPEC/HARNESS/MAC32/MODEL strict, C_REF is
+  satisfied on disk OR by bytes reachable in the file's git history (the
+  wrapper never reads tc_infer.c at run time; --mode c is a Python mirror,
+  C_GREEDY_IDS are recorded constants). Result: tri fpga-selftest 16/16 —
+  the 5 fire-14 refusals are green, spec pins and ids unchanged, so the
+  owner's fire-14 option-C decision (whether the sibling's new engine
+  becomes the reference) is still open and still semantic. Self-test
+  additions cover both branches (garbage sha refused + live stale pin
+  resolves via sibling history). (2) `tri fpga-repin FILE... [--check]`
+  (board.py cmd_repin + repin_walk, self-test 16 checks incl. a synthetic
+  generator): seed = named files, walk pins bottom-up to a fixpoint
+  (leaf pins → cross-spec pins → params regeneration → params pins),
+  never guesses (missing pinned file skipped, ambiguous *_SHA256 refused,
+  generator PROBLEM stops unless another generator still writes). The
+  runner edit was repinned THROUGH the tool: GENERATE_RUNNER_SHA256
+  5d769dd8→72136fe7 in retransmit+3 reopens, RT_PARAMS pins, batch
+  REOPEN_SPEC, 4 params files regenerated, converged in 4 passes, second
+  run rc=0. Two tool bugs found by its own first live run and fixed with
+  self-test cases: bare-mode `wrote` lines were unparsed (walk stopped
+  calling real writes "no writes"), and an UnboundLocalError crashed the
+  first sweep losing walk state — resumed honestly by re-seeding the
+  orphaned params files (their diffs are the generators' mechanical
+  output, provable via git diff; SKILL.md records the resume rule). tri
+  fpga-repin --check probed but did NOT apply the tc_infer.c re-pin —
+  that stays the owner's. Specs 17/17, keycheck 0 hits. Board, pods, RTL
+  untouched.

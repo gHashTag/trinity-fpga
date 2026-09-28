@@ -2,7 +2,7 @@
 """32-token reopen generation run parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_reopen_long_ax7203.t27"
-SPEC_SHA256 = "efed85507bafece8ab0d113d39cff8d1b7827263ad81b7450bcf2f80e4a182d5"
+SPEC_SHA256 = "53055d4eb17a0a974bc1e29c5f36f60472f517a8af40bfa95de443891b16893b"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -13,7 +13,7 @@ SPEC = {
     "GENERATE_PARAMS_FILE": "conformance/tern_tc_generate_long_params.py",
     "GENERATE_PARAMS_SHA256": "e8787c35078c5251b7ba9dcb21454c954faa986d998040919adc791972d7d5f6",
     "GENERATE_RUNNER_FILE": "conformance/tern_tc_generate_ax7203.py",
-    "GENERATE_RUNNER_SHA256": "5d769dd87b761a996d65c3d400f272186a413ecb8cb60159c2992145882bb3c0",
+    "GENERATE_RUNNER_SHA256": "72136fe7c898fa53e0c2042b0203530bcb91ecda2d044f8958b28434420b37a5",
     "GENERATE_SPEC_FILE": "specs/trinet/tern_tc_generate_long_ax7203.t27",
     "GENERATE_SPEC_SHA256": "6a1cc0b068586752827543203dabd1198de4d82a4cb663c64a7192f1e635a5c1",
     "HARNESS_FILE": "conformance/tern_tc_layer_ax7203.py",
@@ -51,11 +51,11 @@ SPEC = {
     "RETRY_BASE": 536870912,
     "RT_MAX_ATTEMPTS": 3,
     "RT_PARAMS_FILE": "conformance/tern_tc_retransmit_params.py",
-    "RT_PARAMS_SHA256": "2b461a64a5c8a3034e96f0e168f401603002e723ccba0f4856b5c91a374e3be3",
+    "RT_PARAMS_SHA256": "34d6697dc03c49e52e3def8e179045c1d99bc34daf63e485d16293390639cd38",
     "RT_RUNNER_FILE": "conformance/tern_tc_generate_rt_ax7203.py",
     "RT_RUNNER_SHA256": "b42ab095684d7019a51b4e5ef0fc92ee4d543a4c0a7f120d8be8736e6d833492",
     "RT_SPEC_FILE": "specs/trinet/tern_tc_retransmit_ax7203.t27",
-    "RT_SPEC_SHA256": "0330bc8e8c4f12d0df17e37271eb06552231536f9759cfe504dbe380fe7d9854",
+    "RT_SPEC_SHA256": "426c86558bc3b9c1a6319592e04184e174b05c6dbea6f67a3c2aa96a4d750192",
     "RUNNER": "conformance/tern_tc_generate_reopen_long_ax7203.py",
     "RX_HOLE_AT": [19008, 137468535, 57000000],
     "RX_HOLE_LEN": [16, 56, 19],

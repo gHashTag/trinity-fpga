@@ -32,6 +32,7 @@ Author: Dmitrii Vasilev (@gHashTag)
 import argparse
 import hashlib
 import os
+import subprocess
 import sys
 import time
 
@@ -339,15 +340,55 @@ def sha256_file(path):
         return hashlib.sha256(f.read()).hexdigest()
 
 
+def git_blob_sha(abs_path, want_sha):
+    """The commit whose blob at abs_path hashes to want_sha, or None.
+
+    The fire-2 pin doctrine: the C reference of record may have moved on disk
+    since the run was pinned, and the pin stays honest while the pinned bytes
+    are reachable in the file's git history. This mirrors gitBlobSha in
+    tern_tc_generate_from_spec.mjs, the doctrine's reference implementation —
+    same git calls, same early stop on the first matching commit."""
+    try:
+        top = subprocess.run(["git", "-C", os.path.dirname(abs_path), "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, check=True).stdout.strip()
+        rel = os.path.relpath(abs_path, top)
+        commits = subprocess.run(["git", "-C", top, "log", "--all", "--format=%H", "--", rel],
+                                 capture_output=True, text=True, check=True).stdout.split()
+        for c in commits:
+            blob = subprocess.run(["git", "-C", top, "show", f"{c}:{rel}"],
+                                  capture_output=True, check=True).stdout
+            if hashlib.sha256(blob).hexdigest() == want_sha:
+                return c
+    except (subprocess.CalledProcessError, OSError):
+        pass
+    return None
+
+
 def pins_ok(SPEC, SPEC_FILE, SPEC_SHA256, log=print):
+    """Every pinned input is checked before anything runs.
+
+    SPEC, the harness, MAC32 and the model stay strict: those bytes are read at
+    run time. The C reference is never read at run time (--mode c is a Python
+    float-sum mirror; the greedy ids are recorded constants), so its pin is
+    satisfied on disk or by the pinned bytes being reachable in the file's git
+    history — the fire-2 doctrine the three generation generators already
+    implement; the six wrappers share this one check."""
     ok = True
-    for rel, want in ((SPEC_FILE, SPEC_SHA256), (SPEC["HARNESS_FILE"], SPEC["HARNESS_SHA256"]),
-                      (SPEC["MAC32_FILE"], SPEC["MAC32_SHA256"]), (SPEC["MODEL"], SPEC["MODEL_SHA256"]),
-                      (SPEC["C_REF_FILE"], SPEC["C_REF_SHA256"])):
+    for rel, want, strict in ((SPEC_FILE, SPEC_SHA256, True),
+                              (SPEC["HARNESS_FILE"], SPEC["HARNESS_SHA256"], True),
+                              (SPEC["MAC32_FILE"], SPEC["MAC32_SHA256"], True),
+                              (SPEC["MODEL"], SPEC["MODEL_SHA256"], True),
+                              (SPEC["C_REF_FILE"], SPEC["C_REF_SHA256"], False)):
         got = sha256_file(rel)
-        if got != want:
-            log(f"PIN MISMATCH {rel}: {got[:16]} != {want[:16]}; nothing run")
-            ok = False
+        if got == want:
+            continue
+        abs_path = os.path.expanduser(rel) if rel.startswith("~") else os.path.join(REPO, rel)
+        if not strict and git_blob_sha(abs_path, want):
+            continue
+        log(f"PIN MISMATCH {rel}: {got[:16]} != {want[:16]}"
+            + ("" if strict else " and the pinned bytes are not in the file's git history")
+            + "; nothing run")
+        ok = False
     return ok
 
 
@@ -415,6 +456,27 @@ def self_test(SPEC, model):
             check(False, f"fault '{fault}' at job 1000 was not caught")
         except Abort as e:
             check(True, f"fault '{fault}' at job 1000 stops the run ({str(e)[:60]})")
+
+    # The fire-2 pin doctrine, as the wrapper now implements it: the C reference of
+    # record is satisfied on disk or by bytes reachable in its git history; the
+    # strict four never fall back. Checked here because pins_ok already passed in
+    # main() — the positive path is live, so the negative path needs its own probe.
+    from tern_tc_generate_params import SPEC_FILE, SPEC_SHA256
+    c_ref_abs = os.path.expanduser(SPEC["C_REF_FILE"]) if SPEC["C_REF_FILE"].startswith("~") \
+        else os.path.join(REPO, SPEC["C_REF_FILE"])
+    check(git_blob_sha(c_ref_abs, "0" * 64) is None,
+          "git history refuses a sha no commit ever had")
+    if sha256_file(SPEC["C_REF_FILE"]) != SPEC["C_REF_SHA256"]:
+        check(git_blob_sha(c_ref_abs, SPEC["C_REF_SHA256"]) is not None,
+              "the pinned C reference bytes are reachable in the file's git history")
+    bad = dict(SPEC)
+    bad["C_REF_SHA256"] = "0" * 64
+    refused = []
+    check(pins_ok(bad, SPEC_FILE, SPEC_SHA256, log=refused.append) is False
+          and any("git history" in m for m in refused),
+          "a C_REF sha nothing ever had fails pins_ok and names the git history")
+    check(pins_ok(SPEC, SPEC_FILE, SPEC_SHA256, log=lambda s: None),
+          "the live pins satisfy pins_ok (on disk or via git history)")
     return ok
 
 

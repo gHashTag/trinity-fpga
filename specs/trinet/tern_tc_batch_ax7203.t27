@@ -58,7 +58,7 @@ pub const PLAN_DOC : str = "conformance/TERN_TC_BATCH_PLAN.md";
 ; --- Files of record: read, never edited ------------------------------------------------------
 pub const PLAN_SHA256 : str = "789527101ddb5aeb855996c64b09ee51a5e314791531faea87e2219b58696804";
 pub const REOPEN_SPEC_FILE : str = "specs/trinet/tern_tc_reopen_t27_ax7203.t27";
-pub const REOPEN_SPEC_SHA256 : str = "dac385b2590c5ea28052d8b3cd6b3e3cb6ecdc60ba5a6f3037df7ff327edb6da";
+pub const REOPEN_SPEC_SHA256 : str = "e446243af91f7f9da48be6ce9c6b52cad6e9cf0659b6d8f8d3e8575752a5133b";
 pub const HARNESS_FILE : str = "conformance/tern_tc_layer_ax7203.py";
 pub const HARNESS_SHA256 : str = "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8";
 pub const MAC32_FILE : str = "conformance/trinet_mac32_conformance_ax7203.py";

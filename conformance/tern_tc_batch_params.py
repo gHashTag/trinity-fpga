@@ -2,7 +2,7 @@
 """Batched wire protocol design parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_batch_ax7203.t27"
-SPEC_SHA256 = "e48bfc4e23b2dc4c435a554fbb384f2e280f0d80ad6e94fd2463d23c4961a40d"
+SPEC_SHA256 = "378251a2fb6bc7441f958865226a5e08b114170a218b1bb9ccf8c50d5f5feb37"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -54,7 +54,7 @@ SPEC = {
     "PREIMAGE_SETX": 20,
     "REASK_JOBS_MAX": 312,
     "REOPEN_SPEC_FILE": "specs/trinet/tern_tc_reopen_t27_ax7203.t27",
-    "REOPEN_SPEC_SHA256": "dac385b2590c5ea28052d8b3cd6b3e3cb6ecdc60ba5a6f3037df7ff327edb6da",
+    "REOPEN_SPEC_SHA256": "e446243af91f7f9da48be6ce9c6b52cad6e9cf0659b6d8f8d3e8575752a5133b",
     "REQ_BODY": 22,
     "REQ_LEN": 24,
     "RESP_DOT6_LEN": 24,
