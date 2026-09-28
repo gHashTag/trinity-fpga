@@ -1,0 +1,54 @@
+# start 2026-09-28T17:13:09Z
+# cmd watch-clients gen_tokens_7_t27_reopen every 30 s, max 5400 s
+# watching gen_tokens_7_t27_reopen.log; samples start when it exists and stop at its '# end'
+2026-09-28T17:13:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:14:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:14:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:15:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:15:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:16:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:16:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:17:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:17:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:18:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:18:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:19:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:19:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:20:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:20:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:21:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:21:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:22:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:22:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:23:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:23:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:24:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:24:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:25:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:25:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:26:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:26:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:27:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:27:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:28:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:28:39Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:29:09Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:29:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:30:10Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:30:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:31:10Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:31:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:32:10Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:32:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:33:10Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:33:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:34:10Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:34:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:35:10Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:35:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:36:10Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:36:40Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+2026-09-28T17:37:11Z 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+# samples 48, first 11, last 11, min 11, max 11; run ended
+# exit=0
+# end 2026-09-28T17:37:11Z
