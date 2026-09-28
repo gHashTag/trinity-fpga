@@ -1090,3 +1090,21 @@ Either stack's UDP layer can sit on a fabric-capture RGMII receiver. Writing
 a minimal ARP/UDP responder is also small, since there are only two frame
 types. Which way to go is the owner's choice. Downloading either stack waits
 for the owner's OK.
+
+### E4 decision table (fire 23 — assembling already-checked facts, one pick)
+
+| | **1. Minimal responder** (extend E3's RTL) | **2. verilog-ethernet** | **3. LiteEth/LiteX** |
+|---|---|---|---|
+| what E4 writes | ARP + UDP receipt path (~two frame types) on the fabric-capture RGMII RX E3 already has | UDP/IP glue over the vendored stack; swap its PHY capture for E3's (its `rtl/iddr.v` hits the same open-flow IDDR issue) | LiteX integration; swap `s7rgmii.py`'s IDDR capture for E3's; board file exists for THIS board |
+| what gets vendored | nothing | a stack (MIT, last push 2025-02-27, not archived) | a Python ecosystem whose default toolchain here is Vivado |
+| license surface | none new | MIT, permissive, unfetched | BSD, permissive, but pulls LiteX build machinery |
+| risk under openXC7 | lowest — E3's capture is the part both others must borrow anyway | its PHY is IDDR-based; the vendored value reduces to the upper layers | same IDDR issue plus toolchain mismatch weight |
+| what the wedge needs | UDP carrying the receipt stream — exactly the two frame types | more than needed | more than needed |
+
+**The loop's recommendation: 1.** Both vendored stacks must have their PHY
+capture replaced by E3's fabric capture anyway (the IDDR issue is theirs,
+not ours), so vendoring buys only upper layers that a two-frame-type
+responder does not need; option 1 adds zero license surface and reuses the
+E3 RTL that is already modeled PASS in nextpnr (10.9 ns RX margin). Options
+2/3 become attractive the day the node needs a real network stack (TCP,
+multiple ports) — the receipt path does not.

@@ -28,6 +28,7 @@ next.
 | fire 20: pin-target existence — do the /tmp-pinned E3 inputs survive, and does specs fail loudly if a pinned file is missing? | DONE | empirical map: specs --check = output-drift + REPO pins (loud, both modes); /tmp pins deliberately the runner's (generator comment); tmpcheck GONE loud, --restore heals (live-proven, sha matched); audit prints info line for gone-but-kept — my mid-fire claim that audit missed it was a too-narrow grep, corrected by full-output retest; NEW standing rule: a fire that sees the audit gone-line runs tmpcheck --restore; gates green to floor 2; no tool change needed — the gap was protocol; no board/pods/RTL |
 | fire 21: tri fpga-fire start — atomic lock row + fire-log stub, mechanical enforcement of the fire-18 protocol | DONE | self-test 6/6 hermetic (never the live file — this tool writes), live refusal verified (rc=1 while fire 21 IN-PROGRESS, file untouched); tools sweep 6→7 all green; shared lock_rows refactor: linter and fire-start parse rows through ONE helper; first live start = fire 22; host-side only; no board/pods/RTL |
 | fire 22: audit sweep + first live fire-start (happy path of the fire-21 tool) | DONE | happy path verified live: row placed after the last LOCKS row, stub at the log tail, ONE write, lint sound; cron-death resume paragraph added to the header (/loop 15m + same mandate + this file = restart without breaking past work); gates green to floor 2 (specs 17/17, keycheck 0, tools 7/7, loopstate sound, no gone-inputs line); host-side only; no board/pods/RTL |
+| fire 23: E4 stack decision table for the owner's pick + LOCKS compaction rule | DONE | NODE_ETHERNET_PLAN.md gained the E4 decision table (assembled from already-checked facts only; recommendation = minimal responder on E3's fabric capture — both vendored stacks need their IDDR PHY swapped for E3's anyway); Standing rules gained the LOCKS-bounded rule (drop old DONE rows past ~15, never log entries); the transient third audit anomaly was this fire's own uncommitted plan edit — cleared by the commit; gates green to floor 2 after commit; host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -280,6 +281,10 @@ live; the live run's log path will be recorded in the table above at launch.
 - If audit prints "N pinned /tmp inputs gone, kept copies exist", the SAME
   fire runs `tri fpga-tmpcheck --restore` (idempotent; restores from kept
   blobs, never over a CHANGED file). A reboot must not outlive the next fire.
+- LOCKS stays bounded: when it holds more than ~15 DONE rows, a fire may DROP
+  the oldest DONE rows (never an IN-PROGRESS row, never a fire-log entry —
+  dropping rows is always lint-safe; the log + DONE section + git carry the
+  history).
 - English for all repo code/docs/commits; Russian only in chat.
 - Self-check each fire: `git status` should contain only this cycle's files;
   `tri fpga-specs` after any spec edit; if something is broken, fix the root
@@ -615,3 +620,24 @@ live; the live run's log path will be recorded in the table above at launch.
   17/17, keycheck 0, tools 7/7, loopstate sound, audit rc=2 = exactly the two
   igla anomalies (LEDGER.md; ahead 20), no gone-inputs line (fire 20's rule
   had nothing to do). Board, pods, RTL untouched.
+
+- fire 23 (2026-09-29): started — E4 stack decision table for the owner's pick + LOCKS compaction rule. Stub written with the lock row by tri fpga-fire start; expand to the full entry at fire end.
+  Full entry — two items. (1) The owner's E4 pick is now a 10-second
+  decision instead of a research task: NODE_ETHERNET_PLAN.md's Prior-art
+  section gained a decision table assembling ONLY facts the plan had already
+  verified (both vendored stacks are IDDR-based and so must have their PHY
+  capture replaced by E3's fabric capture regardless; verilog-ethernet is
+  MIT, last push 2025-02-27, not archived; LiteEth pulls LiteX whose
+  default toolchain here is Vivado) plus the loop's recommendation: minimal
+  responder — zero license surface, reuses E3 RTL already modeled PASS
+  (10.9 ns RX margin), sized exactly to the two frame types the receipt
+  path needs; vendored stacks pay off only if the node ever needs a real
+  network stack. No new facts were asserted — the table cites what the plan
+  checked itself. (2) LOCKS-bounded standing rule: past ~15 DONE rows a fire
+  may drop the oldest (never an IN-PROGRESS row, never a fire-log entry;
+  dropping rows is lint-safe by construction — the linter only demands
+  rows→log, not log→rows). Mid-fire audit showed a THIRD anomaly — this
+  fire's own uncommitted plan edit; exactly the designed behavior (record
+  files belong in commits), cleared by this commit. Sibling ahead 20→21.
+  Gates: specs 17/17, keycheck 0, tools 7/7, loopstate sound, floor 2 after
+  commit. Board, pods, RTL untouched.
