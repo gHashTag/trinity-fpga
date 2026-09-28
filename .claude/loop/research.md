@@ -32,11 +32,12 @@ publishes "every FLOP is accounted for and the ledger is checkable".
 
 ## Weak points of the task (own scan, ranked by cost)
 
-1. **Receipt bandwidth dominates useful work.** 19 B per job, of which the
-   useful sum is a few bytes; the tag+nonce+counters are the point (they are
-   the verification), but nothing batches them. A receipt-batching format
-   (amortize nonce/counters across a burst) could cut wire cost several-fold
-   without weakening the claim — the verifier checks the same sums.
+1. **Wire bandwidth dominates useful work — and it is the requests, not the
+   receipts.** Measured from the T35 log (2026-09-28): the 24 B request stream
+   alone accounts for 99.7 % of the 1414.5 s wall; answers (19 B/job) account
+   for 79 %. Batching receipts alone shortens nothing; the win is deduplicating
+   the request stream (each w chunk is sent 6×, once per digit plane).
+   Full arithmetic and the option ladder: `conformance/TERN_TC_BATCH_PLAN.md`.
 2. **UART when the same chip family already proved GbE.** The openXC7
    gigabit-Ethernet work (merged PRs #109–#115) exists in this ecosystem; the
    tern_tc chain still runs over 1.14 Mbaud serial. Moving the receipt stream
@@ -53,8 +54,13 @@ publishes "every FLOP is accounted for and the ledger is checkable".
 
 ## Options for the next loop (derived from the above)
 
-A. **Receipt batching spec** — design + pre-register a batched receipt frame,
-   measure jobs/s gain on the same bitstream (protocol change, RTL unchanged).
+A. **Batched wire protocol** — designed (fire 4) in
+   `conformance/TERN_TC_BATCH_PLAN.md`: L1 batch receipts (answers, no wall
+   gain alone) + L2 x-pinned dot runs (requests, 6× fewer frames, model says
+   235 s vs 1414.5 s). **Both are RTL changes** — the node parser is stateless
+   per frame, so the earlier "RTL unchanged" guess here was wrong and is
+   retracted. Needs the owner's pick, then spec → BatchCell → rehearsal → RTL →
+   reflash («да»).
 B. **Ethernet receipt path** — port the harness transport from serial to the
    proven GbE node; the receipt/verify layer stays byte-identical.
 C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),

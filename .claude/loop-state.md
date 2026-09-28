@@ -61,15 +61,28 @@ live; the live run's log path will be recorded in the table above at launch.
   back to GEN_SPEC only for logs without the line. decode self-test 16/16
   (decode_spec resolution itself now covered: reopen-log chain, own-spec,
   drift-named, missing-spec fallback, no-spec-line fallback).
+- Batched wire protocol designed (fire 4): `conformance/TERN_TC_BATCH_PLAN.md`
+  — measured wire budget from the T35 log (requests 161.1 MB = 99.7 % of the
+  1414.5 s wall; answers 127.5 MB = 79 %; 4749 of 4762 jobs/s ceiling), exact
+  frame tables (24 B request / 19 B answer / 26-B tag preimage), the 6×
+  per-pass request redundancy (w chunk sent once per digit plane), and the
+  option ladder: L0 host-only = nothing (proved, the parser is stateless per
+  frame), L1 batch receipts (answers only, no wall gain alone), L2 x-pinned
+  dot runs (6× fewer frames, model 235 s vs 1414.5 s), L3 nonce elision
+  (rejected). All of L1/L2 are RTL changes — research.md's earlier "RTL
+  unchanged" guess retracted in place. Design only: no RTL edit, no bitstream,
+  no board work; projections are model arithmetic, labelled as such.
 
 ## READY (next work, in order)
 
-1. Commit + push fire 3's output (record doc, two board logs via `git add -f`,
-   skills, loop-state, loop research) — branch `claude/peaceful-noether-dperdx`,
-   English commits; 8955ea793 and c24d25b7a are also still unpushed.
-2. Next-loop options live in `.claude/loop/research.md` (receipt batching /
-   Ethernet path / corpus round 2); pick one only with the owner awake, or let
-   the next fire start with the cheap one (receipt-batching spec draft).
+1. Commit + push fire 4's output (batch plan, research fix, loop-state) —
+   branch `claude/peaceful-noether-dperdx`, English commits.
+2. Fire 4 finished the cheap item (batch plan). The remaining options all need
+   the owner awake: A (implement the batch protocol — RTL change + reflash,
+   owner's «да»), B (Ethernet receipt path), C (corpus round 2 — spends pod
+   money). Until the owner picks, a fire can only: keep the anomaly scan
+   running (`tri fpga-audit`, keycheck, specs 16/16), or do pure-design work
+   in the same spirit (no board, no pods, no RTL). Do not start A/B/C alone.
 3. End-of-fire report + three collaboration options; self-critique and anomaly
    scan; append fire log line.
 
@@ -103,3 +116,11 @@ live; the live run's log path will be recorded in the table above at launch.
   written to .claude/loop/research.md; fpga-runlog added to tri (self-test
   green); decode GEN_SPEC hardcoding fixed (self-test 11/11); skills updated
   (gpu-finetune new, t27-spec pin doctrine, ax7203-board-loop runlog section).
+- fire 4 (2026-09-29): batch wire plan written
+  (conformance/TERN_TC_BATCH_PLAN.md) from the sources, not assumptions —
+  frame tables from tern_tc_layer_ax7203.py / trinet_mac32_conformance, window
+  mechanics from tern_tc_retransmit.py, stateless parser confirmed in
+  trinet_node_core.v; request-bound fact measured (99.7 %); research.md option
+  A corrected (RTL change, not "RTL unchanged"); skill got the request-bound
+  line; READY rewritten — A/B/C all need the owner, pure-design or audit-only
+  until then.
