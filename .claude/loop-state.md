@@ -15,6 +15,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | fire 16: repin cycle-CAP self-test + tri fpga-pins (blast-radius query) + competitor re-check | DONE | repin 17/17 (new G), pins self-test 5/5 after a live-caught diamond false-positive fix, live radii verified vs the fire-15 cascade, competitor table refreshed (ternfpga open-sourced; wedge intact), specs 17/17, host-side only; no board/pods/RTL |
 | fire 17: tri fpga-tools (tool self-test sweep) as loopcheck's 4th component | DONE | sweep 6/6 green after catching real decode rot (hardcoded fire-2 sha, stale after the fire-14/15 cascades — decode was right, the test was wrong; fixed hermetically 18/18 + the once-real-stale-sha fixture pinned), loopcheck now 4 components, tools meta 9/9; competitor re-check skipped (fire 16 refreshed it hours ago); specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 | fire 18: tri fpga-loopstate (loop-state.md integrity linter) as loopcheck 5th component | DONE | self-test 9/9 (8/9 on first run — its own live check caught the loop's mid-fire log window; protocol fixed: stub+row together at start); loopcheck now 5 components, live sound; specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
+| fire 19: audit sweep + sibling engine-semantics check (did igla-coder-gpu's engine change turn semantic?) | DONE | answer: NO — tc_infer.c has 0 commits and 0 diff since 52be443; sibling engine work is tc_fast (separate bench harness) + research scripts; C_REF pin doctrine and C_GREEDY_IDS unaffected, no re-pin decision pends; loopcheck floor = exactly the 2 igla anomalies (LEDGER.md, ahead 19); specs 17/17, keycheck 0, tools 6/6, loopstate sound; read-only on sibling; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -512,3 +513,24 @@ live; the live run's log path will be recorded in the table above at launch.
   SKILL.md notes both the command and the protocol rule. Gates: specs 17/17,
   keycheck 0 hits, tools 6/6, loopstate 9/9 + live sound, loopcheck floor =
   the two known igla anomalies. Board, pods, RTL untouched.
+- fire 19 (2026-09-29): an honest audit-only fire, plus the one open question
+  READY named, closed with a definitive read-only answer. The question: fire
+  15 left "no re-pin decision is pending unless the sibling's engine change
+  turns semantic" — fire 19 checked. `git log 52be443..HEAD -- c_infer/tc_infer.c`
+  is EMPTY and the diff is empty: the reference engine is byte-identical to
+  the state the C_REF doctrine already covers (on-disk = 52be443's bytes,
+  sha256 cfd640a6…; the pinned OLD-engine bytes stay reachable at 52be443^).
+  The sibling's 8 new commits are tc_fast (a separate C bench harness:
+  --prompt-ids/--samples, pool spin budget revert) and research scripts
+  (t27_bench with per-worker spec-tree copies, t27_repair_ids /
+  resample-with-feedback — both self-flagged negative results in their
+  commit messages). None touches the reference inference path, so
+  C_GREEDY_IDS semantics hold and no re-pin decision pends. Gates: loopcheck
+  five components green to the known floor — specs 17/17, keycheck 0 hits,
+  tools 6/6, loopstate sound (live file), audit rc=2 = exactly the two igla
+  anomalies (LEDGER.md uncommitted; ahead 19, behind 0 — sibling still
+  working; 3 pre-wrapper info lines are informational, not anomalies). No
+  new tool this fire on purpose: pins/tools/loopstate closed the genuine
+  host-side tooling queue over fires 16–18; a sixth component now would be
+  make-work, which READY forbids. Competitor re-check skipped (fire 16
+  refreshed it, rule says rare). Board, pods, RTL untouched.
