@@ -4,6 +4,15 @@ This file coordinates the 15-minute cron loop (job 25699f12). Every fire MUST
 read this first, follow the LOCKS, do the next READY item, update this file,
 and never restart anything marked IN-PROGRESS or DONE.
 
+If the loop is DEAD (no fire in ~an hour, or this file's newest fire-log
+entry is old): the session that held job 25699f12 is gone — the job was
+session-only. A new session restarts it with `/loop 15m` and the SAME
+mandate text (in the old session's first message), then continues from this
+file: LOCKS first, `tri fpga-fire start` for the next fire, Standing rules
+below. Past work cannot be broken by the restart — it is all in LOCKS/DONE
+rows and committed history; the only thing a new job id changes is who fires
+next.
+
 ## LOCKS (do not touch while IN-PROGRESS)
 
 | phase | status | notes |
@@ -18,6 +27,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | fire 19: audit sweep + sibling engine-semantics check (did igla-coder-gpu's engine change turn semantic?) | DONE | answer: NO — tc_infer.c has 0 commits and 0 diff since 52be443; sibling engine work is tc_fast (separate bench harness) + research scripts; C_REF pin doctrine and C_GREEDY_IDS unaffected, no re-pin decision pends; loopcheck floor = exactly the 2 igla anomalies (LEDGER.md, ahead 19); specs 17/17, keycheck 0, tools 6/6, loopstate sound; read-only on sibling; no board/pods/RTL |
 | fire 20: pin-target existence — do the /tmp-pinned E3 inputs survive, and does specs fail loudly if a pinned file is missing? | DONE | empirical map: specs --check = output-drift + REPO pins (loud, both modes); /tmp pins deliberately the runner's (generator comment); tmpcheck GONE loud, --restore heals (live-proven, sha matched); audit prints info line for gone-but-kept — my mid-fire claim that audit missed it was a too-narrow grep, corrected by full-output retest; NEW standing rule: a fire that sees the audit gone-line runs tmpcheck --restore; gates green to floor 2; no tool change needed — the gap was protocol; no board/pods/RTL |
 | fire 21: tri fpga-fire start — atomic lock row + fire-log stub, mechanical enforcement of the fire-18 protocol | DONE | self-test 6/6 hermetic (never the live file — this tool writes), live refusal verified (rc=1 while fire 21 IN-PROGRESS, file untouched); tools sweep 6→7 all green; shared lock_rows refactor: linter and fire-start parse rows through ONE helper; first live start = fire 22; host-side only; no board/pods/RTL |
+| fire 22: audit sweep + first live fire-start (happy path of the fire-21 tool) | DONE | happy path verified live: row placed after the last LOCKS row, stub at the log tail, ONE write, lint sound; cron-death resume paragraph added to the header (/loop 15m + same mandate + this file = restart without breaking past work); gates green to floor 2 (specs 17/17, keycheck 0, tools 7/7, loopstate sound, no gone-inputs line); host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -586,3 +596,22 @@ live; the live run's log path will be recorded in the table above at launch.
   have ValueError'd on the very first real start; now a substring scan.
   Gates: specs 17/17, keycheck 0, tools 7/7, loopstate sound, loopcheck
   floor = the two igla anomalies. Board, pods, RTL untouched.
+
+- fire 22 (2026-09-29): started — audit sweep + first live fire-start (happy path of the fire-21 tool). Stub written with the lock row by tri fpga-fire start; expand to the full entry at fire end.
+  Full entry — the fire-21 tool's first live start, clean: row landed after
+  the last LOCKS row, stub at the fire-log tail, both from ONE write, and the
+  linter said sound before the command even returned. The fire-18 protocol is
+  now mechanical end to end (start by tool, end by hand — the end is prose).
+  Second item, from the mandate's own words ("чтобы новый цикл крона не ломал
+  прошлую работу"): the loop's last single point of failure was the SESSION —
+  job 25699f12 is session-only, and if this session dies the loop dies
+  silently. The header now carries a resume paragraph: a fresh session
+  restarts with /loop 15m and the same mandate, then continues from this file
+  (LOCKS → tri fpga-fire start → Standing rules); all past work lives in
+  LOCKS/DONE rows and committed history, so a new job id changes only who
+  fires next. No tool added this fire — the two candidates (fire end command,
+  cron liveness check) were judged make-work: the end-flip is prose, and the
+  session's own /tasks + this file already answer liveness. Gates: specs
+  17/17, keycheck 0, tools 7/7, loopstate sound, audit rc=2 = exactly the two
+  igla anomalies (LEDGER.md; ahead 20), no gone-inputs line (fire 20's rule
+  had nothing to do). Board, pods, RTL untouched.
