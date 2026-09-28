@@ -13,6 +13,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | T35 board run | DONE, PASS | 2026-09-28T17:13–17:36Z; 6712896/6712896 receipts, ids == CPU_INT_IDS, 0 reopens; record conformance/TERN_TC_GENERATE_T27.md; no live board work remains |
 | fire 15: C_REF git-fallback in wrapper pins_ok + tri fpga-repin | DONE | selftest 16/16 (5 refusals green), specs 17/17, cascade via the new tool, host-side only; no board/pods/RTL |
 | fire 16: repin cycle-CAP self-test + tri fpga-pins (blast-radius query) + competitor re-check | DONE | repin 17/17 (new G), pins self-test 5/5 after a live-caught diamond false-positive fix, live radii verified vs the fire-15 cascade, competitor table refreshed (ternfpga open-sourced; wedge intact), specs 17/17, host-side only; no board/pods/RTL |
+| fire 17: tri fpga-tools (tool self-test sweep) as loopcheck's 4th component | DONE | sweep 6/6 green after catching real decode rot (hardcoded fire-2 sha, stale after the fire-14/15 cascades — decode was right, the test was wrong; fixed hermetically 18/18 + the once-real-stale-sha fixture pinned), loopcheck now 4 components, tools meta 9/9; competitor re-check skipped (fire 16 refreshed it hours ago); specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -460,3 +461,29 @@ live; the live run's log path will be recorded in the table above at launch.
   rather than close the on-silicon-receipts gap. research.md table updated.
   Specs 17/17, keycheck 0 hits, loopcheck floor = exactly the two known igla
   anomalies. Board, pods, RTL untouched.
+- fire 17 (2026-09-29): the tool layer got the sweep its own self-critique
+  asked for, and the sweep's first live run earned its keep immediately.
+  `tri fpga-tools` (board.py TOOL_SELFTESTS registry + run_tool_selftests +
+  cmd_tools + tools_self_test 9/9: dispatch-drift checks, recursion/layering
+  exclusions, aggregation unit test) runs every board-tool's own --self-test
+  — runlog, budget, tmpcheck, decode, repin, pins — in one call with one
+  verdict line; `tri fpga-loopcheck` now runs it as its FOURTH component
+  (specs, keycheck, tools, audit), so every fire re-verifies the whole tool
+  layer after any edit instead of only the tool that changed. First live
+  run: 5/6 — FAIL decode. Root cause NOT decode: its self-test had hardcoded
+  the fire-2 sha `648451ff…` of the reopen spec as a "live" cite; the
+  fire-14/15 repin cascades moved the spec's bytes and the cite went stale,
+  so decode_spec correctly resolved through GENERATE_SPEC_FILE and named the
+  drift, while the test demanded "not drifted". Fix: the hermetic cite now
+  computes the live sha at test time (repin-proof), and the stale fire-2 sha
+  stays as a NEW fixture asserting exactly the live behavior it exposed —
+  a once-real stale sha still resolves and is named "drifted since the run"
+  (decode self-test 17→18). Lesson pinned in SKILL.md: a self-test citing a
+  live file must compute the sha at test time, never hardcode it —
+  hardcoded live state rots at the next cascade. Also fixed the sweep's own
+  first-run interleaving (headers must flush before the subprocess writes).
+  Competitor re-check deliberately skipped: fire 16 refreshed the table
+  hours ago; a same-day re-sweep is noise, and loop-state's own rule says
+  rare. Gates: specs 17/17, keycheck 0 hits, tools 6/6, loopcheck floor =
+  exactly the two known igla anomalies (ahead 18→19, sibling still working).
+  Board, pods, RTL untouched.
