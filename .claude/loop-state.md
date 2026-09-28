@@ -17,6 +17,7 @@ and never restart anything marked IN-PROGRESS or DONE.
 | fire 18: tri fpga-loopstate (loop-state.md integrity linter) as loopcheck 5th component | DONE | self-test 9/9 (8/9 on first run — its own live check caught the loop's mid-fire log window; protocol fixed: stub+row together at start); loopcheck now 5 components, live sound; specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 | fire 19: audit sweep + sibling engine-semantics check (did igla-coder-gpu's engine change turn semantic?) | DONE | answer: NO — tc_infer.c has 0 commits and 0 diff since 52be443; sibling engine work is tc_fast (separate bench harness) + research scripts; C_REF pin doctrine and C_GREEDY_IDS unaffected, no re-pin decision pends; loopcheck floor = exactly the 2 igla anomalies (LEDGER.md, ahead 19); specs 17/17, keycheck 0, tools 6/6, loopstate sound; read-only on sibling; no board/pods/RTL |
 | fire 20: pin-target existence — do the /tmp-pinned E3 inputs survive, and does specs fail loudly if a pinned file is missing? | DONE | empirical map: specs --check = output-drift + REPO pins (loud, both modes); /tmp pins deliberately the runner's (generator comment); tmpcheck GONE loud, --restore heals (live-proven, sha matched); audit prints info line for gone-but-kept — my mid-fire claim that audit missed it was a too-narrow grep, corrected by full-output retest; NEW standing rule: a fire that sees the audit gone-line runs tmpcheck --restore; gates green to floor 2; no tool change needed — the gap was protocol; no board/pods/RTL |
+| fire 21: tri fpga-fire start — atomic lock row + fire-log stub, mechanical enforcement of the fire-18 protocol | DONE | self-test 6/6 hermetic (never the live file — this tool writes), live refusal verified (rc=1 while fire 21 IN-PROGRESS, file untouched); tools sweep 6→7 all green; shared lock_rows refactor: linter and fire-start parse rows through ONE helper; first live start = fire 22; host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -561,3 +562,27 @@ live; the live run's log path will be recorded in the table above at launch.
   thing; the fix is a rule, not code. Gates after restore: specs 17/17,
   keycheck 0, tools 6/6, loopstate sound, loopcheck floor = the two igla
   anomalies (ahead 19→20, sibling still working). Board, pods, RTL untouched.
+- fire 21 (2026-09-29): started — the last discipline-dependence in the loop's
+  coordination is the fire-START protocol itself (row + stub written together,
+  by hand every fire); building `tri fpga-fire start` to make it atomic and
+  mechanical: build the new text in memory, lint it, only then write. Stub
+  written with the lock row (by hand — the tool being built is this step).
+  Full entry — `tri fpga-fire start "<desc>"` shipped. The row+stub edit that
+  fires 18–21 did by hand is now ONE command: next fire number from the log's
+  max, row after the last LOCKS row, stub at the log's end, the new text
+  LINTED before it replaces the file (a bug can refuse, never corrupt).
+  Refusals: a fire already IN-PROGRESS, a base file that does not lint, an
+  empty LOCKS table. Refactor alongside: the linter's row parsing moved into
+  a shared lock_rows() so linter and fire-start can never disagree about what
+  a row is (loopstate self-test 9/9 still, including the live check). Fire's
+  own self-test is 6/6, hermetic in a temp dir on purpose — this tool WRITES,
+  so its self-test must never touch the live file (the tmpcheck/fire-17
+  hermeticity lesson, applied at design time this once). Live verification:
+  the refusal path ran against fire 21's own lock (rc=1, file byte-identical,
+  loopstate sound); the happy path's first live run is fire 22. TOOL_SELFTESTS
+  6→7, `tri fpga-tools` 7/7, tri wrapper dispatch + help updated. Self-caught
+  before first run: lines.index("**UART lock:**") required exact line
+  equality while the live file has the marker starting a longer line — would
+  have ValueError'd on the very first real start; now a substring scan.
+  Gates: specs 17/17, keycheck 0, tools 7/7, loopstate sound, loopcheck
+  floor = the two igla anomalies. Board, pods, RTL untouched.
