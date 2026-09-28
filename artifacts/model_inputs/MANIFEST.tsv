@@ -1,0 +1,10 @@
+# Files that .t27 specs pin by sha256 under /tmp, kept as blobs/<file sha256> (gitignored).
+# Written by tri fpga-tmpcheck --archive, not by hand. pinned_by is spec:CONST; +payload
+# means the pin is the .bit's payload from the sync word, not the whole file.
+# file_sha256	bytes	path	pinned_by
+b429acfb8b371e32d415683de10f6f9896ebce905864072defc0042bb1d7cf85	3574156	/tmp/e3txhold/e3z.sdf	e3_rx_capture_model_ax7203:SDF_SHA256
+95809a97d96c563ebb02c954d24d1848d1e5ef3a85c7af1668a666dffc5fb265	1931556	/tmp/e3txhold/node.fasm	e3_rx_capture_model_ax7203:FASM_SHA256,e3_tx_hold_model_ax7203:FASM_SHA256
+125e1ba6dc210edfcc69c27535af1b8a5ad1a34f5dd40ed10bba3bd2741864a7	10892081	/tmp/e3txhold/node_routed.json	e3_rx_capture_model_ax7203:ROUTED_SHA256
+e75a6ff75d49d82e8e51af089fe1a49e4da230eb0b167a66b185910b1f555695	9730782	/tmp/trinet-node-build/e3z/eth_arp_icmp_ax7203.bit	e3_tx_hold_model_ax7203:PAYLOAD_SHA256+payload
+95809a97d96c563ebb02c954d24d1848d1e5ef3a85c7af1668a666dffc5fb265	1931556	/tmp/trinet-node-build/e3z/node.fasm	e3_tx_hold_model_ax7203:FASM_SHA256
+3b91491691a17672e178eef06291456039e9103a2dfe1a2564cf305c89bd1f32	13063031	/tmp/trinet-node-build/e3z/node.json	e3_tx_hold_model_ax7203:NODE_JSON_SHA256

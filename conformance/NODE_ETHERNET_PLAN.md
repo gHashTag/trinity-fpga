@@ -733,6 +733,26 @@ RAMB36**, no CARRY4, no DSP.
     4 ns later, which leaves 0.3 ns. At P = 2 ns the margin is below zero. A
     gigabit node on this path would need the PHY's RX delay off, or a
     different clock path.
+
+  **Both models read their inputs from `/tmp`, and this Mac empties `/tmp` at
+  boot.** `/private/tmp` was created 8 minutes after `kern.boottime`,
+  2026-09-14 12:03:20Z against 2026-09-14 11:55:10Z, and nothing in it is
+  older. So until
+  01:29Z on 2026-09-28 the TX and RX results could be re-checked only until the
+  next reboot. Now the six files the two specs pin under `/tmp` are kept by sha
+  in `artifacts/model_inputs/blobs/`. That directory is gitignored, 37 MB, and
+  outside git, so a `git clean -x` still removes it. The tracked record is
+  `artifacts/model_inputs/MANIFEST.tsv`: sha, size, path and the pinning
+  constant. `tri fpga-tmpcheck` compares each pin with `/tmp` and with its kept
+  copy, and `--restore` puts a missing file back. `tri fpga-audit` flags a
+  pinned input that is lost or not kept, and `--heal` keeps or restores it. The
+  specs and runners are unchanged, because they still read the same `/tmp`
+  paths.
+
+  Keeping the bytes is not the same as being able to rebuild them. The TX run
+  rebuilt e3z's FASM byte-equal, but YosysHQ/nextpnr#716 reports one seed
+  giving different results between binaries. That is why the files are kept,
+  not left to a rebuild.
 - **BRAM on this board.** No bitstream from this flow has used a block RAM
   here. `e3z` writes it as two RAMB18 halves at width 4 plus the RAMB36 bit for
   width 9, READ_FIRST, as nextpnr-xilinx's `fasm.cc` does. The mock checks the

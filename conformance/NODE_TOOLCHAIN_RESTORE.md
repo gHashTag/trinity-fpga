@@ -115,7 +115,11 @@ and picked the CI artifact over the local build.
   stored gitignored as `artifacts/bitstreams/trinet_node0_ci30762491794.bit`.
   Its sha256 is `0fafd225e2d18f73f6b605a85d0fb592f5a684dd17a7313aad76249ac89eddb4`.
   That matches the recorded prefix `0fafd225e2`, which pins weak point 5
-  above. The load is logged in `board_runs/node0_ci_flash.log`.
+  above. The load is logged in `board_runs/node0_ci_flash.log`. Since
+  2026-09-28, both the file sha and the payload sha (`ee75d97b…3f39f03`, what
+  `tri fpga-flash --expect` checks) are tracked beside the bitstream, in
+  `artifacts/bitstreams/trinet_node0_ci30762491794.bit.sha256`. Before that,
+  the full payload sha was only in logs.
 - **Control, from `conformance/`.** This is the window-24 command from
   `TERN_TC_LAYER_RECEIPTS.md`, which is the one that passed:
   `tri fpga-run tern_tc_all_w24_reload --limit 1800 -- python3

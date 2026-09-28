@@ -1,0 +1,2 @@
+0fafd225e2d18f73f6b605a85d0fb592f5a684dd17a7313aad76249ac89eddb4  trinet_node0_ci30762491794.bit (file)
+ee75d97bb5438a8fb9d50d57a079b2653dcc02293f4f5058a613bdcbb3f39f03  payload from the sync word; CI run 30762491794 artifact trinet-fleet-node0-UNKEYED (head 1bb1d97e), the node restore bitstream; loaded by board_runs/node0_ci_flash.log, node0_restore_after_e2.log, node0_restore_after_e2z.log
