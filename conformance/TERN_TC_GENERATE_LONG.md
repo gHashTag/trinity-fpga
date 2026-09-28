@@ -139,10 +139,35 @@ None of these used the board or the key file; they use the harness's test key.
 
 ## Rehearsal
 
-Not run at the time this pre-registration was committed. The plan: one pair
-through `tri fpga-rehearse`, which runs the same `--refcell` command twice at
-once and compares the event lines with times masked. The pair and its result
-go here before any board run.
+One pair, through `tri fpga-rehearse`, which runs the same `--refcell` command
+twice at once and compares the event lines with times masked. Neither used the
+board or the key file. Committed before the board run.
+
+**Pair, reopen spec `cc5a949140240993`.**
+`rehearsal_runs/gen_tokens_32_reopen_refcell_{1,2}.log`, 11:13:43Z to
+11:43:42Z on 2026-09-28.
+
+- Both runs: REHEARSAL OK. Token ids equal `CPU_INT_IDS`. 768/768 calls,
+  30,762,752 of 30,762,752 jobs credited, 540,672/540,672 rows bit-exact.
+- Transport: 106 retransmits (ceiling 256), 7 resyncs (ceiling 32), 2 reopens
+  (ceiling 4).
+  - Reopen 1, request-stream stall, call 51: flush 3 came after 0 bytes since
+    flush 2; the link closed the port, waited 2 s, opened it again.
+  - Reopen 2, answer-stream stall, call 145: flush 6 came after the silent
+    flush 5; wait 4 s.
+  - The stalls sit at the same calls as the 8-token rehearsal's, as keeping
+    the offsets implies. The five ordinary losses caused resyncs or
+    retransmits, never a reopen.
+- `events kept : 113 (cap 512); lost 106 + resyncs 7 = 113`.
+- The two runs' event lines were identical: 936 lines once times were masked.
+  Key hits 0 in both logs.
+- Elapsed 1798.0 s and 1794.4 s at a load of about 6.7 on 8 cpus (17138
+  answers/s through the reference cell).
+
+The rehearsal matches the prediction: exactly 2 reopens, one per stall, none
+for the ordinary losses, and after the reopen at answer 5,754,002 the run
+continued to 30,762,752 and stayed bit-exact. Whether a reopen clears a real
+stop on the line is what the board run tests.
 
 ## Board run
 
