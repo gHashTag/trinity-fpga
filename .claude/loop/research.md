@@ -1,11 +1,17 @@
 # Loop research — weak points + competitors (2026-09-29, fire 2; competitor
-# table refreshed fire 8)
+# table refreshed fire 8, wedge re-checked fire 13)
 
 Swept through BrowserOS neo (Google → arXiv/GitHub). What the field looks like
 from the tern_tc/AX7203 vantage, and where this project honestly stands.
 Fire-8 refresh: TeLLMe and the nicholi.ai $130-board engine added after a
 re-sweep; none of the new entrants publishes receipted inference either —
-the wedge below is unchanged.
+the wedge below is unchanged. Fire-13 re-check: the "verifiable inference"
+vocabulary is heating up (zkML guides, on-chain proof-of-inference markets,
+PQ-signed API receipts, pairing-based tensor commitments — two strongest
+added to the table), but every entry is a software layer over GPU/API
+serving; still nobody receipts on the accelerator silicon. Hobby-tier
+BitNet-on-FPGA practice posts (KV260 write-ups) keep appearing at the
+nicholi.ai price tier — floor, not competition.
 
 ## Competitors (all verified live, September 2026)
 
@@ -19,6 +25,8 @@ the wedge below is unchanged.
 | **Bitnet.cpp** (Microsoft) | CPU edge inference for ternary LLMs | the baseline everyone cites |
 | **TeLLMe** (UCI-CORSA, FPGA 2026, ACM 3748173.3779191) | end-to-end ternary LLM prefill + decode on FPGA, course-turned-paper stack (TeLLMe_FPGA_2026 repo) | end-to-end (both phases), not just kernels |
 | nicholi.ai engine (June 2026; article title says "multiply-free" — the ternary network is what needs no multipliers) | ternary engine on a $130 FPGA board, write-up with numbers | floor price point |
+| **TensorCommitments** (arXiv 2602.12630, 2026) | verifiable LLM inference: GPU prover commits to activation tensors as multivariate polynomials, client verifies with pairings | 12 ms verify, 2 B/token, ~1 % prover overhead (LLaMA-2-13B) — software/GPU layer |
+| **Animica AICF 7.1.1 receipts** (2026) | each OpenAI-compatible API response can carry an ML-DSA-65-signed receipt binding model/prompt-hash/output-hash | PQ-signed *who-served-what* attestation — software gateway, not silicon |
 
 ## Where we actually stand (no varnish)
 
@@ -34,7 +42,14 @@ physically reopened serial port and stays bit-exact; everything is
 pre-registered in executable specs before the board is touched. That is a
 verified-computation claim, not an accelerator claim — and it is the wedge.
 TerEffic/Ternarycore/ELiTeFormer publish throughput and energy; none
-publishes "every FLOP is accounted for and the ledger is checkable".
+publishes "every FLOP is accounted for and the ledger is checkable". The
+fire-13 additions sharpen the same line from the other side: zkML and
+PQ-signed receipts verify *software serving* (re-execution proofs, gateway
+attestation); ours verifies the *computation inside the accelerator* — the
+receipt is produced by the silicon, per job, at line speed. The two are
+complements, not rivals, but the vocabulary overlap means our claim should
+always be scoped "on-hardware receipts" so it cannot be read as another zkML
+variant.
 
 ## Weak points of the task (own scan, ranked by cost)
 
@@ -58,16 +73,20 @@ publishes "every FLOP is accounted for and the ledger is checkable".
    the impersonation/foreign-frame paths in real hardware, not just in the
    rehearsal's fault injections.
 
-## Options for the next loop (derived from the above)
+## Options for the next loop (derived from the above; refreshed fire 13)
 
-A. **Batched wire protocol** — designed (fire 4) in
-   `conformance/TERN_TC_BATCH_PLAN.md`: L1 batch receipts (answers, no wall
-   gain alone) + L2 x-pinned dot runs (requests, 6× fewer frames, model says
-   235 s vs 1414.5 s). **Both are RTL changes** — the node parser is stateless
-   per frame, so the earlier "RTL unchanged" guess here was wrong and is
-   retracted. Needs the owner's pick, then spec → BatchCell → rehearsal → RTL →
-   reflash («да»).
+A. **Batched wire protocol (SETX/DOT6)** — design COMPLETE through fires 6–12:
+   executable spec, generated params, BatchCell model, rehearsal runner
+   (26 checks), RTL plan, fpga-cost baseline, and the testbench half —
+   `tri fpga-batch-cosim`, pre-built red against the current core (fails at
+   SETX #1's tag as designed; PASS is the RTL edit's gate). What remains is
+   ONLY: the owner's phantom-frame pick (one of three resolutions in
+   TERN_TC_BATCH_RTL_PLAN.md Risks — recommendation: model adopts aliasing),
+   the core edit per the plan, cosim → PASS, reflash («да»). Model projects
+   235 s vs the T35 run's 1414.5 s.
 B. **Ethernet receipt path** — port the harness transport from serial to the
-   proven GbE node; the receipt/verify layer stays byte-identical.
+   proven GbE node; the receipt/verify layer stays byte-identical. E3 RX
+   capture already modeled PASS in nextpnr (hold 10.9 ns); TX-hold PASS.
 C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),
    fine-tune again on a cheap pod, target bpb < 0.5 and multi-line output.
+   Spends pod money — owner's call.

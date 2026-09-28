@@ -357,3 +357,14 @@ live; the live run's log path will be recorded in the table above at launch.
   pin the three resolutions for the owner's pre-RTL pick. Regressions:
   batch 24/24, rehearsal 26/26, keycheck 0 hits. Board, pods, RTL design
   untouched.
+- fire 13 (2026-09-29): audit-only + the sanctioned research re-check
+  (first since fire 8). Loopcheck floor unchanged (specs 17/17, keycheck 72
+  files 0 hits, exactly the two igla anomalies, ahead stayed 16 — sibling
+  idle this window). research.md: two wedge-adjacent entrants added
+  (TensorCommitments arXiv 2602.12630 — pairing-based verify, 12 ms,
+  software/GPU; Animica AICF 7.1.1 — ML-DSA-65-signed API receipts,
+  software gateway) — the "verifiable inference" vocabulary is heating but
+  every entry is a software layer; still nobody receipts on the silicon,
+  wedge intact, claim now scoped "on-hardware receipts" against zkML
+  collision. Options section refreshed to post-fire-12 reality (A =
+  phantom pick + core edit + reflash only). Board, pods, RTL untouched.
