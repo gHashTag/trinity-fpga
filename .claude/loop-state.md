@@ -247,4 +247,7 @@ live; the live run's log path will be recorded in the table above at launch.
   One real bug found by the first run (issued[] gave a job index where a job
   was expected) plus two draft mistakes caught on review (a leftover buffer
   for bytes the link itself holds, a hand-rolled replay fault the model
-  already ships). Board, pods, RTL untouched.
+  already ships). research.md competitor table refreshed (TeLLMe + the
+  nicholi.ai $130-board engine; claim-guard rejected my first wording of
+  "Multiply-Free" <!-- claim-guard: ignore-line --> as a title-shaped claim — reworded to attribute the
+  multiplier-freedom to the network). Board, pods, RTL untouched.
