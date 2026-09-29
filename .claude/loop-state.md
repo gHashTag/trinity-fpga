@@ -31,6 +31,7 @@ next.
 | fire 23: E4 stack decision table for the owner's pick + LOCKS compaction rule | DONE | NODE_ETHERNET_PLAN.md gained the E4 decision table (assembled from already-checked facts only; recommendation = minimal responder on E3's fabric capture — both vendored stacks need their IDDR PHY swapped for E3's anyway); Standing rules gained the LOCKS-bounded rule (drop old DONE rows past ~15, never log entries); the transient third audit anomaly was this fire's own uncommitted plan edit — cleared by the commit; gates green to floor 2 after commit; host-side only; no board/pods/RTL |
 | fire 24: phantom-frame decision table for option A + corpus round-2 cost memo for option C | DONE | TERN_TC_BATCH_RTL_PLAN.md gained the phantom-frame decision table (three Risks end-states side by side; recommendation = 1, model adopts aliasing — the one edit that makes the model agree with the plan's own RTL-side choice, converts the cosim pre-walk from filter to invariant check, costs no gates); research.md option C gained the round-2 cost memo ($0.58 round 1, $74.68 balance → round 2 costs dollars not tens; binding constraint is corpus quality for multi-line output, not money); gates at floor 2 (audit re-checked with FULL output, not a filtered grep — the fire-20 lesson applied); host-side only; no board/pods/RTL |
 | fire 25: fire-log rotation: entries of de-indexed fires archive to .claude/loop/firelog-archive.md, linter learns the combined index, tri fpga-firelog | DONE | the file's unbounded growth closed: entries whose fires lost LOCKS rows move verbatim to the archive (13 moved live: fires 2–14, file 678→551 lines); linter counts a fire's entry in either home; fire-start numbers above the archive max too (self-test caught the collision case); archive written FIRST so a crash duplicates rather than loses; firelog self-test 9/9 (first run 8/9 — a test-hygiene bug: two states sharing one loop/ dir; fixed, not code), tools 8/8, loopcheck at floor 2 (igla ahead 25); standing rule added; host-side only; no board/pods/RTL |
+| fire 26: competitor re-check (rare cadence due: last fire 16, now 26) — read-only sweep, research.md refresh if anything moved | DONE | moved: PENSA added (NeurIPS 2026, Alveo U50 HBM, BitNet 2B4T full on-FPGA, 58.09 tok/s @ctx128, no verifiability — throughput tier) and TRACE added (Linux Foundation/CoSAI Aug 2026: workload-level Trust Records, root = CPU TEEs SEV/TDX, 135k PyPI downloads/10wk — attestation tier, complement but "receipt" vocabulary collision); ternfpga unchanged (72 commits, no receipts), Ternarycore active to Jul 2026 (hw verification) but RTL-correctness only; wedge INTACT — nobody receipts on accelerator silicon; scoping line sharpened to "on-silicon per-job receipts" (was "on-hardware"); READY re-check cadence reset to fire 26; gates at floor 2; read-only web + repo docs; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -268,7 +269,8 @@ live; the live run's log path will be recorded in the table above at launch.
    make-work; an audit-only fire is an honest fire.
    The only cheap extra if the owner stays asleep for many fires: re-check
    `.claude/loop/research.md` competitor movement (read-only, rare, last
-   refreshed fire 13).
+   refreshed fire 26 — next due ~10 fires later, or sooner if a PENSA/TRACE
+   follow-up lands).
 3. Never commit or push igla-coder-gpu while its live session works (see DONE,
    fire 5 triage); document anything found there in this file instead.
 4. End-of-fire report + three collaboration options; self-critique and anomaly
@@ -585,3 +587,35 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   loopstate 9/9, fire 6/6, specs 17/17, keycheck 0; audit at floor 2 (igla
   LEDGER.md; ahead 25 — sibling very alive). Standing rules gained the
   rotation rule. Board, pods, RTL untouched.
+
+- fire 26 (2026-09-29): competitor re-check — the READY section's own
+  sanctioned work for a long-asleep owner (rare cadence: last fire 16).
+
+  Two table additions. (1) PENSA (NeurIPS 2026, Sydney, TernaryNet collab):
+  full BitNet b1.58 2B4T inference on an HBM-equipped Alveo U50, two
+  row-partitioned ternary engines over eight HBM pseudo-channels, 58.09
+  tok/s @ctx 128 / 24.60 @ctx 2048 = 2.14–3.14× a Xeon baseline — the
+  throughput tier gains a datacenter-class entry; no verifiability story.
+  (2) TRACE (Linux Foundation/CoSAI, Aug 2026, from OPAQUE with
+  AMD/Intel/Microsoft/TII): open AI runtime-attestation spec whose
+  "Trust Records" are called tamper-proof receipts — 135k PyPI downloads
+  in ten weeks. Root of trust is CPU confidential computing (SEV/TDX);
+  it attests workloads (environment, software, policies), not per-job
+  math, and not accelerator silicon. Complement, not rival — but the
+  word "receipt" now has a standard body behind a DIFFERENT meaning, so
+  the wedge scoping was sharpened from "on-hardware receipts" to
+  "on-silicon per-job receipts" (research.md).
+
+  Unchanged: ternfpga frozen at 72 commits since fire 16 (energy still
+  Vivado-derived, still no receipts); Ternarycore active into Jul 2026
+  (timing fixes, a hardware verification run) but all verification is
+  RTL correctness vs golden models. The wedge holds: nobody in the
+  accelerator tier publishes cryptographic accountability for the math
+  the silicon performs.
+
+  Method note: two web searches found the new entries; four fetches
+  pinned what each actually claims (PENSA numbers, ternfpga repo state,
+  Ternarycore repo state, TRACE's root of trust) before anything went
+  into the table — no entry added on search-snippet evidence alone.
+  READY's re-check cadence reset to fire 26. Gates at floor 2 (igla
+  LEDGER.md, ahead 26). Board, pods, RTL untouched.

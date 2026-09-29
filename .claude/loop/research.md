@@ -1,5 +1,5 @@
 # Loop research — weak points + competitors (2026-09-29, fire 2; competitor
-# table refreshed fire 8, wedge re-checked fires 13 & 16)
+# table refreshed fire 8, wedge re-checked fires 13, 16 & 26)
 
 Swept through BrowserOS neo (Google → arXiv/GitHub). What the field looks like
 from the tern_tc/AX7203 vantage, and where this project honestly stands.
@@ -17,13 +17,24 @@ commits, Arty A7-35T, BitNet-2B-4T batch-1 decode; energy self-flagged as
 Vivado-derived) — the floor entry hardened, still no receipts; zkML-side
 newcomers (ZK-Tracer, deep-prove) accelerate proof GENERATION on
 GPU/ASIC, which sharpens the complement line rather than closing the gap.
+Fire-26 re-check: PENSA joined the throughput tier (NeurIPS 2026, full
+BitNet 2B4T on an HBM Alveo U50, 58.09 tok/s @ctx128); ternfpga unchanged
+at 72 commits; Ternarycore active into Jul 2026 (hw verification run) but
+still RTL-correctness only. The bigger movement is vocabulary: the Linux
+Foundation's TRACE spec (Aug 2026) calls its workload-level TEE records
+"tamper-proof receipts" — 135k PyPI downloads in ten weeks. TRACE's root
+of trust is CPU confidential computing (SEV/TDX), not accelerator silicon,
+and it attests workloads, not per-job math — the wedge holds, but our claim
+must keep saying "on-silicon per-job receipts" or it now reads as a TRACE
+variant.
 
 ## Competitors (all verified live, September 2026)
 
 | who | what | number that matters |
 |---|---|---|
 | **TerEffic** (arXiv 2502.16473) | FPGA ternary LLM accelerator; fully-on-chip 370M variant + HBM 2.7B variant | ~16,300 tokens/s (370M, on-chip) |
-| **Ternarycore** (github.com/Ternarycore/ternarycore, TRETS paper, CERN-OHL-S + commercial dual license) | open-source BitNet b1.58 accelerator on Arty-7 and Tang Nano; int8 attention measured on silicon; INA226 energy kit; 337 commits | a whole maintained OSS stack |
+| **Ternarycore** (github.com/Ternarycore/ternarycore, TRETS paper, CERN-OHL-S + commercial dual license) | open-source BitNet b1.58 accelerator on Arty-7 and Tang Nano; int8 attention measured on silicon; INA226 energy kit; 337 commits, hw verification run Jul 2026 | a whole maintained OSS stack |
+| **PENSA** (NeurIPS 2026, Sydney; TernaryNet collab; phwl.org writeup) | full BitNet b1.58 2B4T inference on an HBM-equipped AMD Alveo U50 — row-partitioned ternary engines, packed TQ1_0 weights from HBM pseudo-channels | 58.09 tok/s @ctx 128, 24.60 @ctx 2048 (2.14–3.14× Xeon baseline); no verifiability story |
 | **Ando & Nakashima** (arXiv 2609.27453, CANDAR 2026 CSA workshop) | BitNet mapped onto a CGLA ASIC via signed-int4 lanes (OP_SMA4), no BitNet-only datapath | 2.52 tok/s, 0.390 ns per s4 product at 28 nm |
 | **ELiTeFormer** (arXiv 2607.03652, Agostinelli 2026) | first Transformer unifying hybrid linear attention + ternary, co-designed for FPGA | architecture-level claim |
 | **VitaLLM** (arXiv 2604.27396, Lin & Chang) | dual-core (TINT ternary + BoothFlex mixed) with Leading-One-Prediction KV pruning | edge accelerator, prefill+decode |
@@ -32,6 +43,7 @@ GPU/ASIC, which sharpens the complement line rather than closing the gap.
 | nicholi.ai engine → **ternfpga** (Neumann-Labs/ternfpga, open-sourced by fire 16, 2026-09; Apache-2.0) | ternary BitNet-2B-4T batch-1 decode on a $130 Arty A7-35T, 72 commits; energy partly Vivado-derived (self-flagged), bit-exact vs golden models only | floor price point, now a maintained OSS repo — still no receipts |
 | **TensorCommitments** (arXiv 2602.12630, 2026) | verifiable LLM inference: GPU prover commits to activation tensors as multivariate polynomials, client verifies with pairings | 12 ms verify, 2 B/token, ~1 % prover overhead (LLaMA-2-13B) — software/GPU layer |
 | **Animica AICF 7.1.1 receipts** (2026) | each OpenAI-compatible API response can carry an ML-DSA-65-signed receipt binding model/prompt-hash/output-hash | PQ-signed *who-served-what* attestation — software gateway, not silicon |
+| **TRACE** (Linux Foundation/CoSAI spec, Aug 2026; OPAQUE + AMD/Intel/Microsoft/TII) | open AI runtime-attestation spec: tamper-proof "Trust Records" per workload (execution env, launched software, data classifications, policies), root of trust = CPU TEEs (SEV/TDX) | 135k PyPI downloads in ~10 weeks; workload-level attestation, NOT per-job math and NOT accelerator silicon — complement, with a "receipt" vocabulary collision to stay clear of |
 
 ## Where we actually stand (no varnish)
 
@@ -52,9 +64,10 @@ fire-13 additions sharpen the same line from the other side: zkML and
 PQ-signed receipts verify *software serving* (re-execution proofs, gateway
 attestation); ours verifies the *computation inside the accelerator* — the
 receipt is produced by the silicon, per job, at line speed. The two are
-complements, not rivals, but the vocabulary overlap means our claim should
-always be scoped "on-hardware receipts" so it cannot be read as another zkML
-variant.
+complements, not rivals, but the vocabulary overlap (zkML, and since Aug
+2026 TRACE's "Trust Records") means our claim should always be scoped
+"on-silicon per-job receipts" so it cannot be read as another
+zkML/TEE-attestation variant.
 
 ## Weak points of the task (own scan, ranked by cost)
 
