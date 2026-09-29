@@ -33,6 +33,7 @@ next.
 | fire 25: fire-log rotation: entries of de-indexed fires archive to .claude/loop/firelog-archive.md, linter learns the combined index, tri fpga-firelog | DONE | the file's unbounded growth closed: entries whose fires lost LOCKS rows move verbatim to the archive (13 moved live: fires 2–14, file 678→551 lines); linter counts a fire's entry in either home; fire-start numbers above the archive max too (self-test caught the collision case); archive written FIRST so a crash duplicates rather than loses; firelog self-test 9/9 (first run 8/9 — a test-hygiene bug: two states sharing one loop/ dir; fixed, not code), tools 8/8, loopcheck at floor 2 (igla ahead 25); standing rule added; host-side only; no board/pods/RTL |
 | fire 26: competitor re-check (rare cadence due: last fire 16, now 26) — read-only sweep, research.md refresh if anything moved | DONE | moved: PENSA added (NeurIPS 2026, Alveo U50 HBM, BitNet 2B4T full on-FPGA, 58.09 tok/s @ctx128, no verifiability — throughput tier) and TRACE added (Linux Foundation/CoSAI Aug 2026: workload-level Trust Records, root = CPU TEEs SEV/TDX, 135k PyPI downloads/10wk — attestation tier, complement but "receipt" vocabulary collision); ternfpga unchanged (72 commits, no receipts), Ternarycore active to Jul 2026 (hw verification) but RTL-correctness only; wedge INTACT — nobody receipts on accelerator silicon; scoping line sharpened to "on-silicon per-job receipts" (was "on-hardware"); READY re-check cadence reset to fire 26; gates at floor 2; read-only web + repo docs; no board/pods/RTL |
 | fire 27: stamp-probe midnight bug: the audit calibration probe crosses a UTC date boundary in the [00:45,01:00) window and false-reports blindness — fix the probe, add a regression at the caught instant | DONE | root cause proven empirically before the edit (probe 00:02 UTC vs commit 23:47 previous day → replace() lands earlier-on-commit-date → not flagged; window edges [00:45,00:59:59] blind, 01:00 and 14:00 controls flag); stamp_probe() steps the synthetic commit back hour-by-hour until stamp and commit share a UTC date — probe stays inside future_stamps' documented same-date scope at every instant; tri fpga-stamps added (the check alone + calibration; self-test 9/9 incl. the caught instant 00:47:53Z and both window edges), tools sweep 8→9, dispatch + tri wrapper; live proof INSIDE the window: audit 00:57:26Z third anomaly gone, floor 2; corpus-durability fact recorded in research.md option C (no ft_t27_8k builder in the repo); host-side only; no board/pods/RTL |
+| fire 28: corpus durability keep: the round-1 ft_t27_8k corpus (16M, no builder in the repo) lives only in volatile places — give tri a keep command in the tmpcheck blob pattern and keep it for real | DONE | tri fpga-keep PATH TAG reuses tmpcheck's substrate (blobs/<sha> gitignored + tracked MANIFEST.tsv rows, pins keep:TAG beside existing spec pins) so a kept tree gets the watching/restore machinery free — no second watcher built; self-test 9/9 hermetic (dedup, idempotence, pre-existing rows untouched, tmpcheck integration, rmtree→restored, refusals); first run caught its own test bug live: the outside-/tmp refusal leaned on TMPDIR and this host has TMPDIR=/tmp — fire 25's host-env lesson again, fixed to a string-level guard + nothing-written assertion; LIVE keep: 92/92 files, tag keep:ft_t27_8k, tmpcheck now 98 pinned /tmp files 0 lost 0 unkept, --restore rebuilds after reboot; tools sweep 9→10, loopcheck floor 2; MANIFEST.tsv committed (tracked) |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -647,3 +648,30 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   only while /tmp and the STOPPED pod's volume both survive; recorded in
   research.md option C with the tmpcheck-style keep as the fix direction.
   Board, pods, RTL untouched. /tmp/probe_check.py was the evidence script.
+
+- fire 28 (2026-09-29): fire 27's second finding made mechanical. The
+  round-1 corpus /tmp/ft_t27_8k (92 files, 16M) had no builder in the repo
+  and lived only in /tmp (dies at reboot) and on the STOPPED pod (dies with
+  the pod). New tool tri fpga-keep PATH TAG: every file under a /tmp tree
+  becomes a blobs/<sha256> entry (gitignored) plus a MANIFEST.tsv row
+  (tracked), pins tagged keep:TAG — reusing tmpcheck's substrate on purpose,
+  because once a path is in the manifest tmp_report already watches it and
+  --restore already rebuilds it, so an explicitly kept tree inherits the
+  whole durability machinery a spec-pinned file has, with zero new watcher
+  code. Self-test 9/9 hermetic (nested tree, duplicate content deduped to
+  one blob, idempotent second run, pre-existing spec-pinned row untouched,
+  tmpcheck sees the rows, rmtree → GONE-but-kept → restored with original
+  bytes, outside-/tmp and bad-TAG refusals). The first run of the self-test
+  was 8/9 and the failure was INSTRUCTIVE, not cosmetic: the outside-/tmp
+  refusal test built its "outside" tree under tempfile, but this host runs
+  TMPDIR=/tmp, so the guard rightly passed and the file was kept — a
+  hermetic test must not lean on host env (fire 25's lesson, now caught a
+  second way); the check is now a string-level refusal plus a
+  nothing-was-written assertion. Live run: tri fpga-keep /tmp/ft_t27_8k
+  ft_t27_8k kept 92/92; tmpcheck reports 98 pinned /tmp files, 0 lost,
+  0 not kept; after any reboot the audit's gone-line + standing rule
+  (tmpcheck --restore) rebuilds the corpus. tools sweep 9→10 all green;
+  loopcheck at floor 2 (specs 17/17, keycheck 0, loopstate sound). The pod
+  volume remains the only other copy — noted in research.md option C.
+  MANIFEST.tsv (tracked) committed; blobs gitignored. Board, pods, RTL
+  untouched.

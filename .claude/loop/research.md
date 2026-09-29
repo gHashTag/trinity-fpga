@@ -115,9 +115,12 @@ C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),
    of dollars, even with a bigger corpus and longer contexts; the binding
    constraint is corpus quality for multi-line output, not money. Corpus copies
    from round 1: `/workspace/ft_t27_8k` on the pod + `/tmp/ft_t27_8k` local.
-   *Durability (fire 27):* no builder for `ft_t27_8k` exists in this repo
-   (grep over .py/.zig/.md matches nothing outside .claude/loop), so round 2
-   inherits round 1's corpus only if both copies survive — /tmp dies at the
-   next reboot, the STOPPED pod's volume dies with the pod. Before round 2,
-   either commit a builder script or keep the corpus the tmpcheck way
-   (gitignored blobs + tracked MANIFEST.tsv).
+   *Durability (fire 27 → resolved fire 28):* no builder for `ft_t27_8k`
+   exists in this repo (grep over .py/.zig/.md matches nothing outside
+   .claude/loop), so the corpus lived only in /tmp (dies at reboot) and on
+   the STOPPED pod (dies with the pod). Fire 28 closed the local half:
+   `tri fpga-keep /tmp/ft_t27_8k ft_t27_8k` wrote all 92 files into the
+   tmpcheck blob store (gitignored blobs + tracked MANIFEST.tsv rows tagged
+   keep:ft_t27_8k), so `tri fpga-tmpcheck --restore` rebuilds it after a
+   reboot and the audit watches it. The pod volume is still the only other
+   copy — round 2 should not assume it.
