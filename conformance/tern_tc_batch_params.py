@@ -2,7 +2,7 @@
 """Batched wire protocol design parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_batch_ax7203.t27"
-SPEC_SHA256 = "378251a2fb6bc7441f958865226a5e08b114170a218b1bb9ccf8c50d5f5feb37"
+SPEC_SHA256 = "aebd8b52bb47f814c1e2851437569f8440d066114de1b166bae6a546e7af06f1"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -40,7 +40,7 @@ SPEC = {
     "MAX_RETRANSMITS": 256,
     "MODEL_LINK_S_MAX": 235,
     "NODE_RTL_FILE": "fpga/portable/trinet_node_core.v",
-    "NODE_RTL_SHA256": "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1",
+    "NODE_RTL_SHA256": "fc22d2c14b2acfd05a250385e96bbd88cc56bf41c6bb825a4f9a3916d7200f45",
     "N_TRITS": 32,
     "OP_DOT6": 4,
     "OP_MAC32": 1,
@@ -68,6 +68,8 @@ SPEC = {
     "SETX_GATE": 60,
     "SETX_RUN_MAX": 11188,
     "SETX_WQ": 60,
+    "SIP_RTL_FILE": "fpga/openxc7-synth/trinet_siphash24.v",
+    "SIP_RTL_SHA256": "d08931b803a42ef1cf459b3abc49bf7d32bbebf8f0206660a839a68c25dc41a8",
     "TODAY_REQ_BYTES": 161109504,
     "TODAY_RESP_BYTES": 127545024,
     "WINDOW": 24,
@@ -75,4 +77,7 @@ SPEC = {
     "WQ_L2_BYTES": 78240,
     "WQ_NOW": 19200,
     "WQ_NOW_BYTES": 460800,
+    "XRAM_ABITS": 8,
+    "XRAM_USED": 162,
+    "XRAM_WORDS": 256,
 }

@@ -52,7 +52,8 @@ function semanticProblems(f) {
   const where = (file) => join(REPO, file)
   for (const [file, sha] of [[f.PLAN_DOC, f.PLAN_SHA256],
     [f.REOPEN_SPEC_FILE, f.REOPEN_SPEC_SHA256], [f.HARNESS_FILE, f.HARNESS_SHA256],
-    [f.MAC32_FILE, f.MAC32_SHA256], [f.NODE_RTL_FILE, f.NODE_RTL_SHA256]]) {
+    [f.MAC32_FILE, f.MAC32_SHA256], [f.NODE_RTL_FILE, f.NODE_RTL_SHA256],
+    [f.SIP_RTL_FILE, f.SIP_RTL_SHA256]]) {
     if (!existsSync(where(file))) p.push(`${file} missing`)
     else if (sha256(readFileSync(where(file))) !== sha) p.push(`${file}: sha256 differs from the spec`)
   }

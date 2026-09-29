@@ -64,7 +64,12 @@ pub const HARNESS_SHA256 : str = "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f28
 pub const MAC32_FILE : str = "conformance/trinet_mac32_conformance_ax7203.py";
 pub const MAC32_SHA256 : str = "11fa651938a0e360a311f63ec4c04de15241ad9a7c6e26175ead084e07ababa2";
 pub const NODE_RTL_FILE : str = "fpga/portable/trinet_node_core.v";
-pub const NODE_RTL_SHA256 : str = "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1";
+pub const NODE_RTL_SHA256 : str = "fc22d2c14b2acfd05a250385e96bbd88cc56bf41c6bb825a4f9a3916d7200f45";
+; The tag engine too: a 3-bit block counter silently wrapped at message word 8,
+; which no 26-byte preimage ever reached -- pin the engine now that a 73-byte
+; preimage depends on it.
+pub const SIP_RTL_FILE : str = "fpga/openxc7-synth/trinet_siphash24.v";
+pub const SIP_RTL_SHA256 : str = "d08931b803a42ef1cf459b3abc49bf7d32bbebf8f0206660a839a68c25dc41a8";
 
 ; --- Today's protocol, repeated from the reopen spec; the generator reads each back ----------
 pub const JOBS_7T27 : u32 = 6712896;
@@ -101,6 +106,18 @@ pub const PREIMAGE_SETX : u8 = 20;
 pub const PREIMAGE_DOT6 : u8 = 73;
 pub const PLANES : u8 = 6;
 pub const N_TRITS : u8 = 32;
+
+; --- x RAM addressing (decision 1 of TERN_TC_BATCH_RTL_PLAN.md: out-of-range aliases) -----------
+; An address (plane, chunk) is never refused. The arithmetic is full width and the
+; RAM's address port is XRAM_ABITS bits, so the word named is
+; (plane * C_DOWN + chunk) mod XRAM_WORDS -- the physical depth is the port's whole
+; space 2^XRAM_ABITS, of which the first XRAM_USED words are the live matrix and
+; the slack beyond is never addressed in range. A bogus address harms only the host
+; that issued it: the SETX tag MACs the received bytes, the DOT6 tag MACs what the
+; RAM returned. Never-written words read as zeros, in the model and in silicon.
+pub const XRAM_USED : u8 = 162;
+pub const XRAM_ABITS : u8 = 8;
+pub const XRAM_WORDS : u16 = 256;
 
 ; --- Passes of one matrix pass (rows x in_dim; C = in_dim / 32) --------------------------------
 pub const R_WQ : u16 = 320;
@@ -178,6 +195,27 @@ test preimages_mac_what_was_consumed {
     assert PREIMAGE_DOT6 == 1 + 4 + 8 + 1 + 1 + PLANES * SETX_CHUNK_BYTES + PLANES + 4;
     assert PLANES * SETX_CHUNK_BYTES == 48;
     assert N_TRITS == 32;
+}
+
+; Out-of-range addresses alias (decision 1): the used region is the widest
+; matrix pass; the port is $clog2 wide so half the space is too small and the
+; whole fits; a phantom plane lands in the slack, a phantom chunk crosses
+; plane lines, a far-enough address wraps past the top -- and every aliased
+; word is a real word.
+test out_of_range_addresses_alias {
+    assert XRAM_USED == PLANES * C_DOWN;
+    assert XRAM_WORDS == 256;
+    assert XRAM_WORDS / 2 < XRAM_USED;
+    assert XRAM_WORDS >= XRAM_USED;
+    assert 6 * C_DOWN + 0 == 162;
+    assert 162 % XRAM_WORDS == 162;
+    assert 2 * C_DOWN + 63 == 117;
+    assert 117 % XRAM_WORDS == 117;
+    assert 0 * C_DOWN + 200 == 200;
+    assert 200 % XRAM_WORDS == 200;
+    assert 9 * C_DOWN + 63 == 306;
+    assert 306 % XRAM_WORDS == 50;
+    assert XRAM_WORDS - 1 == 255;
 }
 
 test per_pass_six_x_redundancy_removed_exactly {

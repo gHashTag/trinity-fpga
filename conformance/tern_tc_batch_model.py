@@ -25,9 +25,13 @@ What this model does not settle, on purpose:
   * The byte-level AA-55 hunt and the flush-resync proof. RefCell-level models
     take 24-byte-aligned frames; that property is pinned in the spec and lives
     in the real parser (fpga/portable/trinet_node_core.v).
-  * Out-of-range addressing (plane >= PLANES or chunk >= c_max): the spec does
-    not define it; the model raises, which is a modeling assertion, not a
-    protocol behavior. The RTL decides.
+  * Out-of-range addressing (plane >= PLANES or chunk >= c_max): resolved by
+    decision 1 of TERN_TC_BATCH_RTL_PLAN.md -- not refused. The address
+    arithmetic is full width and the RAM's address port truncates, so such an
+    address aliases to (plane*c_max + chunk) mod 2^addrbits, identically here
+    and in silicon (fpga/portable/trinet_node_core.v). A bogus address harms
+    only the host that issued it: the SETX tag still MACs the received bytes,
+    the DOT6 tag still MACs what the RAM returned.
   * Timing, RAM cost, throughput. `tri fpga-cost`'s question, never a model's
     claim; the spec's projections are link arithmetic and stay in the spec.
 
@@ -144,15 +148,28 @@ class BatchCell(RefCell):
                  fault=None, fault_at=0, fault_plane=2):
         super().__init__(node_id=node_id, key=key, fault=fault, fault_at=fault_at)
         self.c_max, self.fault_plane = c_max, fault_plane
-        self.xram = bytearray(PLANES * c_max * CHUNK_BYTES)
+        # Physical depth is 2^addrbits words, not PLANES*c_max: the address
+        # port truncates to addrbits, so an out-of-range (plane, chunk) lands
+        # in the slack beyond the used region, never off the end of the RAM.
+        # The RTL array is sized the same way; never-written words read zero.
+        self.xram = bytearray((1 << (PLANES * c_max - 1).bit_length())
+                              * CHUNK_BYTES)
         self.n_setx = self.n_dot6 = 0
         self.first_dot6 = None
 
+    def _alias(self, plane, chunk):
+        """Where the RAM's truncated address port lands a (plane, chunk).
+
+        Decision 1 of TERN_TC_BATCH_RTL_PLAN.md: out-of-range addressing is
+        not refused. The address arithmetic is full width and the port is
+        $clog2(PLANES*c_max) bits wide, so the word addressed is
+        (plane*c_max + chunk) mod 2^addrbits -- same word here and in silicon.
+        """
+        abits = (PLANES * self.c_max - 1).bit_length()   # the RAM address-port width
+        return (plane * self.c_max + chunk) & ((1 << abits) - 1)
+
     def _x(self, plane, chunk):
-        if plane >= PLANES or chunk >= self.c_max:
-            raise ValueError(                      # modeling assertion, not protocol
-                f"address (plane {plane}, chunk {chunk}) outside the model's RAM")
-        off = (plane * self.c_max + chunk) * CHUNK_BYTES
+        off = self._alias(plane, chunk) * CHUNK_BYTES
         return bytes(self.xram[off:off + CHUNK_BYTES])
 
     def _answer(self, fr):
@@ -165,12 +182,9 @@ class BatchCell(RefCell):
 
     def _answer_setx(self, fr):
         nonce_b, plane, chunk, x8 = fr[3:7], fr[7], fr[8], fr[9:17]
-        if not self._addr_ok(plane, chunk):
-            raise ValueError(                      # modeling assertion, not protocol
-                f"SETX address (plane {plane}, chunk {chunk}) outside the model's RAM")
         hit = self.n_setx == self.fault_at
         self.n_setx += 1
-        off = (plane * self.c_max + chunk) * CHUNK_BYTES
+        off = self._alias(plane, chunk) * CHUNK_BYTES
         self.xram[off:off + CHUNK_BYTES] = x8
         if hit and self.fault == "setx_write_flip":
             self.xram[off] ^= 0x01                 # RAM holds other than what was sent
@@ -212,9 +226,6 @@ class BatchCell(RefCell):
         if self.first_dot6 is None:
             self.first_dot6 = resp
         self.out += resp
-
-    def _addr_ok(self, plane, chunk):
-        return plane < PLANES and chunk < self.c_max
 
     def _sign_key(self):
         if self.fault == "wrong_key":

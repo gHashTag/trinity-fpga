@@ -150,3 +150,17 @@ C. **Corpus round 2** — more steps on the SAME corpus (fire 32 exonerated
    exactly). The corpus now has three independent lives — /tmp, the blob
    store, and a verified derivation chain — so the pod volume no longer
    matters for round 2.
+   *Round-2 verdict (fire 35, 2026-09-29, per round2-plan.md §4/§5):* ran
+   end-to-end (extend-resume, --tokens 220,856,320 exact per correction 2);
+   stop rule §5a OVERFIT fired — val_bpb 0.6105@337 → 0.8506@2696 → 0.7288@3370,
+   primary ≤ 0.55 FAILED. **Pinned model stays ROUND-1** (pre-registered judge =
+   loss). The behavioral criterion round 2 was for did move: non-degenerate
+   ≥2-line bodies on the 20-prompt val set 10% (r1) → 45% (r2), zero
+   repetition loops in r2 vs 6 in r1 — real, but not a re-pin (post-hoc metric
+   chasing; the lesson is now machinery: `tri fpga-genscore`). Round-3 lever,
+   per the plan's own §7 wall: data QUANTITY (the t27 tree has grown since
+   9fec01a78 — new targets instead of more epochs), decided at the next fire,
+   not pre-committed. Spent $3.35 (compute ≈ $0.15 of it; rest = idle-burn
+   admission), balance ≈ $71.3. Round-2 artifacts local in
+   `data/checkpoints/tern_tc_t27_r2/`, evidence kept `keep:tct27_r2_verdict`;
+   no TC02 export of the loser.

@@ -35,6 +35,7 @@ next.
 | fire 32: corpus diagnosis: why one-line output — replicate the sibling fim split over kept items.jsonl and measure what fraction of training targets (mid) were multi-line; round-2 design note for option C; LOCKS compaction (17 DONE rows) | DONE 2026-09-29 | verdict: corpus NOT the reason (58.3% of 3521 train targets 6+ lines; model's 6-token output = 1.3rd percentile → training-budget/capacity symptom); round-2 lever = steps, same corpus shape; firelog/linter cross-reference bug pair found & fixed (10/10+10/10+13/13), fire 16 entry now archived; LOCKS 17→15; loopcheck floor 2 |
 | fire 33: round-2 training pre-registration: convert fire-32 measured diagnosis into executable plan (steps/schedule/cost/criteria) for option C; audit sweep | DONE 2026-09-29 | plan = .claude/loop/round2-plan.md: extend mode (resume ckpt.pt), target 3,370 steps ≈ $5.22, cap 4,000/$7, primary bpb ≤ 0.55 + ≥25% multi-line on 20 held prompts, 5 stop rules (overfit 2-eval rise at 240 total epochs; plateau at step 2000 < 0.02 gain → "BRAM-sized model plateaus" verdict — tc is 77% BRAM, no upscale exists); new facts: round 1 = 23.98 epochs over the 7.37M-token train split, $1.72/1k steps; overwrite hazard caught pre-registration (resume rewrites run.json) → pull-before-extend §6; research.md option C retargeted off "bigger corpus" (fire 32 killed it); SKILL.md lesson + toolsrc refresh 1-new/3-same; loopcheck floor 2; no board/pods/RTL/money |
 | fire 34: adversarial self-review of round2-plan.md: recompute every numeric claim from source arithmetic (train.py, manifest, cost anchors), re-check resume/smoke side effects in the control flow, sweep research.md for other stale claims; fix what fails | DONE 2026-09-29 | 3 defects found & fixed pre-execution: --tokens 1.77e9 floors to 3375 not 3370 (now exact 1766850560), "smoke = no checkpoint overwrite" was false (train.py checkpoints after the break; ckpt.pt advances 337→340, steps counted), stop-rule (b) re-anchored to the eval cadence (step 2022 = 6th eval, evals are multiples of 337); all other figures recomputed clean (epochs/warmup/decay/costs/balance); research.md sweep vs DONE verdicts: no further stale claims; amendment note added to the plan header; SKILL.md lesson + toolsrc refresh 1-new/3-same; loopcheck floor 2; no board/pods/RTL/money |
+| fire 35: execute owner's triple pick (все три): A batched-wire RTL+cosim+reflash (aliasing resolution), B E3 board run + E4 minimal responder, C round-2 training per round2-plan.md §6 — long-running, IN-PROGRESS protects from cron re-fire | DONE 2026-09-29 | C ran end-to-end: §5a overfit fired (val_bpb 0.6105@337→0.8506@2696→0.7288@3370), primary ≤0.55 FAILED, pinned model stays ROUND-1 (pre-registered judge = loss); behavioral: r2 fixes degeneracy (r1 10% vs r2 45% non-degenerate ≥2-line) but loses on loss; round-3 lever = data quantity. A host-complete (spec repinned, cosim PASS, rehearsal PASS, synthesis clean, payload 48463217…, 9,730,792 B) — board leg needs batched board arm + owner sudo. B untouched (owner gate). Admissions: pod idle burn $2.29, ckpt_predecay overwritten (round-1 final.pt now sole copy, local), behavioral check blocked a day on env trivia (all recorded in SKILL.md). New tool tri fpga-genscore (degeneracy-aware scorer, tools 10→11, self-test 7/7, reproduces hand scores on the real evidence). Evidence kept tct27_r2_verdict + data/checkpoints/tern_tc_t27_r2; NO TC02 export of round-2 |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -798,3 +799,88 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   make-work. Gates: audit floor 2 (igla LEDGER.md; ahead 33); specs
   17/17, keycheck 0, tools 10/10. Host-side only; no board/pods/RTL; no
   money.
+
+- fire 35 (2026-09-29): execute owner's triple pick (все три) — A batched-wire
+  host leg, B E3 board run (owner-gated), C round-2 training. C ran end-to-end;
+  A is host-complete awaiting the owner-sudo reflash; B untouched (owner's sudo
+  `e3_flash` never run). Verdicts first, admissions under them.
+
+  C — round-2 training (the pre-registered plan's own judge = loss): pod
+  9kt3lwrgxjbrz5 ran the extend-resume per §6: inputs sha-verified against the
+  fire-28 keep, round-1 records pulled BEFORE any training write, smoke
+  "resumed from step 337" then ckpt.pt advanced 337→340 exactly as the fire-34
+  correction predicted, full run --tokens 220856320 (correction 2's arithmetic,
+  NOT the plan's original 1.77e9). Stop rule §5a OVERFIT fired: val_bpb
+  0.6105@337 → 0.8506@2696 → 0.7288@3370 — two consecutive eval rises; §4
+  primary ≤0.55 FAILED. Pinned model stays ROUND-1 (pre-registered judge =
+  loss; re-pinning round-2 on the better behavioral score would be post-hoc
+  metric chasing). Round-3 lever recorded: data quantity, not steps (§7 wall).
+
+  C — behavioral §4 (the part round 2 was FOR): greedy FIM on 20 held prompts,
+  val20 filtered to the 86 specs present at build time and parseable under the
+  current bench (one drifted item excluded, qmtech_a100t_integration::on_comb).
+  Literal criterion ≥2-line bodies: r1 8/20 (40%), r2 9/20 (45%) — both pass
+  the ≥25% letter. Degeneracy filter (unique stripped lines ≥ max(2, len//2)):
+  r1 = 2/20 (10%) FAIL — 6 of its 8 multi-line outputs are repetition loops
+  (44 lines / 11 unique, `zig_lines = 0` looping in a CompileResult);
+  r2 = 9/20 (45%) PASS, zero degenerate. Round-2 DID fix the one-line
+  degeneracy fire 32 diagnosed — but under the pre-registered loss-judge it
+  still loses. Lesson: generative pre-registrations need a degeneracy clause;
+  the scorer is now `tri fpga-genscore` (below) so no future fire can cite the
+  literal count alone.
+
+  A — batched wire protocol, host side COMPLETE: spec pin re-pinned + verified
+  (trinet_node_core.v sha fc22d2c1…), cosim PASS re-run (7,695 B model==RTL
+  byte-identical; negative control differs), rehearsal self-test PASS,
+  from_spec regen + --check PASS (74 consts / 10 tests / 80 asserts / 0
+  failures, verdict "same"), openXC7 synthesis clean first pass — payload sha
+  48463217d7580535d9f1acd5ccc91145e31040ad3b9e2868814322ac11d791d8, 9,730,792
+  B, at /tmp/trinet-node-build/node0-batched/trinet_node0.bit. Board leg NOT
+  done: it needs (1) the batched board arm WRITTEN — run_pass over
+  ro.serial_link with its own pre-registration, the spec's "WHAT IT DOES NOT
+  SAY" demands it, NO board mode exists in the runner yet — and (2) the
+  owner's sudo for the reflash. Remains the top option for the next fire.
+
+  B — E3 + E4: nothing run. The owner's one-line `tri fpga-flash e3_flash
+  artifacts/bitstreams/e3_eth_arp_icmp_zinv_t1.bit --owner-yes "все три"
+  --expect 4fd7923d` (he types the sudo password) is still the gate; E4
+  minimal responder design notes live in research.md.
+
+  Admissions (self-critique, the loop mandate's own ask): (1) pod idle burn
+  ≈ 3.1 h ≈ $2.29 — training compute ENDED 06:54Z but the pod ran to 09:59:58Z
+  while the behavioral check was blocked on pip gaps and the classifier outage;
+  the plan's §6 said stop the pod at the end, and "the end" arrived at 06:54,
+  not 10:00. (2) ckpt_predecay.pt: round 1's pre-decay checkpoint on the pod
+  volume was OVERWRITTEN by round 2 (the §2 hazard named run.json/final.pt but
+  missed this file); round-1's final.pt survived and its local copy in
+  data/checkpoints/tern_tc_t27_r1/ is now the ONLY copy of round-1 weights
+  anywhere. (3) The behavioral check burned most of a day on environment
+  trivia — pod image lacks tokenizers/pyarrow (PEP 668 →
+  --break-system-packages), 44 of 130 held-out specs were missing from the
+  build-time checkout (manifest's own held_specs_missing_from_checkout), and
+  one item drifted past the current bench parser. None of this was training
+  science; all of it is now recorded in SKILL.md so the next round does not
+  re-learn it.
+
+  Economics: pod 9kt3lwrgxjbrz5 05:28:22Z→09:59:58Z ≈ 4.53 h × $0.74 ≈ $3.35;
+  true compute ≈ $0.15 of that (correction 2's anchor was right); balance
+  ≈ $71.3 from $74.68. Round-2 artifacts: data/checkpoints/tern_tc_t27_r2/
+  (final.pt 36,324,991 B, run.json, log.jsonl, summary.json); evidence kept
+  under tag keep:tct27_r2_verdict (val20 + both cands + both scoring scripts,
+  5 files). NO TC02 export of round-2 (the pinned model is round-1; exporting
+  the loser would fork the board story).
+
+  New tool (the per-fire CLI update the mandate asks for): `tri fpga-genscore
+  CANDS.jsonl [--min-lines N --pass-frac F]` — the degeneracy-aware scorer,
+  verdict rides the FILTERED count, exit 0 only if every file passes; hermetic
+  self-test 7/7 (counts, filter, both verdict bars, missing-file refusal);
+  tools sweep 10→11. On the real evidence it reproduces the hand scores: r1
+  FAIL 10%, r2 PASS 45%.
+
+  Process: row+stub via tri fpga-fire start; this close-out written after the
+  last artifact was pulled; loopstate lint + keycheck before commit; commit
+  docs(loop) + push. Classifier outage note: the fire's last hours ran against
+  "claude-opus-4-8[1m] temporarily unavailable" flapping — probes passed,
+  exec-shaped calls needed 10-minute waits; the close-out itself was staged
+  through it (work staged in /tmp, retried, never dropped).
+

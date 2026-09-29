@@ -11,6 +11,39 @@ advance — train.py checkpoints after the break), §6.5 --tokens made exact
 (1.77e9 floors to 3,375 steps, not 3,370). Every other figure recomputed
 from train.py arithmetic, the corpus manifest and the cost anchors: holds.
 
+Fire 35 correction 2 (2026-09-29, from the pulled round-1 run.json +
+log.jsonl + train.py lines 181-187, BEFORE any training write; the pod came
+up, so the records fire 34 could not read are now local): round 1 ran with
+--batch_tokens 65536 (seqs=32, micro=32 — one micro-batch per optimizer
+step), NOT the 524,288 default fire 34 computed from. Fire 34's blind spot
+was exactly this: no pod was up, so the plan leaned on train.py defaults
+where round 1 had passed overrides. Consequences, recomputed:
+
+- §6.5 --tokens for 3,370 steps is **220,856,320** (= 3,370 × 65,536).
+  The previously pre-registered 1,766,850,560 floors to 26,960 steps —
+  6.7× the 4,000-step cap and far past $7 at the old cost anchor. Both
+  22,085,632 = 337 × 65,536 (round 1) and 220,856,320 = 3,370 × 65,536
+  are exact.
+- Epochs: round 1 = **3.00** (22,085,632 / 7,368,311), not 23.98. Round-2
+  target total = 30.0 epochs, cap = 35.6. §5a/§5b, not budget, are the
+  binding stop rules.
+- The cost anchor was idle time, not compute. log.jsonl elapsed_h at the
+  final step is 0.0108 (39 s wall: ~14 s torch.compile + 337 × 0.067
+  s/step + 4 evals; 971k tok/s sustained, MFU 46%). Round 1's $0.58 was
+  ~47 min of pod idle at $0.74/h. True compute is ≈ $1.72 per ~26,000
+  steps, not per 1,000 — full round 2 ≈ 5 min of GPU ≈ ≤ $0.15. The $7
+  cap stays as an outer guard only.
+- Flags for §6.4/§6.5, verbatim from the records: --size tc --ternary
+  --batch_tokens 65536 --micro 32 --lr 0.0008065 (the recorded plateau
+  LR; log.jsonl shows 0.0008065 through the stable phase) --seed 0,
+  eval_every LEFT at default 0.1 (round 1 passed 0.25, which put its
+  evals on an 84 cadence; the default keeps this run's evals on the
+  337 cadence that §5a/§5b are anchored to), --time_limit_h 1.0
+  (round-1 total wall was 0.0108 h; 1.0 h catches a hang, never honest
+  compute). Round-1 hours live in summary.json, not run.json.
+- warmup 100 / decay_start 2,696 at 3,370 steps re-confirmed against
+  train.py 185-186 (round 1: 67/269, matches run.json).
+
 ## 1. Why round 2 looks like this (measured)
 
 - Fire 32 diagnosed the one-line output: the corpus is not the cause. Over

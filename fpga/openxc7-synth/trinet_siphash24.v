@@ -98,7 +98,11 @@ module trinet_siphash24 #(
                      S_DONE  = 3'd5;
 
     reg [2:0]  st;
-    reg [2:0]  blk;        // 0..FULL_WORDS = message words, then the tail
+    // 4 bits, not 3: a 3-bit blk wrapped at block 8, so any message of 8+
+    // words (65+ bytes) silently jumped to the tail mid-stream. 26 B (3
+    // words) and 20 B (2 words) never reached the wrap; the 73-byte DOT6
+    // preimage did. 4 bits holds FULL_WORDS up to 15, i.e. 127 bytes.
+    reg [3:0]  blk;        // 0..FULL_WORDS = message words, then the tail
     reg [2:0]  rnd;
     reg        finalising;
     reg [63:0] cur_block;
@@ -122,8 +126,8 @@ module trinet_siphash24 #(
                 end
 
                 S_ABSORB: begin
-                    cur_block <= (blk < FULL_WORDS[2:0]) ? m_word[blk] : tail_block;
-                    v3 <= v3 ^ ((blk < FULL_WORDS[2:0]) ? m_word[blk] : tail_block);
+                    cur_block <= (blk < FULL_WORDS[3:0]) ? m_word[blk] : tail_block;
+                    v3 <= v3 ^ ((blk < FULL_WORDS[3:0]) ? m_word[blk] : tail_block);
                     rnd <= 3'd0;
                     st <= S_ROUND;
                 end
@@ -141,7 +145,7 @@ module trinet_siphash24 #(
 
                 S_XOR0: begin
                     v0 <= v0 ^ cur_block;
-                    if (blk == FULL_WORDS[2:0]) st <= S_FINAL;
+                    if (blk == FULL_WORDS[3:0]) st <= S_FINAL;
                     else begin
                         blk <= blk + 3'd1;
                         st <= S_ABSORB;

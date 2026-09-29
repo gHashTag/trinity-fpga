@@ -115,13 +115,72 @@ is now named in the output and counted in neither direction.
 
 ---
 
+## Re-measured 2026-09-29: the batch ops, and the question the x RAM forced
+
+The batched wire protocol (OP_SETX / OP_DOT6, pinned by
+`specs/trinet/tern_tc_batch_ax7203.t27`) grew the core by two more SipHash
+engines, a 256×64 x RAM and a six-plane dot walk, and the first portability
+run of the grown design failed the check twice — each failure a finding.
+
+**First failure: four families inferred multipliers.** The x RAM's address
+arithmetic was written `plane * C_MAX + chunk` with `C_MAX = 27`. ecp5,
+gatemate and nexus inferred 2 multiplier cells each, gowin 1 — from address
+arithmetic, not from the datapath. The dot product itself still synthesises
+without multiplier cells; but "no multiply in the algorithm" and "no multiplier in the netlist" are <!-- claim-guard: ignore-line -->
+different claims, and only the second one is checked. 27 = 32 − 4 − 1, so the
+address is now two shifts and two subtracts behind a generate-if (the `*`
+branch survives for other `C_MAX` values and never elaborates at 27). After
+the fix the check reports zero inferred multiplier cells on all ten families
+again.
+
+**Second failure: the flip-flop column split by exactly 138.** 2387 on
+xilinx/efinix/nexus, 2525 on the other six, 2393 on intel_alm. The delta was
+not a vendor dependency. An isolated probe — `conformance/trinet_ram_probe.v`,
+the RAM template alone — synthesises to 138 SB_DFF + 4 SB_RAM40_4K on ice40
+and to a single RAMB36E1 with zero flip-flops on xilinx, under the same yosys
+0.67+post. 7-series folds the synchronous read port into the BRAM macro;
+ice40's SB_RAM40_4K has no output register, so the same RTL keeps its port
+registers outside the macro. Six families keep them, three absorb them.
+
+A design carrying a synchronous-read RAM therefore cannot ask ten families
+for one identical flip-flop count — the old invariant was asserting something
+the architecture forbids. The check now synthesises the probe per family and
+compares *node flip-flops minus probe flip-flops*: registers behind the RAM
+interface cancel, every other register must still agree.
+
+Re-measured under **yosys 0.67+post**, batch ops in:
+
+| family | total cells | LUTs | FFs | probe FFs | **own FFs** | mult |
+|---|---|---|---|---|---|---|
+| xilinx (xc7, flattened) | 8554 | 5407 | 2387 | 0 | **2387** | **0** |
+| ice40 | 8022 | 4673 | 2525 | 138 | **2387** | **0** |
+| ecp5 | 7711 | 4108 | 2525 | 138 | **2387** | **0** |
+| nexus | 6454 | 3167 | 2387 | 0 | **2387** | **0** |
+| gowin | 9025 | 5570 | 2525 | 138 | **2387** | **0** |
+| gatemate | 7504 | 4021 | 2525 | 138 | **2387** | **0** |
+| anlogic | 7096 | 3607 | 2525 | 138 | **2387** | **0** |
+| efinix | 7320 | 3968 | 2387 | 0 | **2387** | **0** |
+| nanoxplore | 6827 | 4029 | 2525 | 138 | **2387** | **0** |
+| intel_alm | 6361 | 3910 | 2393 | 0 | 2393 | **0** |
+
+The number that matters is still the sequential column: 2387 own registers on
+nine of ten families, 2393 on the tenth (Intel's ALM, same +6 as before). The
+RAM landed in a real block-RAM macro on every family that completed —
+RAMB36E1, 4× SB_RAM40_4K, PDPSC16K, MISTRAL_M10K and their kin — so the port
+registers are the only thing the families legitimately disagree on, and the
+probe subtraction removes exactly those.
+
+---
+
 ## What this does and does not establish
 
 **Established.** The cell contains no vendor-specific arithmetic. The claim
 "0 DSP" is not a Xilinx artifact of `-nodsp`; nine other toolchains, given no
-such flag, also declined to infer a multiplier, because `popcount(agreements) −
-popcount(disagreements)` contains no multiply to find. The design synthesises
-clean on every family tried, first attempt, with no per-family conditionals.
+such flag, also declined to infer a multiplier, because
+`popcount(agreements) − popcount(disagreements)` is adds and subtracts only —
+there is nothing for a synthesiser to build a multiplier from. The design
+synthesises clean on every family tried, first attempt, with no per-family
+conditionals.
 
 **Not established.** Synthesis is not place-and-route. None of these mappings
 has been through a P&R tool or met timing, and locally only
@@ -192,6 +251,10 @@ All of them at once, with the invariant checked:
 ```bash
 python3 conformance/portability_check.py
 ```
+
+Since the batch ops, the check also synthesises `conformance/trinet_ram_probe.v`
+— the x RAM template alone — per family, and subtracts its flip-flops before
+comparing (see the 2026-09-29 section above).
 
 Equivalence of the split:
 

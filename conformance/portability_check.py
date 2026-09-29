@@ -15,6 +15,19 @@ The check asserts an invariant rather than a number.
     is not the claim — the agreement is — which is why this check asserts the
     spread and not the value.)
 
+    The batch ops added an x RAM — a synchronous-read inferred RAM — and with
+    it a wrinkle the old claim could not survive unchanged: families split on
+    how much of that template's port plumbing their block RAM macro absorbs.
+    7-series folds the read port into RAMB36E1; ice40's SB_RAM40_4K has no
+    output register, so the same RTL keeps its port registers outside the
+    macro (138 of them, measured 2026-09-29 under yosys 0.67+post). So the
+    comparison now runs per family on TWO designs: the node, and
+    trinet_ram_probe.v — the RAM template alone — and compares
+    (node flip-flops − probe flip-flops). Registers behind the RAM interface
+    cancel; every other register must still agree. A family that maps the
+    probe to no RAM macro AND keeps no port registers has simply lost the
+    RAM, and the check refuses that too.
+
   * No family may infer a multiplier. The dot product is
     popcount(agreements) - popcount(disagreements), so there is no multiply to
     find. On Xilinx this is enforced with -nodsp because DSP48 inference caused
@@ -45,6 +58,8 @@ SOURCES = [
     ROOT / "fpga" / "openxc7-synth" / "trinet_siphash24.v",
 ]
 TOP = "trinet_node_core"
+PROBE_SOURCE = ROOT / "conformance" / "trinet_ram_probe.v"
+PROBE_TOP = "trinet_ram_probe"
 
 # Xilinx needs its two flags for reasons recorded in the FPGA skill: -nodsp
 # because DSP48 inference for GF multiply caused a routing failure, and -nocarry
@@ -55,6 +70,8 @@ FF_PAT = re.compile(
     r"dff|_FF\b|FD[RCPS]E?\b|FD1P|MAP_SEQ|EFX_FF|TRELLIS_FF|MISTRAL_FF", re.I)
 LUT_PAT = re.compile(r"lut|ALUT|MSLICE|SLICE", re.I)
 MUL_PAT = re.compile(r"dsp\d|mult|MULT18|DSP48", re.I)
+RAM_PAT = re.compile(
+    r"ram|mem|RAMB|PDPSC16K|DP16KD|SP16K|M10K|M20K|MLAB", re.I)
 SKIP_PAT = re.compile(r"wire|port|cell|memor|process|submod", re.I)
 
 # Families whose synth_ pass exists but which are not general-purpose FPGA
@@ -70,21 +87,24 @@ def available_families() -> list:
     return [f for f in fams if f not in EXCLUDE]
 
 
-def synth(family: str, workdir: pathlib.Path):
+def synth(family: str, workdir: pathlib.Path, sources=None, top=None):
     extra = EXTRA_ARGS.get(family, "")
-    reads = "\n".join(f"read_verilog {s}" for s in SOURCES)
-    script = workdir / f"{family}.ys"
+    sources = SOURCES if sources is None else sources
+    top = TOP if top is None else top
+    reads = "\n".join(f"read_verilog {s}" for s in sources)
+    script = workdir / f"{family}_{top}.ys"
     script.write_text(
-        f"{reads}\nhierarchy -top {TOP}\n"
-        f"synth_{family} {extra} -top {TOP}\nstat -top {TOP}\n")
+        f"{reads}\nhierarchy -top {top}\n"
+        f"synth_{family} {extra} -top {top}\nstat -top {top}\n")
     r = subprocess.run(["yosys", "-s", str(script)],
                        capture_output=True, text=True, timeout=900)
     return r.returncode, r.stdout + r.stderr
 
 
-def parse(log: str) -> dict:
+def parse(log: str, top=None) -> dict:
     """Cell counts from the last per-module stat block for the top."""
-    block = log.split(f"=== {TOP} ===")[-1].split("=== design hierarchy ===")[0]
+    top = TOP if top is None else top
+    block = log.split(f"=== {top} ===")[-1].split("=== design hierarchy ===")[0]
     cells = {}
     for line in block.splitlines():
         m = re.match(r"^\s+(\d+)\s+(\$?[A-Za-z][\w$]*)\s*$", line)
@@ -92,7 +112,8 @@ def parse(log: str) -> dict:
             cells[m.group(2)] = int(m.group(1))
     tally = lambda pat: sum(v for k, v in cells.items() if pat.search(k))
     return {"cells": sum(cells.values()), "ff": tally(FF_PAT),
-            "lut": tally(LUT_PAT), "mul": tally(MUL_PAT)}
+            "lut": tally(LUT_PAT), "mul": tally(MUL_PAT),
+            "ram": tally(RAM_PAT)}
 
 
 def main() -> int:
@@ -117,7 +138,8 @@ def main() -> int:
         return 1
 
     print(f"yosys offers {len(fams)} candidate families: {' '.join(fams)}\n")
-    print(f"{'family':<12}{'cells':>8}{'LUTs':>8}{'FFs':>8}{'mult':>7}  result")
+    print(f"{'family':<12}{'cells':>8}{'LUTs':>8}{'FFs':>8}{'probeFF':>9}"
+          f"{'own FFs':>9}{'mult':>7}  result")
 
     results, failures, unreadable = {}, [], []
     with tempfile.TemporaryDirectory() as td:
@@ -136,7 +158,8 @@ def main() -> int:
                 continue
             st = parse(log)
             if st["cells"] == 0:
-                print(f"{fam:<12}{'':>8}{'':>8}{'':>8}{'':>7}  no stats (skipped)")
+                print(f"{fam:<12}{'':>8}{'':>8}{'':>8}{'':>9}{'':>9}{'':>7}"
+                      f"  no stats (skipped)")
                 continue
             if st["ff"] == 0:
                 # A family that synthesises but whose register cells this script
@@ -147,10 +170,29 @@ def main() -> int:
                 # about. Observed: analogdevices under yosys 0.65 reports 2686
                 # cells and zero recognised flip-flops, and the run announced 11
                 # families when 10 had agreed.
-                print(f"{fam:<12}{st['cells']:>8}{st['lut']:>8}{'0':>8}{st['mul']:>7}"
-                      f"  NO FLIP-FLOPS RECOGNISED — not counted, extend FF_PAT")
+                print(f"{fam:<12}{st['cells']:>8}{st['lut']:>8}{'0':>8}{'':>9}{'':>9}"
+                      f"{st['mul']:>7}  NO FLIP-FLOPS RECOGNISED — not counted, extend FF_PAT")
                 unreadable.append(fam)
                 continue
+            # The RAM template alone, same family: whatever flip-flops it keeps
+            # are the port registers that family's block RAM could not absorb,
+            # and they cancel before the comparison.
+            prc, plog = synth(fam, work, sources=[PROBE_SOURCE], top=PROBE_TOP)
+            pst = parse(plog, PROBE_TOP) if prc == 0 else None
+            if pst is None or pst["cells"] == 0:
+                print(f"{fam:<12}{'':>8}{'':>8}{'':>8}{'':>9}{'':>9}{'':>7}"
+                      f"  probe unreadable (skipped)")
+                continue
+            # A probe with no RAM macro, no port registers AND no LUTs left
+            # synthesised to nothing — the memory is gone. (Names of real
+            # block RAM macros vary by family: RAMB36E1, SB_RAM40_4K,
+            # PDPSC16K, MISTRAL_M10K — RAM_PAT carries the known ones, and a
+            # family whose macro name it misses still keeps either the port
+            # registers or the LUT fabric, so this cannot false-alarm.)
+            if pst["ram"] == 0 and pst["ff"] == 0 and pst["lut"] == 0:
+                failures.append(f"{fam} mapped the RAM probe to nothing at all: "
+                                f"the RAM vanished there")
+            st["probe_ff"], st["ff_corr"] = pst["ff"], st["ff"] - pst["ff"]
             results[fam] = st
             note = ""
             if st["mul"]:
@@ -158,7 +200,7 @@ def main() -> int:
                 failures.append(f"{fam} inferred {st['mul']} multiplier(s); the "
                                 f"ternary dot product contains no multiply")
             print(f"{fam:<12}{st['cells']:>8}{st['lut']:>8}{st['ff']:>8}"
-                  f"{st['mul']:>7}  {note or 'ok'}")
+                  f"{st['probe_ff']:>9}{st['ff_corr']:>9}{st['mul']:>7}  {note or 'ok'}")
 
     print()
     if len(results) < args.min_families:
@@ -168,20 +210,24 @@ def main() -> int:
 
     # No truthiness filter here any more: a zero never reaches `results`, so
     # every family in it carries a real count and none can be dropped
-    # silently from the comparison.
-    ffs = {f: r["ff"] for f, r in results.items()}
+    # silently from the comparison. What is compared is the count OUTSIDE the
+    # RAM interface (node minus probe), so a family absorbing the RAM's port
+    # registers into its macro and a family that cannot still meet on every
+    # other register.
+    ffs = {f: r["ff_corr"] for f, r in results.items()}
     if not ffs:
         print("FAIL: no family reported any flip-flops. The cell has "
               "well over a thousand, so the parser is broken, not the design.")
         return 1
 
     lo, hi = min(ffs.values()), max(ffs.values())
-    print(f"sequential state: {lo}..{hi} flip-flops across "
-          f"{len(ffs)} families (spread {hi - lo}, tolerance {args.ff_tolerance})")
+    print(f"sequential state outside the RAM interface: {lo}..{hi} flip-flops "
+          f"across {len(ffs)} families (spread {hi - lo}, tolerance {args.ff_tolerance})")
     if hi - lo > args.ff_tolerance:
         odd = sorted(ffs.items(), key=lambda kv: kv[1])
         failures.append(
-            f"flip-flop count disagrees across families by {hi - lo}: "
+            f"flip-flop count (RAM interface subtracted) disagrees across "
+            f"families by {hi - lo}: "
             f"{', '.join(f'{k}={v}' for k, v in odd)}. Either the design gained "
             f"a vendor dependency or a register was optimised away somewhere.")
 
@@ -193,7 +239,8 @@ def main() -> int:
 
     if unreadable:
         print(f"note: {len(unreadable)} family(ies) synthesised but named no register\n      cell this script knows — {', '.join(unreadable)}. Not counted either way.")
-    print(f"OK: {len(results)} families, no multipliers, sequential state agrees")
+    print(f"OK: {len(results)} families, no multipliers, sequential state outside "
+          f"the RAM interface agrees")
     return 0
 
 
