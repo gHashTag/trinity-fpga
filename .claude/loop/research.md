@@ -95,3 +95,10 @@ B. **Ethernet receipt path** — port the harness transport from serial to the
 C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),
    fine-tune again on a cheap pod, target bpb < 0.5 and multi-line output.
    Spends pod money — owner's call.
+   *Cost memo (fire 24, from the round-1 session's recorded numbers):* round 1
+   was 337 steps, val bpb 0.756 → 0.611, **$0.58 spent** of the RunPod balance
+   (**$74.68 remaining** at round-1 close). The gap to target (0.611 → < 0.5)
+   is roughly the whole round-1 gain again, so round 2 costs dollars, not tens
+   of dollars, even with a bigger corpus and longer contexts; the binding
+   constraint is corpus quality for multi-line output, not money. Corpus copies
+   from round 1: `/workspace/ft_t27_8k` on the pod + `/tmp/ft_t27_8k` local.

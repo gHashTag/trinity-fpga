@@ -238,3 +238,25 @@ call.
 - BRAM vs distributed RAM at 162×64 is a measurement outcome, not a choice;
   both close on an XC7A200T.
 - The portability header rewrite is mandatory, not cosmetic.
+
+### Phantom-frame decision table (fire 24 — assembling already-checked facts, one pick)
+
+The three end-states above, side by side. Every cell restates a fact this
+plan has already established; the table adds no new claims.
+
+| | 1. Model adopts aliasing | 2. RTL guarded no-op | 3. Adjudicable-only cosim (today) |
+|---|---|---|---|
+| What changes | One spec edit: the model's out-of-RAM assertion becomes the same truncation the RTL plan already chose | One RTL edit: a range guard the current plan does not carry; out-of-range phantom → no answer | Nothing — this is the standing state |
+| Cosim coverage under loss | Every stream adjudicable | Every stream adjudicable (model-drop == RTL-no-answer) | Adjudicable streams only; drop positions hand-picked, re-proven by the pre-walk every run |
+| Cost | A spec line + regenerate; zero gates added to the core | Extra comparator + guard logic in the op path, before any RTL exists | Zero, but the phantom-frame question stays open and byte-exact equality under loss is never exercised |
+| The pre-walk's role | Stays as a cheap invariant check (every frame owns its answer) instead of a coverage filter | Same as 1 | Is the mechanism that keeps the cosim honest |
+| Semantics on the board | Out-of-range write lands in the aliased plane — garbage in, deterministic garbage out | Out-of-range write is dropped silently | Never observed — cosim never runs those streams |
+
+**Recommendation: 1.** The aliasing decision is already made on the RTL side
+of this plan; option 1 is the one edit that makes the model agree with the
+plan's own choice, converts the cosim pre-walk from a filter back into an
+invariant check, and costs no gates. Option 2 buys the same coverage for an
+extra guard plus a silent-drop semantic that is harder to debug on the board
+than an aliased answer. Option 3 is correct as a holding position and wrong
+as an end-state: it never exercises the loss streams the phantom finding is
+about. Owner's pick before RTL is written — one word closes it.

@@ -29,6 +29,7 @@ next.
 | fire 21: tri fpga-fire start — atomic lock row + fire-log stub, mechanical enforcement of the fire-18 protocol | DONE | self-test 6/6 hermetic (never the live file — this tool writes), live refusal verified (rc=1 while fire 21 IN-PROGRESS, file untouched); tools sweep 6→7 all green; shared lock_rows refactor: linter and fire-start parse rows through ONE helper; first live start = fire 22; host-side only; no board/pods/RTL |
 | fire 22: audit sweep + first live fire-start (happy path of the fire-21 tool) | DONE | happy path verified live: row placed after the last LOCKS row, stub at the log tail, ONE write, lint sound; cron-death resume paragraph added to the header (/loop 15m + same mandate + this file = restart without breaking past work); gates green to floor 2 (specs 17/17, keycheck 0, tools 7/7, loopstate sound, no gone-inputs line); host-side only; no board/pods/RTL |
 | fire 23: E4 stack decision table for the owner's pick + LOCKS compaction rule | DONE | NODE_ETHERNET_PLAN.md gained the E4 decision table (assembled from already-checked facts only; recommendation = minimal responder on E3's fabric capture — both vendored stacks need their IDDR PHY swapped for E3's anyway); Standing rules gained the LOCKS-bounded rule (drop old DONE rows past ~15, never log entries); the transient third audit anomaly was this fire's own uncommitted plan edit — cleared by the commit; gates green to floor 2 after commit; host-side only; no board/pods/RTL |
+| fire 24: phantom-frame decision table for option A + corpus round-2 cost memo for option C | DONE | TERN_TC_BATCH_RTL_PLAN.md gained the phantom-frame decision table (three Risks end-states side by side; recommendation = 1, model adopts aliasing — the one edit that makes the model agree with the plan's own RTL-side choice, converts the cosim pre-walk from filter to invariant check, costs no gates); research.md option C gained the round-2 cost memo ($0.58 round 1, $74.68 balance → round 2 costs dollars not tens; binding constraint is corpus quality for multi-line output, not money); gates at floor 2 (audit re-checked with FULL output, not a filtered grep — the fire-20 lesson applied); host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -641,3 +642,34 @@ live; the live run's log path will be recorded in the table above at launch.
   files belong in commits), cleared by this commit. Sibling ahead 20→21.
   Gates: specs 17/17, keycheck 0, tools 7/7, loopstate sound, floor 2 after
   commit. Board, pods, RTL untouched.
+
+- fire 24 (2026-09-29): phantom-frame decision table for option A + corpus
+  round-2 cost memo for option C. Both options in research.md's list are now
+  pick-ready, mirroring fire 23's E4 table.
+
+  The table went into TERN_TC_BATCH_RTL_PLAN.md right after Risks, under
+  "Phantom-frame decision table (fire 24 — assembling already-checked facts,
+  one pick)". Five rows compare the three Risks end-states: what changes
+  (spec edit vs RTL guard vs nothing), cosim coverage under loss (all streams
+  adjudicable for 1 and 2 vs adjudicable-only for 3), cost, the pre-walk's
+  role (invariant check vs filter), and board semantics (aliased write vs
+  silent drop vs never exercised). Recommendation = 1: the aliasing decision
+  is already made on the RTL side, so option 1 is the one edit that makes the
+  model agree with the plan's own choice at zero gates; option 2 pays a guard
+  for the same coverage and buries a silent-drop semantic; option 3 is a
+  holding position that never exercises the loss streams the finding is
+  about. Every cell restates a fact the plan had already established — no new
+  claims.
+
+  The cost memo went into research.md option C: round 1 was 337 steps, val
+  bpb 0.756 → 0.611, $0.58 spent, $74.68 balance at close; the remaining gap
+  to < 0.5 is roughly the whole round-1 gain again, so round 2 costs dollars,
+  not tens of dollars, and the binding constraint is corpus quality for
+  multi-line output, not money. Corpus copies noted (/workspace/ft_t27_8k pod
+  + /tmp/ft_t27_8k local).
+
+  Gates: audit re-checked with the tool's FULL output this time (the fire-20
+  filtered-grep lesson, applied unprompted) — exactly the 2 igla floor
+  anomalies (LEDGER.md; ahead 22, sibling still alive), no third from this
+  fire's own edits; specs 17/17, keycheck 0, tools 7/7, loopstate sound.
+  Board, pods, RTL untouched.
