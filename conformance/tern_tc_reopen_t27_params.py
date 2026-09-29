@@ -2,7 +2,7 @@
 """7-token t27-tuned reopen generation run parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_reopen_t27_ax7203.t27"
-SPEC_SHA256 = "e446243af91f7f9da48be6ce9c6b52cad6e9cf0659b6d8f8d3e8575752a5133b"
+SPEC_SHA256 = "8dae969e44953149422ca6677d0e3fe990f7d85564674ed9c877f971bbdac80c"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -32,7 +32,7 @@ SPEC = {
     "MIN_ANSWERS_PER_S": 2500,
     "NODE_ID": 1414678862,
     "NODE_RTL_FILE": "fpga/portable/trinet_node_core.v",
-    "NODE_RTL_SHA256": "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1",
+    "NODE_RTL_SHA256": "fc22d2c14b2acfd05a250385e96bbd88cc56bf41c6bb825a4f9a3916d7200f45",
     "N_TOKENS": 7,
     "PROTOCOL_FILE": "conformance/tern_tc_retransmit.py",
     "PROTOCOL_SHA256": "eda9f8bced1a0f251324f35e1d5843e565dbb283c48a6590318f98eba912833b",
@@ -51,11 +51,11 @@ SPEC = {
     "RETRY_BASE": 536870912,
     "RT_MAX_ATTEMPTS": 3,
     "RT_PARAMS_FILE": "conformance/tern_tc_retransmit_params.py",
-    "RT_PARAMS_SHA256": "34d6697dc03c49e52e3def8e179045c1d99bc34daf63e485d16293390639cd38",
+    "RT_PARAMS_SHA256": "c7cc4d1b417e673813dfcd3fd198f47ca93cc10fc11bea79e0fd76be01dfb8b4",
     "RT_RUNNER_FILE": "conformance/tern_tc_generate_rt_ax7203.py",
     "RT_RUNNER_SHA256": "b42ab095684d7019a51b4e5ef0fc92ee4d543a4c0a7f120d8be8736e6d833492",
     "RT_SPEC_FILE": "specs/trinet/tern_tc_retransmit_ax7203.t27",
-    "RT_SPEC_SHA256": "426c86558bc3b9c1a6319592e04184e174b05c6dbea6f67a3c2aa96a4d750192",
+    "RT_SPEC_SHA256": "e7078b22b10cb5449501a9b8038f84f36675d2dbaee671bb70e5245e3e3e5c10",
     "RUNNER": "conformance/tern_tc_generate_reopen_t27_ax7203.py",
     "RX_HOLE_AT": [19008, 137468535, 57000000],
     "RX_HOLE_LEN": [16, 56, 19],

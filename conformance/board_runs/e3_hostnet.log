@@ -1,0 +1,17 @@
+# start 2026-09-29T03:07:07Z
+# usb DIRECT ['0x1100000']
+# usb clients 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+# usb driver AppleUSBSLCOM (com.apple.DriverKit-AppleUSBSLCOM) -> /dev/cu.usbserial-110
+# load 27.5 32.3 22.9 on 8 cpus (BUSY: 1-min load above 2 per cpu)
+# cmd tri fpga-hostnet 192.168.1.222
+route   192.168.1.222: interface en0, no gateway (direct)
+host    en0 192.168.1.101/24
+arp     (incomplete)
+note    default routes also through utun8; the line above is what the kernel picks now
+hostnet 192.168.1.222: ok; nothing was sent
+real 0.17
+user 0.10
+sys 0.05
+# exit=0
+# load 27.5 32.3 22.9 on 8 cpus (BUSY: 1-min load above 2 per cpu)
+# end 2026-09-29T03:07:08Z

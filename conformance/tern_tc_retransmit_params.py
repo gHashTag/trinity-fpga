@@ -2,7 +2,7 @@
 """Retransmit generation run parameters; the spec is the source, this file is a copy of it."""
 
 SPEC_FILE = "specs/trinet/tern_tc_retransmit_ax7203.t27"
-SPEC_SHA256 = "426c86558bc3b9c1a6319592e04184e174b05c6dbea6f67a3c2aa96a4d750192"
+SPEC_SHA256 = "e7078b22b10cb5449501a9b8038f84f36675d2dbaee671bb70e5245e3e3e5c10"
 COMPILER_WASM_SHA256 = "bb39b9a5ca412a2695ab6a20a54e222933e10edaf08ef053670e4974d08f113f"
 
 SPEC = {
@@ -30,7 +30,7 @@ SPEC = {
     "MIN_ANSWERS_PER_S": 2500,
     "NODE_ID": 1414678862,
     "NODE_RTL_FILE": "fpga/portable/trinet_node_core.v",
-    "NODE_RTL_SHA256": "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1",
+    "NODE_RTL_SHA256": "fc22d2c14b2acfd05a250385e96bbd88cc56bf41c6bb825a4f9a3916d7200f45",
     "N_TOKENS": 8,
     "PROTOCOL_FILE": "conformance/tern_tc_retransmit.py",
     "PROTOCOL_SHA256": "eda9f8bced1a0f251324f35e1d5843e565dbb283c48a6590318f98eba912833b",

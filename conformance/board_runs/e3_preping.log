@@ -1,0 +1,17 @@
+# start 2026-09-29T03:06:42Z
+# usb DIRECT ['0x1100000']
+# usb clients 11 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 8}
+# usb driver AppleUSBSLCOM (com.apple.DriverKit-AppleUSBSLCOM) -> /dev/cu.usbserial-110
+# load 29.0 32.9 22.8 on 8 cpus (BUSY: 1-min load above 2 per cpu)
+# cmd ping -c 2 192.168.1.222
+PING 192.168.1.222 (192.168.1.222): 56 data bytes
+Request timeout for icmp_seq 0
+
+--- 192.168.1.222 ping statistics ---
+2 packets transmitted, 0 packets received, 100.0% packet loss
+real 12.01
+user 0.00
+sys 0.00
+# exit=2
+# load 29.5 32.8 22.9 on 8 cpus (BUSY: 1-min load above 2 per cpu)
+# end 2026-09-29T03:06:54Z

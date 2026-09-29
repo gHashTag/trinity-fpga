@@ -61,7 +61,7 @@ pub const GENERATE_RUNNER_SHA256 : str = "72136fe7c898fa53e0c2042b0203530bcb91ec
 pub const HARNESS_FILE : str = "conformance/tern_tc_layer_ax7203.py";
 pub const HARNESS_SHA256 : str = "37f2dbc313b348a35b927f07f9532a4faed08d6b0b7f2889d5c34b09bd70e8d8";
 pub const NODE_RTL_FILE : str = "fpga/portable/trinet_node_core.v";
-pub const NODE_RTL_SHA256 : str = "920a0842dbdaec9f6f2fe122bd0cae71da7e156b9f2b86890c2c085a04e26bb1";
+pub const NODE_RTL_SHA256 : str = "fc22d2c14b2acfd05a250385e96bbd88cc56bf41c6bb825a4f9a3916d7200f45";
 pub const PROTOCOL_FILE : str = "conformance/tern_tc_retransmit.py";
 pub const PROTOCOL_SHA256 : str = "eda9f8bced1a0f251324f35e1d5843e565dbb283c48a6590318f98eba912833b";
 
