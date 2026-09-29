@@ -17,8 +17,6 @@ next.
 
 | phase | status | notes |
 |---|---|---|
-| fire 15: C_REF git-fallback in wrapper pins_ok + tri fpga-repin | DONE | selftest 16/16 (5 refusals green), specs 17/17, cascade via the new tool, host-side only; no board/pods/RTL |
-| fire 16: repin cycle-CAP self-test + tri fpga-pins (blast-radius query) + competitor re-check | DONE | repin 17/17 (new G), pins self-test 5/5 after a live-caught diamond false-positive fix, live radii verified vs the fire-15 cascade, competitor table refreshed (ternfpga open-sourced; wedge intact), specs 17/17, host-side only; no board/pods/RTL |
 | fire 17: tri fpga-tools (tool self-test sweep) as loopcheck's 4th component | DONE | sweep 6/6 green after catching real decode rot (hardcoded fire-2 sha, stale after the fire-14/15 cascades — decode was right, the test was wrong; fixed hermetically 18/18 + the once-real-stale-sha fixture pinned), loopcheck now 4 components, tools meta 9/9; competitor re-check skipped (fire 16 refreshed it hours ago); specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 | fire 18: tri fpga-loopstate (loop-state.md integrity linter) as loopcheck 5th component | DONE | self-test 9/9 (8/9 on first run — its own live check caught the loop's mid-fire log window; protocol fixed: stub+row together at start); loopcheck now 5 components, live sound; specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
 | fire 19: audit sweep + sibling engine-semantics check (did igla-coder-gpu's engine change turn semantic?) | DONE | answer: NO — tc_infer.c has 0 commits and 0 diff since 52be443; sibling engine work is tc_fast (separate bench harness) + research scripts; C_REF pin doctrine and C_GREEDY_IDS unaffected, no re-pin decision pends; loopcheck floor = exactly the 2 igla anomalies (LEDGER.md, ahead 19); specs 17/17, keycheck 0, tools 6/6, loopstate sound; read-only on sibling; no board/pods/RTL |
@@ -34,6 +32,7 @@ next.
 | fire 29: corpus builder derivability: the missing ft_t27_8k builder — read manifest.json/items.jsonl/tokenizer, find what derives them and from what; if derivable, write a builder verified sha256-identical to the fire-28 manifest; if not, document exactly what is unknowable | DONE 2026-09-29 | builder found: sibling t27_bench.py fim (deterministic, no RNG); pin proven; tri fpga-derive verifies 92/92 (91 byte-identical + manifest.json content); loopcheck floor 2 |
 | fire 30: LOCKS compaction (18 DONE rows past the ~15 bound) + audit-only sweep; competitor re-check not due (fire 26, next ~36) | DONE 2026-09-29 | LOCKS 18→15 DONE rows (three T35 phase rows dropped; facts preserved in DONE bullets + git), firelog archive a correct no-op (fires 2–3 entries already archived at fire 25), lint sound, 17 table lines verified; loopcheck floor = exactly the 2 igla anomalies; host-side only; no board/pods/RTL |
 | fire 31: tool-source durability: board.py + SKILL.md + tri wrapper exist only uncommitted outside the repo — snapshot through the keep substrate so a skills-repo reset cannot lose the loop tooling; audit sweep | DONE 2026-09-29 | risk proven real (whole skill dir UNTRACKED, git log empty — zero committed copies of 27 fires of tooling); 4 files snapshotted /tmp/loop_toolsrc, kept keep:toolsrc (secret-scanned first), refresh re-keep sha-deduped 1-new/3-same; standing rule + SKILL.md lesson; loopcheck floor 2 |
+| fire 32: corpus diagnosis: why one-line output — replicate the sibling fim split over kept items.jsonl and measure what fraction of training targets (mid) were multi-line; round-2 design note for option C; LOCKS compaction (17 DONE rows) | DONE 2026-09-29 | verdict: corpus NOT the reason (58.3% of 3521 train targets 6+ lines; model's 6-token output = 1.3rd percentile → training-budget/capacity symptom); round-2 lever = steps, same corpus shape; firelog/linter cross-reference bug pair found & fixed (10/10+10/10+13/13), fire 16 entry now archived; LOCKS 17→15; loopcheck floor 2 |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -316,63 +315,6 @@ live; the live run's log path will be recorded in the table above at launch.
 ## Fire log
 
 Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
-
-- fire 15 (2026-09-29): the fire-2 C_REF doctrine completed in the second
-  place it was owed, and the recurring re-pin cascade became a tool. (1)
-  `git_blob_sha` in tern_tc_generate_ax7203.py mirrors the generators'
-  gitBlobSha: pins_ok keeps SPEC/HARNESS/MAC32/MODEL strict, C_REF is
-  satisfied on disk OR by bytes reachable in the file's git history (the
-  wrapper never reads tc_infer.c at run time; --mode c is a Python mirror,
-  C_GREEDY_IDS are recorded constants). Result: tri fpga-selftest 16/16 —
-  the 5 fire-14 refusals are green, spec pins and ids unchanged, so the
-  owner's fire-14 option-C decision (whether the sibling's new engine
-  becomes the reference) is still open and still semantic. Self-test
-  additions cover both branches (garbage sha refused + live stale pin
-  resolves via sibling history). (2) `tri fpga-repin FILE... [--check]`
-  (board.py cmd_repin + repin_walk, self-test 16 checks incl. a synthetic
-  generator): seed = named files, walk pins bottom-up to a fixpoint
-  (leaf pins → cross-spec pins → params regeneration → params pins),
-  never guesses (missing pinned file skipped, ambiguous *_SHA256 refused,
-  generator PROBLEM stops unless another generator still writes). The
-  runner edit was repinned THROUGH the tool: GENERATE_RUNNER_SHA256
-  5d769dd8→72136fe7 in retransmit+3 reopens, RT_PARAMS pins, batch
-  REOPEN_SPEC, 4 params files regenerated, converged in 4 passes, second
-  run rc=0. Two tool bugs found by its own first live run and fixed with
-  self-test cases: bare-mode `wrote` lines were unparsed (walk stopped
-  calling real writes "no writes"), and an UnboundLocalError crashed the
-  first sweep losing walk state — resumed honestly by re-seeding the
-  orphaned params files (their diffs are the generators' mechanical
-  output, provable via git diff; SKILL.md records the resume rule). tri
-  fpga-repin --check probed but did NOT apply the tc_infer.c re-pin —
-  that stays the owner's. Specs 17/17, keycheck 0 hits. Board, pods, RTL
-  untouched.
-
-- fire 16 (2026-09-29): the pin-graph pair completed — repin's CAP path got a
-  self-test, and its planning half became a command. (1) Scenario G in
-  repin_self_test: two specs pinning each other by file sha oscillate forever
-  in principle; the walk must stop at MAX_REPIN_PASSES with a loud `CAP:` line
-  and rc=2, not hang — 17/17. (2) `tri fpga-pins FILE` (board.py pin_pinner_map
-  + print_pin_radius + pins_self_test): the transitive blast radius of editing
-  FILE through the pin graph — L1 direct pinners, L2 pinners of those specs,
-  fixpoint — plus the params generators reading any spec inside the radius:
-  the exact set fpga-repin then walks, queryable BEFORE the edit. Its first
-  live run (harness radius: 10 specs, 10 generators, rc=0) caught a real bug
-  in my own cycle detection: it printed CYCLE for `reopen pins generate
-  again`, but two paths reaching one spec is a diamond (reopens pin BOTH the
-  generate spec and the harness — the corpus is layered like that), not a
-  cycle; a true cycle is mutual pinning (a node whose pinner chain leads back
-  to itself), now detected by reachability and printed as CYCLE rc=1. The
-  diamond class is pinned in the self-test (5/5). Live verification against
-  known truth: harness → 10 specs 1 level; retransmit spec → 3 reopens + batch
-  on 2 levels; reopen_t27 → batch only — exactly the fire-15 cascade shape.
-  (3) Competitor re-check (targeted, from fire 13): nicholi.ai's engine went
-  open source (Neumann-Labs/ternfpga, Apache-2.0, Arty A7-35T, BitNet-2B-4T,
-  energy partly Vivado-derived and self-flagged as such) — the floor entry
-  hardened, still no receipts; zkML newcomers (ZK-Tracer, deep-prove)
-  accelerate proof GENERATION on GPU/ASIC — they sharpen the complement line
-  rather than close the on-silicon-receipts gap. research.md table updated.
-  Specs 17/17, keycheck 0 hits, loopcheck floor = exactly the two known igla
-  anomalies. Board, pods, RTL untouched.
 
 - fire 17 (2026-09-29): the tool layer got the sweep its own self-critique
   asked for, and the sweep's first live run earned its keep immediately.
@@ -765,3 +707,31 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   keycheck 0, tools 10/10, loopstate sound, audit at open and close =
   exactly the 2 igla anomalies (LEDGER.md; ahead 31, sibling alive).
   Host-side only; no board/pods/RTL; no money.
+
+- fire 32 (2026-09-29) — corpus diagnosis + a tool bug pair the compaction
+  flushed out. (1) The weak-point-3 question — "why does the model emit one
+  line" — answered by MEASUREMENT, not opinion: /tmp/fimdiag.py imports the
+  sibling's t27_bench read-only (its own functions/is_stub/norm — zero
+  transcription risk), git-archive-extracts the pinned tree 9fec01a78
+  (checkout untouched), and replicates cmd_fim's walk exactly (held set,
+  /scratch/ skip, md5%20 split, bad-line drop, is_stub/4000-char/room
+  filters). Verdict over 3,521 train FIM targets: 2.8 % newline-free bodies,
+  25.4 % single-statement style, **58.3 % six-plus lines**; median target 48
+  tokens / 157 chars; the model's actual 6-token output is the **1.3rd
+  percentile** of target length. The corpus TAUGHT multi-line — the collapse
+  to the shortest well-formed body is a training-budget (337 steps) /
+  capacity symptom. research.md weak point 3 and option C's memo corrected:
+  round 2's lever is steps and schedule on the SAME corpus shape, not corpus
+  reshaping. Evidence kept (fimdiag.py + results, keep:fire32). (2) LOCKS
+  compaction 17→15 (fires 15–16 rows dropped) exposed a REAL bug pair in the
+  rotation machinery: the archiver indexed fires by findall over the whole
+  phase cell, so fire 26's phase "last fire 16, now 26" falsely kept fire 16
+  "indexed" — and the linter had the mirror bug (a cross-reference demanded
+  that fire's entry), so the two errors cancelled and lint stayed green.
+  Fixed both to parse only the row's OWN leading "fire N"; regression cases
+  in both self-tests (loopstate 10/10, firelog 10/10, tools sweep 13/13);
+  live proof: the re-run archived fire 16's entry (738→711 lines) and the
+  fixed linter says sound. (3) Tool snapshot refreshed per the fire-31 rule
+  (board.py changed; secret-scanned; 1 new / 3 same). Gates: audit at open
+  and close = floor 2 (igla LEDGER.md; ahead 31). Host-side only; no
+  board/pods/RTL; no money.

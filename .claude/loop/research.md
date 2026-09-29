@@ -86,6 +86,16 @@ zkML/TEE-attestation variant.
    a length the model itself chose (its own small first), but one line is not
    a program. Scaling the corpus/prompt work matters more than any wire fix
    for anyone who wants igla-coder to actually code.
+   *Measured, fire 32:* the corpus is NOT the reason. Replicating the
+   builder's exact walk over the pinned tree (import of the sibling's own
+   `functions`/`is_stub`/`norm`): 3,521 train FIM targets of which only
+   2.8 % are newline-free bodies, 25.4 % single-statement style, **58.3 %
+   six-plus lines**; median target 48 tokens / 157 chars; the model's actual
+   6-token output sits at the **1.3rd percentile** of target length. The
+   data taught multi-line; the model collapsed to the shortest well-formed
+   body anyway — a training-budget (337 steps) / capacity symptom, not a
+   data-mix one. Round 2's lever is steps and schedule on the SAME corpus
+   shape, not corpus reshaping.
 4. **One board, one node.** The tri-net story (node ids, setkey) is built for
    many nodes; every run so far is one AX7203. A second node would exercise
    the impersonation/foreign-frame paths in real hardware, not just in the
@@ -113,7 +123,9 @@ C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),
    (**$74.68 remaining** at round-1 close). The gap to target (0.611 → < 0.5)
    is roughly the whole round-1 gain again, so round 2 costs dollars, not tens
    of dollars, even with a bigger corpus and longer contexts; the binding
-   constraint is corpus quality for multi-line output, not money. Corpus copies
+   constraint is training budget, not money — fire 32 measured the corpus mix
+   and multi-line was taught (58 % of targets 6+ lines): more steps on the
+   same corpus shape, not corpus reshaping. Corpus copies
    from round 1: `/workspace/ft_t27_8k` on the pod + `/tmp/ft_t27_8k` local.
    *Durability (fires 27–28 → derivability proven fire 29):* no builder for
    `ft_t27_8k` lives in this repo — the builder is the sibling's
