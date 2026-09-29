@@ -115,3 +115,9 @@ C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),
    of dollars, even with a bigger corpus and longer contexts; the binding
    constraint is corpus quality for multi-line output, not money. Corpus copies
    from round 1: `/workspace/ft_t27_8k` on the pod + `/tmp/ft_t27_8k` local.
+   *Durability (fire 27):* no builder for `ft_t27_8k` exists in this repo
+   (grep over .py/.zig/.md matches nothing outside .claude/loop), so round 2
+   inherits round 1's corpus only if both copies survive — /tmp dies at the
+   next reboot, the STOPPED pod's volume dies with the pod. Before round 2,
+   either commit a builder script or keep the corpus the tmpcheck way
+   (gitignored blobs + tracked MANIFEST.tsv).

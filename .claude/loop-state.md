@@ -32,6 +32,7 @@ next.
 | fire 24: phantom-frame decision table for option A + corpus round-2 cost memo for option C | DONE | TERN_TC_BATCH_RTL_PLAN.md gained the phantom-frame decision table (three Risks end-states side by side; recommendation = 1, model adopts aliasing — the one edit that makes the model agree with the plan's own RTL-side choice, converts the cosim pre-walk from filter to invariant check, costs no gates); research.md option C gained the round-2 cost memo ($0.58 round 1, $74.68 balance → round 2 costs dollars not tens; binding constraint is corpus quality for multi-line output, not money); gates at floor 2 (audit re-checked with FULL output, not a filtered grep — the fire-20 lesson applied); host-side only; no board/pods/RTL |
 | fire 25: fire-log rotation: entries of de-indexed fires archive to .claude/loop/firelog-archive.md, linter learns the combined index, tri fpga-firelog | DONE | the file's unbounded growth closed: entries whose fires lost LOCKS rows move verbatim to the archive (13 moved live: fires 2–14, file 678→551 lines); linter counts a fire's entry in either home; fire-start numbers above the archive max too (self-test caught the collision case); archive written FIRST so a crash duplicates rather than loses; firelog self-test 9/9 (first run 8/9 — a test-hygiene bug: two states sharing one loop/ dir; fixed, not code), tools 8/8, loopcheck at floor 2 (igla ahead 25); standing rule added; host-side only; no board/pods/RTL |
 | fire 26: competitor re-check (rare cadence due: last fire 16, now 26) — read-only sweep, research.md refresh if anything moved | DONE | moved: PENSA added (NeurIPS 2026, Alveo U50 HBM, BitNet 2B4T full on-FPGA, 58.09 tok/s @ctx128, no verifiability — throughput tier) and TRACE added (Linux Foundation/CoSAI Aug 2026: workload-level Trust Records, root = CPU TEEs SEV/TDX, 135k PyPI downloads/10wk — attestation tier, complement but "receipt" vocabulary collision); ternfpga unchanged (72 commits, no receipts), Ternarycore active to Jul 2026 (hw verification) but RTL-correctness only; wedge INTACT — nobody receipts on accelerator silicon; scoping line sharpened to "on-silicon per-job receipts" (was "on-hardware"); READY re-check cadence reset to fire 26; gates at floor 2; read-only web + repo docs; no board/pods/RTL |
+| fire 27: stamp-probe midnight bug: the audit calibration probe crosses a UTC date boundary in the [00:45,01:00) window and false-reports blindness — fix the probe, add a regression at the caught instant | DONE | root cause proven empirically before the edit (probe 00:02 UTC vs commit 23:47 previous day → replace() lands earlier-on-commit-date → not flagged; window edges [00:45,00:59:59] blind, 01:00 and 14:00 controls flag); stamp_probe() steps the synthetic commit back hour-by-hour until stamp and commit share a UTC date — probe stays inside future_stamps' documented same-date scope at every instant; tri fpga-stamps added (the check alone + calibration; self-test 9/9 incl. the caught instant 00:47:53Z and both window edges), tools sweep 8→9, dispatch + tri wrapper; live proof INSIDE the window: audit 00:57:26Z third anomaly gone, floor 2; corpus-durability fact recorded in research.md option C (no ft_t27_8k builder in the repo); host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -619,3 +620,30 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   into the table — no entry added on search-snippet evidence alone.
   READY's re-check cadence reset to fire 26. Gates at floor 2 (igla
   LEDGER.md, ahead 26). Board, pods, RTL untouched.
+
+- fire 27 (2026-09-29): the audit reported a THIRD anomaly at 00:47:53Z —
+  "stamp check is blind: a stamp 15 min after its commit was not reported" —
+  and the loop self-healed its own instrument. Root cause, proven empirically
+  BEFORE any edit (a synthetic probe script, no guessing): the audit's
+  calibration probe built "probe HH:MM UTC" from now-3600/+900; run inside
+  the [00:45, 01:00) UTC window the stamp rolls over midnight and
+  future_stamps' replace() then lands it EARLIER on the commit's own date —
+  the probe tested nothing and the audit reported a blindness it had caused
+  itself. Window edges 00:45:00/00:59:59 blind, 01:00:00 and 14:00 controls
+  flag — exactly the predicted 15-minute daily window, and the live audit ran
+  inside it. Fix: stamp_probe(now_epoch) steps the synthetic commit back
+  hour-by-hour until stamp and commit share a UTC date, keeping the probe
+  inside the check's documented same-date scope at EVERY instant; cmd_audit
+  now uses it. New tool tri fpga-stamps — the stamp check alone (claim-doc
+  sweep + calibration), self-test 9/9 hermetic: scope semantics (future
+  flagged, past/slack clean, other-date and impossible clocks skipped) plus
+  the fire-27 regression at the caught instant and both window edges; tools
+  sweep 8→9 all green, dispatch + tri wrapper updated. Live proof: the
+  post-fix audit ran 00:57:26Z, still inside the old blind window, and the
+  third anomaly is gone — floor back to exactly 2 igla anomalies (LEDGER.md,
+  ahead 26); loopcheck specs 17/17, keycheck 0, tools 9/9, loopstate sound.
+  Second finding, documented not invented: /tmp/ft_t27_8k (16M, alive) has
+  NO builder anywhere in this repo — round 2 of option C inherits its corpus
+  only while /tmp and the STOPPED pod's volume both survive; recorded in
+  research.md option C with the tmpcheck-style keep as the fix direction.
+  Board, pods, RTL untouched. /tmp/probe_check.py was the evidence script.
