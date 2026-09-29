@@ -115,9 +115,17 @@ A. **Batched wire protocol (SETX/DOT6)** — design COMPLETE through fires 6–1
 B. **Ethernet receipt path** — port the harness transport from serial to the
    proven GbE node; the receipt/verify layer stays byte-identical. E3 RX
    capture already modeled PASS in nextpnr (hold 10.9 ns); TX-hold PASS.
-C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),
-   fine-tune again on a cheap pod, target bpb < 0.5 and multi-line output.
-   Spends pod money — owner's call.
+C. **Corpus round 2** — more steps on the SAME corpus (fire 32 exonerated
+   the data mix; round 1 was 337 steps = 23.98 epochs over the 7.37 M-token
+   train split), extend the round-1 run on a cheap pod, target bpb ≤ 0.55
+   (stretch < 0.5) and multi-line output. Spends pod money — owner's call.
+   **Pre-registered plan: `.claude/loop/round2-plan.md` (fire 33)** —
+   extend mode (resume ckpt.pt, full optimizer state), target 3,370 total
+   steps ≈ $5.22 new spend, hard cap 4,000 steps / $7; five stop rules,
+   the two load-bearing ones being the overfit wall (240 total epochs at
+   target — val rising 2 evals in a row halts) and the capacity-plateau
+   verdict (tc is 77 % of the board's BRAM; a bigger model is not an
+   option behind this link — a plateau is a result, not a pivot).
    *Cost memo (fire 24, from the round-1 session's recorded numbers):* round 1
    was 337 steps, val bpb 0.756 → 0.611, **$0.58 spent** of the RunPod balance
    (**$74.68 remaining** at round-1 close). The gap to target (0.611 → < 0.5)

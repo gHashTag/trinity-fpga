@@ -33,6 +33,7 @@ next.
 | fire 30: LOCKS compaction (18 DONE rows past the ~15 bound) + audit-only sweep; competitor re-check not due (fire 26, next ~36) | DONE 2026-09-29 | LOCKS 18→15 DONE rows (three T35 phase rows dropped; facts preserved in DONE bullets + git), firelog archive a correct no-op (fires 2–3 entries already archived at fire 25), lint sound, 17 table lines verified; loopcheck floor = exactly the 2 igla anomalies; host-side only; no board/pods/RTL |
 | fire 31: tool-source durability: board.py + SKILL.md + tri wrapper exist only uncommitted outside the repo — snapshot through the keep substrate so a skills-repo reset cannot lose the loop tooling; audit sweep | DONE 2026-09-29 | risk proven real (whole skill dir UNTRACKED, git log empty — zero committed copies of 27 fires of tooling); 4 files snapshotted /tmp/loop_toolsrc, kept keep:toolsrc (secret-scanned first), refresh re-keep sha-deduped 1-new/3-same; standing rule + SKILL.md lesson; loopcheck floor 2 |
 | fire 32: corpus diagnosis: why one-line output — replicate the sibling fim split over kept items.jsonl and measure what fraction of training targets (mid) were multi-line; round-2 design note for option C; LOCKS compaction (17 DONE rows) | DONE 2026-09-29 | verdict: corpus NOT the reason (58.3% of 3521 train targets 6+ lines; model's 6-token output = 1.3rd percentile → training-budget/capacity symptom); round-2 lever = steps, same corpus shape; firelog/linter cross-reference bug pair found & fixed (10/10+10/10+13/13), fire 16 entry now archived; LOCKS 17→15; loopcheck floor 2 |
+| fire 33: round-2 training pre-registration: convert fire-32 measured diagnosis into executable plan (steps/schedule/cost/criteria) for option C; audit sweep | DONE 2026-09-29 | plan = .claude/loop/round2-plan.md: extend mode (resume ckpt.pt), target 3,370 steps ≈ $5.22, cap 4,000/$7, primary bpb ≤ 0.55 + ≥25% multi-line on 20 held prompts, 5 stop rules (overfit 2-eval rise at 240 total epochs; plateau at step 2000 < 0.02 gain → "BRAM-sized model plateaus" verdict — tc is 77% BRAM, no upscale exists); new facts: round 1 = 23.98 epochs over the 7.37M-token train split, $1.72/1k steps; overwrite hazard caught pre-registration (resume rewrites run.json) → pull-before-extend §6; research.md option C retargeted off "bigger corpus" (fire 32 killed it); SKILL.md lesson + toolsrc refresh 1-new/3-same; loopcheck floor 2; no board/pods/RTL/money |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -735,3 +736,32 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   (board.py changed; secret-scanned; 1 new / 3 same). Gates: audit at open
   and close = floor 2 (igla LEDGER.md; ahead 31). Host-side only; no
   board/pods/RTL; no money.
+
+- fire 33 (2026-09-29): round-2 fine-tune pre-registration (option C's
+  executable form) + audit sweep. The plan (.claude/loop/round2-plan.md)
+  is written BEFORE any pod starts; nothing was run. Facts gathered
+  read-only from the sibling repo (train.py/model.py/HANDOFF.md, never
+  edited): train.py --tokens → steps (× 524,288), resume = full state
+  (model+opt+data+step) from ckpt.pt, --init = weights with a fresh
+  schedule, auto final eval, run.json records everything; model size tc
+  = 6.46 M ternary weights = 77 % of XC7A200T BRAM → every larger size
+  breaks the board story, so a capacity plateau is a verdict, not a
+  pivot; corpus manifest (fire-28 keep): train 7,368,311 tokens → round
+  1's 176.68 M tokens = 23.98 epochs — "more steps" means deeper epochs,
+  which makes the val-based stop rule load-bearing, not ornamental.
+  Plan shape: extend the round-1 run (resume ckpt.pt on volume
+  igla-coder-data), target 3,370 total steps ($5.22 new at the measured
+  $1.72/1k), hard cap 4,000 steps/$7; primary success final val_bpb_mix
+  ≤ 0.55, stretch < 0.50, behavioral ≥ 25 % two-line bodies on 20 held
+  prompts; five stop rules (overfit = val rise 2 evals in a row; plateau
+  at step 2,000 with < 0.02 gain over 0.611; budget; restart spike > 2×
+  end-loss; pod fault). One loss class caught while writing the plan:
+  resume REWRITES run.json and a finished round 2 replaces final.pt —
+  the round-1 records exist only on the working volume, so plan §6 step
+  3 pulls them BEFORE the resume smoke (SKILL.md lesson added; toolsrc
+  snapshot refreshed 1-new/3-same per the fire-31 rule, secret-scanned).
+  research.md option C retargeted: was "bigger corpus", now "more steps,
+  same corpus" per fire 32, with the plan pointer. Gates: audit at open
+  and close = floor 2 (igla LEDGER.md; ahead 33); specs 17/17, keycheck
+  0, tools 10/10. Host-side only; no board/pods/RTL; no money — the plan
+  executes only on the owner's "C".
