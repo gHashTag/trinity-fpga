@@ -4,6 +4,13 @@ Written fire 33 (2026-09-29), BEFORE any pod is started. Nothing here has
 been run; every number cites its source. The owner's pick ("C") starts the
 sequence in §6 — not before. No board, no RTL: this is the model-side leg.
 
+Fire 34 adversarial pass (same day, still before any execution): three
+corrections applied and recorded here — §5b re-anchored to the eval cadence
+(step 2,022, not 2,000), §6.4 smoke side effects corrected (ckpt.pt DOES
+advance — train.py checkpoints after the break), §6.5 --tokens made exact
+(1.77e9 floors to 3,375 steps, not 3,370). Every other figure recomputed
+from train.py arithmetic, the corpus manifest and the cost anchors: holds.
+
 ## 1. Why round 2 looks like this (measured)
 
 - Fire 32 diagnosed the one-line output: the corpus is not the cause. Over
@@ -71,7 +78,8 @@ the full run.
 
 a. **Overfit**: val_bpb_mix rises on 2 consecutive evals (eval_every =
    337 steps) → stop, keep the best checkpoint.
-b. **Plateau**: at step 2,000 the best val_bpb_mix has improved < 0.02
+b. **Plateau**: at the 6th eval (step 2,022 — evals land on multiples of
+   337) the best val_bpb_mix has improved < 0.02
    over round 1's 0.611 → stop; verdict "capacity ceiling of the
    BRAM-sized model" (§1 wall).
 c. **Budget**: 4,000 steps or $7.
@@ -94,8 +102,12 @@ e. **Pod/GPU fault** → stop, salvage log.jsonl (appends incrementally),
    verbatim except --tokens (and the §2 branch if taken). Record hours
    in §3.
 4. Smoke: resume + `--max_steps 340`. Expect "resumed from step 337",
-   three steps, no checkpoint overwrite (< save_every_min 30 min).
-5. Full: `--tokens 1.77e9` (3,370 steps), eval_every default (0.1),
+   three steps. Side effects, named (fire-34 correction): train.py
+   checkpoints unconditionally after the break, so ckpt.pt advances
+   337→340 — the three steps are real and count toward 3,370 — and
+   run.json is rewritten (§2 hazard; the pull is step 3, before this).
+5. Full: `--tokens 1766850560` (= 3,370 × 524,288 exactly — 1.77e9 would
+   floor to 3,375), eval_every default (0.1),
    time_limit_h safety margin from step-3 hours.
 6. Watch evals against §5; log.jsonl appends — pull live if needed.
 7. Post: auto final eval → summary; export TC02 (same exporter, new sha);

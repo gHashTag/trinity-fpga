@@ -34,6 +34,7 @@ next.
 | fire 31: tool-source durability: board.py + SKILL.md + tri wrapper exist only uncommitted outside the repo — snapshot through the keep substrate so a skills-repo reset cannot lose the loop tooling; audit sweep | DONE 2026-09-29 | risk proven real (whole skill dir UNTRACKED, git log empty — zero committed copies of 27 fires of tooling); 4 files snapshotted /tmp/loop_toolsrc, kept keep:toolsrc (secret-scanned first), refresh re-keep sha-deduped 1-new/3-same; standing rule + SKILL.md lesson; loopcheck floor 2 |
 | fire 32: corpus diagnosis: why one-line output — replicate the sibling fim split over kept items.jsonl and measure what fraction of training targets (mid) were multi-line; round-2 design note for option C; LOCKS compaction (17 DONE rows) | DONE 2026-09-29 | verdict: corpus NOT the reason (58.3% of 3521 train targets 6+ lines; model's 6-token output = 1.3rd percentile → training-budget/capacity symptom); round-2 lever = steps, same corpus shape; firelog/linter cross-reference bug pair found & fixed (10/10+10/10+13/13), fire 16 entry now archived; LOCKS 17→15; loopcheck floor 2 |
 | fire 33: round-2 training pre-registration: convert fire-32 measured diagnosis into executable plan (steps/schedule/cost/criteria) for option C; audit sweep | DONE 2026-09-29 | plan = .claude/loop/round2-plan.md: extend mode (resume ckpt.pt), target 3,370 steps ≈ $5.22, cap 4,000/$7, primary bpb ≤ 0.55 + ≥25% multi-line on 20 held prompts, 5 stop rules (overfit 2-eval rise at 240 total epochs; plateau at step 2000 < 0.02 gain → "BRAM-sized model plateaus" verdict — tc is 77% BRAM, no upscale exists); new facts: round 1 = 23.98 epochs over the 7.37M-token train split, $1.72/1k steps; overwrite hazard caught pre-registration (resume rewrites run.json) → pull-before-extend §6; research.md option C retargeted off "bigger corpus" (fire 32 killed it); SKILL.md lesson + toolsrc refresh 1-new/3-same; loopcheck floor 2; no board/pods/RTL/money |
+| fire 34: adversarial self-review of round2-plan.md: recompute every numeric claim from source arithmetic (train.py, manifest, cost anchors), re-check resume/smoke side effects in the control flow, sweep research.md for other stale claims; fix what fails | DONE 2026-09-29 | 3 defects found & fixed pre-execution: --tokens 1.77e9 floors to 3375 not 3370 (now exact 1766850560), "smoke = no checkpoint overwrite" was false (train.py checkpoints after the break; ckpt.pt advances 337→340, steps counted), stop-rule (b) re-anchored to the eval cadence (step 2022 = 6th eval, evals are multiples of 337); all other figures recomputed clean (epochs/warmup/decay/costs/balance); research.md sweep vs DONE verdicts: no further stale claims; amendment note added to the plan header; SKILL.md lesson + toolsrc refresh 1-new/3-same; loopcheck floor 2; no board/pods/RTL/money |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -765,3 +766,35 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   and close = floor 2 (igla LEDGER.md; ahead 33); specs 17/17, keycheck
   0, tools 10/10. Host-side only; no board/pods/RTL; no money — the plan
   executes only on the owner's "C".
+
+- fire 34 (2026-09-29): adversarial self-review of the fire-33 plan
+  (.claude/loop/round2-plan.md) — the fire-33 self-critique promised it
+  ("следующему файру — сверка"), executed before anything can execute the
+  plan. Method: recompute every numeric claim from the source it cites
+  (train.py's steps/warmup/decay/eval arithmetic, the corpus manifest,
+  the $0.58/337-step cost anchor) and walk the code's exit paths, not
+  just its body. THREE defects found, all fixed pre-execution with an
+  amendment note in the plan header: (1) §6.5 `--tokens 1.77e9` floors
+  to 3,375 steps, not the target 3,370 — now the exact integer
+  1766850560 (= 3370 × 524288); (2) §6.4 claimed the smoke run does not
+  overwrite the checkpoint — false, train.py calls checkpoint(ck)
+  unconditionally AFTER the loop break, so ckpt.pt advances 337→340
+  (three real steps, counted toward the total) and run.json is rewritten
+  (already flagged in §2, now also in the smoke step); (3) stop rule (b)
+  was anchored at "step 2,000", which sits between evals — re-anchored
+  to the 6th eval (step 2,022; evals are multiples of 337). Every other
+  figure recomputed CLEAN: 176.685 M tokens = 23.98 epochs, warmup 100 /
+  decay from 2,696 at 3,370 steps, budget table rows (883 M/120,
+  1.767 B/240, 2.097 B/285 epochs), costs $2.32/$5.22/$6.30, balance
+  floor $67.68. research.md swept claim-by-claim against the DONE
+  records (wire shares, jobs, E3 holds, $74.68, 235 s vs 1414.5 s): no
+  further stale claims — option C's header (fixed fire 33) was the only
+  one. SKILL.md lesson added (recompute-from-source pass between writing
+  "execute exactly this" and execution; exit paths are where side
+  effects hide; the author is the worst reviewer of their own
+  arithmetic); toolsrc snapshot refreshed per the fire-31 rule
+  (1-new/3-same, secret-scanned). No new tri command — the pass was
+  reading and arithmetic, not machinery; forcing a tool would be
+  make-work. Gates: audit floor 2 (igla LEDGER.md; ahead 33); specs
+  17/17, keycheck 0, tools 10/10. Host-side only; no board/pods/RTL; no
+  money.
