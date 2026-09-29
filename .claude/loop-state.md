@@ -17,9 +17,6 @@ next.
 
 | phase | status | notes |
 |---|---|---|
-| T35 spec + wrappers authoring | DONE | committed 8955ea793 (fire 2); specs/generators/params/wrappers/CPU logs |
-| T35 rehearsal pair | DONE | PASS x2, committed c24d25b7a; ids equal CPU_INT_IDS, 2 reopens, key hits 0 |
-| T35 board run | DONE, PASS | 2026-09-28T17:13–17:36Z; 6712896/6712896 receipts, ids == CPU_INT_IDS, 0 reopens; record conformance/TERN_TC_GENERATE_T27.md; no live board work remains |
 | fire 15: C_REF git-fallback in wrapper pins_ok + tri fpga-repin | DONE | selftest 16/16 (5 refusals green), specs 17/17, cascade via the new tool, host-side only; no board/pods/RTL |
 | fire 16: repin cycle-CAP self-test + tri fpga-pins (blast-radius query) + competitor re-check | DONE | repin 17/17 (new G), pins self-test 5/5 after a live-caught diamond false-positive fix, live radii verified vs the fire-15 cascade, competitor table refreshed (ternfpga open-sourced; wedge intact), specs 17/17, host-side only; no board/pods/RTL |
 | fire 17: tri fpga-tools (tool self-test sweep) as loopcheck's 4th component | DONE | sweep 6/6 green after catching real decode rot (hardcoded fire-2 sha, stale after the fire-14/15 cascades — decode was right, the test was wrong; fixed hermetically 18/18 + the once-real-stale-sha fixture pinned), loopcheck now 4 components, tools meta 9/9; competitor re-check skipped (fire 16 refreshed it hours ago); specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
@@ -35,6 +32,7 @@ next.
 | fire 27: stamp-probe midnight bug: the audit calibration probe crosses a UTC date boundary in the [00:45,01:00) window and false-reports blindness — fix the probe, add a regression at the caught instant | DONE | root cause proven empirically before the edit (probe 00:02 UTC vs commit 23:47 previous day → replace() lands earlier-on-commit-date → not flagged; window edges [00:45,00:59:59] blind, 01:00 and 14:00 controls flag); stamp_probe() steps the synthetic commit back hour-by-hour until stamp and commit share a UTC date — probe stays inside future_stamps' documented same-date scope at every instant; tri fpga-stamps added (the check alone + calibration; self-test 9/9 incl. the caught instant 00:47:53Z and both window edges), tools sweep 8→9, dispatch + tri wrapper; live proof INSIDE the window: audit 00:57:26Z third anomaly gone, floor 2; corpus-durability fact recorded in research.md option C (no ft_t27_8k builder in the repo); host-side only; no board/pods/RTL |
 | fire 28: corpus durability keep: the round-1 ft_t27_8k corpus (16M, no builder in the repo) lives only in volatile places — give tri a keep command in the tmpcheck blob pattern and keep it for real | DONE | tri fpga-keep PATH TAG reuses tmpcheck's substrate (blobs/<sha> gitignored + tracked MANIFEST.tsv rows, pins keep:TAG beside existing spec pins) so a kept tree gets the watching/restore machinery free — no second watcher built; self-test 9/9 hermetic (dedup, idempotence, pre-existing rows untouched, tmpcheck integration, rmtree→restored, refusals); first run caught its own test bug live: the outside-/tmp refusal leaned on TMPDIR and this host has TMPDIR=/tmp — fire 25's host-env lesson again, fixed to a string-level guard + nothing-written assertion; LIVE keep: 92/92 files, tag keep:ft_t27_8k, tmpcheck now 98 pinned /tmp files 0 lost 0 unkept, --restore rebuilds after reboot; tools sweep 9→10, loopcheck floor 2; MANIFEST.tsv committed (tracked) |
 | fire 29: corpus builder derivability: the missing ft_t27_8k builder — read manifest.json/items.jsonl/tokenizer, find what derives them and from what; if derivable, write a builder verified sha256-identical to the fire-28 manifest; if not, document exactly what is unknowable | DONE 2026-09-29 | builder found: sibling t27_bench.py fim (deterministic, no RNG); pin proven; tri fpga-derive verifies 92/92 (91 byte-identical + manifest.json content); loopcheck floor 2 |
+| fire 30: LOCKS compaction (18 DONE rows past the ~15 bound) + audit-only sweep; competitor re-check not due (fire 26, next ~36) | DONE 2026-09-29 | LOCKS 18→15 DONE rows (three T35 phase rows dropped; facts preserved in DONE bullets + git), firelog archive a correct no-op (fires 2–3 entries already archived at fire 25), lint sound, 17 table lines verified; loopcheck floor = exactly the 2 igla anomalies; host-side only; no board/pods/RTL |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -715,3 +713,20 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   loopstate sound, loopcheck floor 2 (igla LEDGER.md, ahead 30 — the
   sibling keeps committing; MANIFEST.tsv anomaly is this fire's own rows,
   gone with the commit). Board, pods, RTL untouched; no money spent.
+
+- fire 30 (2026-09-29) — LOCKS compaction + audit-only sweep. READY said audit-only (A and B
+  wait on the owner's picks; C needs pod money), and the file's own LOCKS-bounded rule
+  came due: 18 DONE rows, 3 past the ~15 bound. Dropped the three oldest — the T35
+  phase rows (spec authoring, rehearsal pair, board run). Nothing was lost: their
+  facts live in the DONE section bullets ("T35 board run COMPLETE" block) and in git
+  history; the rows were pointers, not the record. `tri fpga-firelog archive` was a
+  correct no-op — every fire-log entry's fire still has a LOCKS row (fires 2–3 entries
+  were already moved at fire 25; the three rows dropped this fire never had log
+  entries of their own). Lint sound after the drop; 17 table lines = header + 15 DONE
+  (fires 15–29) + this row. Audit sweep at the known floor: exactly the 2 igla
+  anomalies (LEDGER.md uncommitted; ahead 30), tools 10/10, specs ok, keycheck 0,
+  loopstate sound — no new anomalies, no drift. Competitor re-check not due (last
+  fire 26, next ~36). Host-side only; no board/pods/RTL; no money. Self-check: the
+  compaction rule's "never log entries" half held automatically because the archive
+  runs idempotently and reported its no-op honestly rather than moving anything —
+  the fire-25 design did its job with zero intervention.
