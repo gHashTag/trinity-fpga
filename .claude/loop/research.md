@@ -115,12 +115,18 @@ C. **Corpus round 2** — bigger t27 FIM corpus (more items, longer contexts),
    of dollars, even with a bigger corpus and longer contexts; the binding
    constraint is corpus quality for multi-line output, not money. Corpus copies
    from round 1: `/workspace/ft_t27_8k` on the pod + `/tmp/ft_t27_8k` local.
-   *Durability (fire 27 → resolved fire 28):* no builder for `ft_t27_8k`
-   exists in this repo (grep over .py/.zig/.md matches nothing outside
-   .claude/loop), so the corpus lived only in /tmp (dies at reboot) and on
-   the STOPPED pod (dies with the pod). Fire 28 closed the local half:
-   `tri fpga-keep /tmp/ft_t27_8k ft_t27_8k` wrote all 92 files into the
-   tmpcheck blob store (gitignored blobs + tracked MANIFEST.tsv rows tagged
-   keep:ft_t27_8k), so `tri fpga-tmpcheck --restore` rebuilds it after a
-   reboot and the audit watches it. The pod volume is still the only other
-   copy — round 2 should not assume it.
+   *Durability (fires 27–28 → derivability proven fire 29):* no builder for
+   `ft_t27_8k` lives in this repo — the builder is the sibling's
+   `~/igla-coder-gpu/t27_bench.py` (`fim` subcommand, no RNG, fully
+   deterministic). Fire 28 kept all 92 files in the tmpcheck blob store; fire
+   29 pinned the missing input: the build ran over `~/t27` at commit
+   `9fec01a78` (specs subtree `dfdbec0cd938`), proven by the manifest's own
+   fingerprint (86 held specs present / 44 missing) plus an exact token-count
+   match, and verified end-to-end by `tri fpga-derive ft_t27_8k`: git-archive
+   extract of the pinned commit + the sibling scripts + items/tokenizer pulled
+   from the keep blobs → **91/92 files byte-identical**, manifest.json the lone
+   exception (the builder version that wrote its `held_specs_*` keys exists
+   only on the stopped pod; its train/val token counts and held list reproduce
+   exactly). The corpus now has three independent lives — /tmp, the blob
+   store, and a verified derivation chain — so the pod volume no longer
+   matters for round 2.

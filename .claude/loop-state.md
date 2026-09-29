@@ -34,6 +34,7 @@ next.
 | fire 26: competitor re-check (rare cadence due: last fire 16, now 26) — read-only sweep, research.md refresh if anything moved | DONE | moved: PENSA added (NeurIPS 2026, Alveo U50 HBM, BitNet 2B4T full on-FPGA, 58.09 tok/s @ctx128, no verifiability — throughput tier) and TRACE added (Linux Foundation/CoSAI Aug 2026: workload-level Trust Records, root = CPU TEEs SEV/TDX, 135k PyPI downloads/10wk — attestation tier, complement but "receipt" vocabulary collision); ternfpga unchanged (72 commits, no receipts), Ternarycore active to Jul 2026 (hw verification) but RTL-correctness only; wedge INTACT — nobody receipts on accelerator silicon; scoping line sharpened to "on-silicon per-job receipts" (was "on-hardware"); READY re-check cadence reset to fire 26; gates at floor 2; read-only web + repo docs; no board/pods/RTL |
 | fire 27: stamp-probe midnight bug: the audit calibration probe crosses a UTC date boundary in the [00:45,01:00) window and false-reports blindness — fix the probe, add a regression at the caught instant | DONE | root cause proven empirically before the edit (probe 00:02 UTC vs commit 23:47 previous day → replace() lands earlier-on-commit-date → not flagged; window edges [00:45,00:59:59] blind, 01:00 and 14:00 controls flag); stamp_probe() steps the synthetic commit back hour-by-hour until stamp and commit share a UTC date — probe stays inside future_stamps' documented same-date scope at every instant; tri fpga-stamps added (the check alone + calibration; self-test 9/9 incl. the caught instant 00:47:53Z and both window edges), tools sweep 8→9, dispatch + tri wrapper; live proof INSIDE the window: audit 00:57:26Z third anomaly gone, floor 2; corpus-durability fact recorded in research.md option C (no ft_t27_8k builder in the repo); host-side only; no board/pods/RTL |
 | fire 28: corpus durability keep: the round-1 ft_t27_8k corpus (16M, no builder in the repo) lives only in volatile places — give tri a keep command in the tmpcheck blob pattern and keep it for real | DONE | tri fpga-keep PATH TAG reuses tmpcheck's substrate (blobs/<sha> gitignored + tracked MANIFEST.tsv rows, pins keep:TAG beside existing spec pins) so a kept tree gets the watching/restore machinery free — no second watcher built; self-test 9/9 hermetic (dedup, idempotence, pre-existing rows untouched, tmpcheck integration, rmtree→restored, refusals); first run caught its own test bug live: the outside-/tmp refusal leaned on TMPDIR and this host has TMPDIR=/tmp — fire 25's host-env lesson again, fixed to a string-level guard + nothing-written assertion; LIVE keep: 92/92 files, tag keep:ft_t27_8k, tmpcheck now 98 pinned /tmp files 0 lost 0 unkept, --restore rebuilds after reboot; tools sweep 9→10, loopcheck floor 2; MANIFEST.tsv committed (tracked) |
+| fire 29: corpus builder derivability: the missing ft_t27_8k builder — read manifest.json/items.jsonl/tokenizer, find what derives them and from what; if derivable, write a builder verified sha256-identical to the fire-28 manifest; if not, document exactly what is unknowable | DONE 2026-09-29 | builder found: sibling t27_bench.py fim (deterministic, no RNG); pin proven; tri fpga-derive verifies 92/92 (91 byte-identical + manifest.json content); loopcheck floor 2 |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -675,3 +676,42 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   volume remains the only other copy — noted in research.md option C.
   MANIFEST.tsv (tracked) committed; blobs gitignored. Board, pods, RTL
   untouched.
+
+- fire 29 (2026-09-29): corpus builder derivability — RESOLVED, the corpus is
+  rebuildable. Audit at open: floor 2 (igla LEDGER.md, igla ahead 27).
+  Chain found by reading the sibling read-only: `t27_bench.py items`
+  (t27 checkout + pool + t27c → bench/items.jsonl) → `t27_bench.py fim`
+  (items + tokenizer → ft_t27 corpus). cmd_fim has NO randomness (the only
+  torch.manual_seed is in gen), so byte-identity is purely a function of the
+  inputs: the t27 tree walked, items.jsonl, tokenizer.json, defaults --ctx
+  2048 --max_body 4000. The unrecorded input was the tree: pinned by the
+  manifest's own fingerprint — held_specs_missing_from_checkout (44 of 130)
+  narrows ~/t27 history to TWO specs/ subtree shas (84dd59d4, dfdbec0c;
+  /tmp/pin_tree.py, kept keep:fire29) — and an exact token-count match picks
+  dfdbec0c = commit 9fec01a78 = current HEAD, specs/ working tree clean
+  (candidate A: train 7,360,119 ≠ manifest 7,368,311; candidate B: exact).
+  Rebuild proven: 91/92 kept rows byte-identical (train/val t27.bin,
+  token_bytes.npy, tokenizer.json, items.jsonl, all 86 held-spec copies);
+  the lone exception is manifest.json itself — the builder version that
+  emitted held_specs_present/missing + note is not the current sibling file
+  (it writes stats instead) and survives only on the stopped pod; its
+  train_tokens/val_tokens/held_out_specs reproduce exactly, so the drift is
+  bookkeeping, not content. Tool: `tri fpga-derive ft_t27_8k [--out DIR]` —
+  git-archive extract of the pin (checkout untouched), sibling scripts
+  copied with a loud refusal if the patched shape drifted, pyarrow stub
+  (host lacks it; fim never needs it), items/tokenizer pulled from the keep
+  BLOBS (a dead /tmp is not a blocker), then every row sha-checked (rc=0
+  live, "92/92 rows verified"). Two self-caught bugs on the way: .git
+  is_file() vs exists(); and the destructive-out guard first compared
+  resolve()d against literal /tmp (macOS symlink → /private/tmp), never
+  fired, and the guard TEST itself rebuilt into the live kept tree —
+  survived because blobs existed, manifest.json restored from its blob,
+  tmpcheck back to 98 pinned / 0 lost; guard now compares resolve() on both
+  sides, refusal rc=2 verified honestly (after a pipeline rc misread —
+  fires 20/24/27/28 lesson, again). research.md option C durability
+  paragraph rewritten: three independent lives (/tmp, blobs, verified
+  chain), the pod volume no longer matters. Evidence kept: pin_tree.py +
+  verify92.py (keep:fire29). Gates: tools 10/10, specs 17/17, keycheck 0,
+  loopstate sound, loopcheck floor 2 (igla LEDGER.md, ahead 30 — the
+  sibling keeps committing; MANIFEST.tsv anomaly is this fire's own rows,
+  gone with the commit). Board, pods, RTL untouched; no money spent.
