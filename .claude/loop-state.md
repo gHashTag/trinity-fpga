@@ -33,6 +33,7 @@ next.
 | fire 28: corpus durability keep: the round-1 ft_t27_8k corpus (16M, no builder in the repo) lives only in volatile places — give tri a keep command in the tmpcheck blob pattern and keep it for real | DONE | tri fpga-keep PATH TAG reuses tmpcheck's substrate (blobs/<sha> gitignored + tracked MANIFEST.tsv rows, pins keep:TAG beside existing spec pins) so a kept tree gets the watching/restore machinery free — no second watcher built; self-test 9/9 hermetic (dedup, idempotence, pre-existing rows untouched, tmpcheck integration, rmtree→restored, refusals); first run caught its own test bug live: the outside-/tmp refusal leaned on TMPDIR and this host has TMPDIR=/tmp — fire 25's host-env lesson again, fixed to a string-level guard + nothing-written assertion; LIVE keep: 92/92 files, tag keep:ft_t27_8k, tmpcheck now 98 pinned /tmp files 0 lost 0 unkept, --restore rebuilds after reboot; tools sweep 9→10, loopcheck floor 2; MANIFEST.tsv committed (tracked) |
 | fire 29: corpus builder derivability: the missing ft_t27_8k builder — read manifest.json/items.jsonl/tokenizer, find what derives them and from what; if derivable, write a builder verified sha256-identical to the fire-28 manifest; if not, document exactly what is unknowable | DONE 2026-09-29 | builder found: sibling t27_bench.py fim (deterministic, no RNG); pin proven; tri fpga-derive verifies 92/92 (91 byte-identical + manifest.json content); loopcheck floor 2 |
 | fire 30: LOCKS compaction (18 DONE rows past the ~15 bound) + audit-only sweep; competitor re-check not due (fire 26, next ~36) | DONE 2026-09-29 | LOCKS 18→15 DONE rows (three T35 phase rows dropped; facts preserved in DONE bullets + git), firelog archive a correct no-op (fires 2–3 entries already archived at fire 25), lint sound, 17 table lines verified; loopcheck floor = exactly the 2 igla anomalies; host-side only; no board/pods/RTL |
+| fire 31: tool-source durability: board.py + SKILL.md + tri wrapper exist only uncommitted outside the repo — snapshot through the keep substrate so a skills-repo reset cannot lose the loop tooling; audit sweep | DONE 2026-09-29 | risk proven real (whole skill dir UNTRACKED, git log empty — zero committed copies of 27 fires of tooling); 4 files snapshotted /tmp/loop_toolsrc, kept keep:toolsrc (secret-scanned first), refresh re-keep sha-deduped 1-new/3-same; standing rule + SKILL.md lesson; loopcheck floor 2 |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -295,6 +296,12 @@ live; the live run's log path will be recorded in the table above at launch.
   VERBATIM to `.claude/loop/firelog-archive.md` (never dropped; the linter
   counts a fire's entry in either home; the archive is written first, so a
   crash between the two writes duplicates entries, it never loses them).
+- Tool-source durability (fire 31): board.py, SKILL.md, LESSONS.md and the
+  `~/.local/bin/tri` wrapper have no committed copy anywhere (skills repo
+  keeps them untracked by owner-precedent). Any fire that edits one of them
+  re-copies all four over `/tmp/loop_toolsrc/` and re-runs
+  `tri fpga-keep /tmp/loop_toolsrc toolsrc` (sha-deduped; secret-scan the
+  key prefix file→env before keeping).
 - English for all repo code/docs/commits; Russian only in chat.
 - Self-check each fire: `git status` should contain only this cycle's files;
   `tri fpga-specs` after any spec edit; if something is broken, fix the root
@@ -730,3 +737,31 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   compaction rule's "never log entries" half held automatically because the archive
   runs idempotently and reported its no-op honestly rather than moving anything —
   the fire-25 design did its job with zero intervention.
+
+- fire 31 (2026-09-29) — tool-source durability. The weak spot was found by
+  auditing WHICH assets have zero committed copies, not which are volatile
+  (the fire-28/29 lens applied to the loop itself): `scripts/board.py` (10
+  tools, fires 3–29), SKILL.md, LESSONS.md and the `~/.local/bin/tri` wrapper
+  lived only as untracked files — `git -C ~/skills status` shows the whole
+  `ax7203-board-loop/` dir as `??` and `git log -- board.py` is EMPTY, so a
+  routine `git clean` in the owner's dirty skills repo (where committing
+  around his changes is off-limits by precedent) would have erased 27 fires
+  of tooling with no copy anywhere. Fix, zero new code: flat snapshot dir
+  `/tmp/loop_toolsrc/` (board.py, SKILL.md, LESSONS.md, tri) through the
+  ordinary `tri fpga-keep … toolsrc` — the blob store lives under
+  trinity-fpga/artifacts, a different tree than ~/skills, so no git
+  operation there can touch it; tmpcheck went 98→104 pinned / 0 lost /
+  0 not kept and --restore rebuilds the dir after any wipe. Secret-scan
+  before keeping (RunPod key prefix, file→env in one call, never printed):
+  CLEAN. The refresh protocol is proven, not assumed: after the SKILL.md
+  lesson was written, the re-copy + re-keep printed "1 newly kept, 3
+  already kept" — sha-dedup makes unchanged files no-ops exactly as
+  designed. Standing rule added (any tool-layer edit re-snapshots) and the
+  lesson recorded in SKILL.md (which is itself inside the snapshot —
+  self-consistent). NOT snapshotted, on purpose: `_state/` (runtime UART
+  observations, not source) and `/tmp/rpk2.txt` (a secret; copying it would
+  expand its exposure surface — if a reboot clears /tmp the key is the
+  owner's to restore, noted in the report). Gates: loopcheck specs 17/17,
+  keycheck 0, tools 10/10, loopstate sound, audit at open and close =
+  exactly the 2 igla anomalies (LEDGER.md; ahead 31, sibling alive).
+  Host-side only; no board/pods/RTL; no money.
