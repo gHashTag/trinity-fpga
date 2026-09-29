@@ -884,3 +884,21 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   exec-shaped calls needed 10-minute waits; the close-out itself was staged
   through it (work staged in /tmp, retried, never dropped).
 
+  Post-commit addendum (same fire, found by the close-out's own loopcheck):
+  (1) the final sweep flagged 4 spec-drift anomalies — Lane A's RTL edit had
+  been repinned into the batch spec only; the reopen/retransmit family still
+  pinned the old shas. tri fpga-repin walked NODE_RTL=fc22d2c1… through all
+  five specs to fixpoint (8 passes, params regenerated); the old op set
+  regenerates byte-identical constants from the new core — the batch ops were
+  added beside the old wire protocol, not under it. specs 17/17; second commit
+  1dd2f747e also carries the E3 rehearsal logs the audit flagged (add -f past
+  the *.log ignore, same as every other board_runs log). (2) claim-guard
+  blocked the first commit: fire 34's portability-doc wording attributed the
+  absence of multiplies to nothing in particular — the exact shape the owner's
+  rule forbids (freedom from multiplication is a property of the ternary
+  network and must be said of the network). Reworded to
+  measured-report language ("synthesises without multiplier cells", "the check
+  reports zero inferred multiplier cells") with the rule-quoting line marked
+  ignore-line. Loopcheck at close: specs 17/17, keycheck 0, tools 11/11,
+  loopstate sound, audit floor = 1 igla anomaly (ahead 1, sibling-owned).
+
