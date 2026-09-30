@@ -198,24 +198,50 @@ The printed row shows LUT/FF/C4/DSP only; read `RAMB*` from the `/tmp` logs
 by hand, or make the two-line `board.py` change to print it — that session's
 call.
 
-## The pre-registration the board run will cite (skeleton)
+## The pre-registration the board run will cite (concretised fire 36)
 
-- **Before any flash, all three green:** `tri fpga-batch-rehearsal`
-  (26 checks), the new `tern_tc_batch_rtl_cosim.py`, and the unchanged
-  `tern_tc_retransmit_rtl_cosim.py` (drift control). Plus `tri fpga-cost`
-  answers 1–3 above, recorded with the logs' paths.
-- **Bitstream identity:** commit sha of the RTL edit, bitstream sha from
-  `build_trinet_node.py`, node id, fresh key fingerprint (never the key).
-- **Run shape:** the rehearsal pair's pass sizes on the real UART; frame
-  counts `n_setx`/`n_dot6` per pass pre-computed from the pass dimensions;
-  ceilings from the spec (`BATCH_RETRANSMITS_MAX`, resync ceiling) — success
-  is every row bit-exact vs the int8 oracle, transport counters within
-  ceilings, `tri fpga-keycheck` 0 hits.
+The arm exists: `conformance/tern_tc_batch_board_ax7203.py` — `run_pass`
+over `ro.serial_link`, pins the batch spec and everything it carries, and
+its `--self-test`/`--refcell` are green zero of the gate list below.
+
+- **Before any flash, green in this order:**
+  0. `tern_tc_batch_board_ax7203.py --self-test` (pins, frame arithmetic,
+     main path clean and under scheduled holes + one reopen, oracle-lie and
+     dead-line negatives fail the verdict) and `--refcell` (the same
+     predicate end-to-end through the reference cell).
+  1. `tri fpga-batch-rehearsal` (26 checks);
+  2. `tern_tc_batch_rtl_cosim.py` (PASS on the edited core, both passes);
+  3. `tern_tc_retransmit_rtl_cosim.py` unchanged (drift control);
+  4. `tri fpga-cost` answers 1–3 above, recorded with the logs' paths.
+  1–4 are green as of fire 35; 0 is this fire's.
+- **Bitstream identity:** payload sha256
+  `48463217d7580535d9f1acd5ccc91145e31040ad3b9e2868814322ac11d791d8`,
+  9,730,792 bytes, built by fire 35 at
+  `/tmp/trinet-node-build/node0-batched/trinet_node0.bit` (the sha is
+  tracked in the repo's fire-35 record). Node id and fresh key fingerprint
+  are recorded by the run itself (setkey ack; fingerprint, never the key).
+- **Run shape (the pair, pre-computed):** wq 16 rows × 320 wide — 60 SETX +
+  160 DOT6 frames; down 16 rows × 864 wide — 162 SETX + 432 DOT6. `--full`
+  (320 × 320: 60 + 3200; 320 × 864: 162 + 8640) is a separate run with its
+  own ceiling, not part of the first board proof.
+- **Ceilings:** retransmits ≤ `BATCH_RETRANSMITS_MAX` (13), resyncs ≤ 32,
+  reopens ≤ 4 (the pinned reopen spec), wall ≤ 240 s for the pair
+  (900 s for `--full`). Success is every row bit-exact against the int8
+  oracle, `frames_batched` per pass equal to the pre-computed counts, all
+  transport counters within ceilings, and `tri fpga-keycheck` 0 hits before
+  any run log is committed. Anything else is `RESULT: FAIL` with the first
+  bad row named.
 - **Reflash needs the owner's quoted «да» and a fresh `--setkey`** (SRAM
-  wipes) — unchanged doctrine.
+  wipes) — unchanged doctrine. The owner's one action, consent already
+  given for lane A:
+  `tri fpga-batch-board --setkey --port /dev/cu.usbserial-110 --keys ../trinet-keys.txt --node node0`
+  (fire 36's `tri fpga-batch-board` forwards verbatim to
+  `python3 conformance/tern_tc_batch_board_ax7203.py`; either form runs the
+  same arm).
 - **Speed stays unclaimed:** 235 s is the model's link arithmetic until a
   real run exists; the pre-registration pins the run's own ceilings, it does
-  not inherit the projection.
+  not inherit the projection. The pair's wall number, once measured, is the
+  first honest datapoint, and `--full`'s is the second.
 
 ## Risks and open edges
 

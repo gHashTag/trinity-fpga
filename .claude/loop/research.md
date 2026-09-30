@@ -26,7 +26,15 @@ Foundation's TRACE spec (Aug 2026) calls its workload-level TEE records
 of trust is CPU confidential computing (SEV/TDX), not accelerator silicon,
 and it attests workloads, not per-job math — the wedge holds, but our claim
 must keep saying "on-silicon per-job receipts" or it now reads as a TRACE
-variant.
+variant. Fire-36 re-check: no movement in the lane itself — a fresh
+ternary-FPGA + receipts/verifiable search returns nothing, PENSA and TRACE
+are unchanged since the fire-26 record, Ternarycore shipped its v1.0-trets
+release + Zenodo DOI (Sep 19, 337 commits, still RTL-correctness only), and
+ternfpga's README now documents nine build phases with on-fabric energy
+measurements (attention 1.99 J/tok, FFN 1.62 derived, phase-9 co-resident
+bit-exact at 45/50 BRAM — "the honest pivot") — still 72 commits, still
+zero receipts a stranger can verify. The wedge is intact and still
+unoccupied.
 
 ## Competitors (all verified live, September 2026)
 
@@ -40,7 +48,7 @@ variant.
 | **VitaLLM** (arXiv 2604.27396, Lin & Chang) | dual-core (TINT ternary + BoothFlex mixed) with Leading-One-Prediction KV pruning | edge accelerator, prefill+decode |
 | **Bitnet.cpp** (Microsoft) | CPU edge inference for ternary LLMs | the baseline everyone cites |
 | **TeLLMe** (UCI-CORSA, FPGA 2026, ACM 3748173.3779191) | end-to-end ternary LLM prefill + decode on FPGA, course-turned-paper stack (TeLLMe_FPGA_2026 repo) | end-to-end (both phases), not just kernels |
-| nicholi.ai engine → **ternfpga** (Neumann-Labs/ternfpga, open-sourced by fire 16, 2026-09; Apache-2.0) | ternary BitNet-2B-4T batch-1 decode on a $130 Arty A7-35T, 72 commits; energy partly Vivado-derived (self-flagged), bit-exact vs golden models only | floor price point, now a maintained OSS repo — still no receipts |
+| nicholi.ai engine → **ternfpga** (Neumann-Labs/ternfpga, open-sourced by fire 16, 2026-09; Apache-2.0) | ternary BitNet-2B-4T batch-1 decode on a $130 Arty A7-35T, 72 commits; README (fire 36) documents nine build phases with on-fabric energy (attention 1.99 J/tok, FFN 1.62 derived, phase-9 co-resident bit-exact 45/50 BRAM) | floor price point, now with self-measured silicon energy — still no receipts a stranger can verify |
 | **TensorCommitments** (arXiv 2602.12630, 2026) | verifiable LLM inference: GPU prover commits to activation tensors as multivariate polynomials, client verifies with pairings | 12 ms verify, 2 B/token, ~1 % prover overhead (LLaMA-2-13B) — software/GPU layer |
 | **Animica AICF 7.1.1 receipts** (2026) | each OpenAI-compatible API response can carry an ML-DSA-65-signed receipt binding model/prompt-hash/output-hash | PQ-signed *who-served-what* attestation — software gateway, not silicon |
 | **TRACE** (Linux Foundation/CoSAI spec, Aug 2026; OPAQUE + AMD/Intel/Microsoft/TII) | open AI runtime-attestation spec: tamper-proof "Trust Records" per workload (execution env, launched software, data classifications, policies), root of trust = CPU TEEs (SEV/TDX) | 135k PyPI downloads in ~10 weeks; workload-level attestation, NOT per-job math and NOT accelerator silicon — complement, with a "receipt" vocabulary collision to stay clear of |

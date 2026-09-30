@@ -17,10 +17,6 @@ next.
 
 | phase | status | notes |
 |---|---|---|
-| fire 17: tri fpga-tools (tool self-test sweep) as loopcheck's 4th component | DONE | sweep 6/6 green after catching real decode rot (hardcoded fire-2 sha, stale after the fire-14/15 cascades — decode was right, the test was wrong; fixed hermetically 18/18 + the once-real-stale-sha fixture pinned), loopcheck now 4 components, tools meta 9/9; competitor re-check skipped (fire 16 refreshed it hours ago); specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
-| fire 18: tri fpga-loopstate (loop-state.md integrity linter) as loopcheck 5th component | DONE | self-test 9/9 (8/9 on first run — its own live check caught the loop's mid-fire log window; protocol fixed: stub+row together at start); loopcheck now 5 components, live sound; specs 17/17, keycheck 0, host-side only; no board/pods/RTL |
-| fire 19: audit sweep + sibling engine-semantics check (did igla-coder-gpu's engine change turn semantic?) | DONE | answer: NO — tc_infer.c has 0 commits and 0 diff since 52be443; sibling engine work is tc_fast (separate bench harness) + research scripts; C_REF pin doctrine and C_GREEDY_IDS unaffected, no re-pin decision pends; loopcheck floor = exactly the 2 igla anomalies (LEDGER.md, ahead 19); specs 17/17, keycheck 0, tools 6/6, loopstate sound; read-only on sibling; no board/pods/RTL |
-| fire 20: pin-target existence — do the /tmp-pinned E3 inputs survive, and does specs fail loudly if a pinned file is missing? | DONE | empirical map: specs --check = output-drift + REPO pins (loud, both modes); /tmp pins deliberately the runner's (generator comment); tmpcheck GONE loud, --restore heals (live-proven, sha matched); audit prints info line for gone-but-kept — my mid-fire claim that audit missed it was a too-narrow grep, corrected by full-output retest; NEW standing rule: a fire that sees the audit gone-line runs tmpcheck --restore; gates green to floor 2; no tool change needed — the gap was protocol; no board/pods/RTL |
 | fire 21: tri fpga-fire start — atomic lock row + fire-log stub, mechanical enforcement of the fire-18 protocol | DONE | self-test 6/6 hermetic (never the live file — this tool writes), live refusal verified (rc=1 while fire 21 IN-PROGRESS, file untouched); tools sweep 6→7 all green; shared lock_rows refactor: linter and fire-start parse rows through ONE helper; first live start = fire 22; host-side only; no board/pods/RTL |
 | fire 22: audit sweep + first live fire-start (happy path of the fire-21 tool) | DONE | happy path verified live: row placed after the last LOCKS row, stub at the log tail, ONE write, lint sound; cron-death resume paragraph added to the header (/loop 15m + same mandate + this file = restart without breaking past work); gates green to floor 2 (specs 17/17, keycheck 0, tools 7/7, loopstate sound, no gone-inputs line); host-side only; no board/pods/RTL |
 | fire 23: E4 stack decision table for the owner's pick + LOCKS compaction rule | DONE | NODE_ETHERNET_PLAN.md gained the E4 decision table (assembled from already-checked facts only; recommendation = minimal responder on E3's fabric capture — both vendored stacks need their IDDR PHY swapped for E3's anyway); Standing rules gained the LOCKS-bounded rule (drop old DONE rows past ~15, never log entries); the transient third audit anomaly was this fire's own uncommitted plan edit — cleared by the commit; gates green to floor 2 after commit; host-side only; no board/pods/RTL |
@@ -36,6 +32,7 @@ next.
 | fire 33: round-2 training pre-registration: convert fire-32 measured diagnosis into executable plan (steps/schedule/cost/criteria) for option C; audit sweep | DONE 2026-09-29 | plan = .claude/loop/round2-plan.md: extend mode (resume ckpt.pt), target 3,370 steps ≈ $5.22, cap 4,000/$7, primary bpb ≤ 0.55 + ≥25% multi-line on 20 held prompts, 5 stop rules (overfit 2-eval rise at 240 total epochs; plateau at step 2000 < 0.02 gain → "BRAM-sized model plateaus" verdict — tc is 77% BRAM, no upscale exists); new facts: round 1 = 23.98 epochs over the 7.37M-token train split, $1.72/1k steps; overwrite hazard caught pre-registration (resume rewrites run.json) → pull-before-extend §6; research.md option C retargeted off "bigger corpus" (fire 32 killed it); SKILL.md lesson + toolsrc refresh 1-new/3-same; loopcheck floor 2; no board/pods/RTL/money |
 | fire 34: adversarial self-review of round2-plan.md: recompute every numeric claim from source arithmetic (train.py, manifest, cost anchors), re-check resume/smoke side effects in the control flow, sweep research.md for other stale claims; fix what fails | DONE 2026-09-29 | 3 defects found & fixed pre-execution: --tokens 1.77e9 floors to 3375 not 3370 (now exact 1766850560), "smoke = no checkpoint overwrite" was false (train.py checkpoints after the break; ckpt.pt advances 337→340, steps counted), stop-rule (b) re-anchored to the eval cadence (step 2022 = 6th eval, evals are multiples of 337); all other figures recomputed clean (epochs/warmup/decay/costs/balance); research.md sweep vs DONE verdicts: no further stale claims; amendment note added to the plan header; SKILL.md lesson + toolsrc refresh 1-new/3-same; loopcheck floor 2; no board/pods/RTL/money |
 | fire 35: execute owner's triple pick (все три): A batched-wire RTL+cosim+reflash (aliasing resolution), B E3 board run + E4 minimal responder, C round-2 training per round2-plan.md §6 — long-running, IN-PROGRESS protects from cron re-fire | DONE 2026-09-29 | C ran end-to-end: §5a overfit fired (val_bpb 0.6105@337→0.8506@2696→0.7288@3370), primary ≤0.55 FAILED, pinned model stays ROUND-1 (pre-registered judge = loss); behavioral: r2 fixes degeneracy (r1 10% vs r2 45% non-degenerate ≥2-line) but loses on loss; round-3 lever = data quantity. A host-complete (spec repinned, cosim PASS, rehearsal PASS, synthesis clean, payload 48463217…, 9,730,792 B) — board leg needs batched board arm + owner sudo. B untouched (owner gate). Admissions: pod idle burn $2.29, ckpt_predecay overwritten (round-1 final.pt now sole copy, local), behavioral check blocked a day on env trivia (all recorded in SKILL.md). New tool tri fpga-genscore (degeneracy-aware scorer, tools 10→11, self-test 7/7, reproduces hand scores on the real evidence). Evidence kept tct27_r2_verdict + data/checkpoints/tern_tc_t27_r2; NO TC02 export of round-2 |
+| fire 36: A host half: batched board arm (board mode over serial link, own pre-registration) + LOCKS compaction + competitor re-check (due) | DONE 2026-09-30 | arm = conformance/tern_tc_batch_board_ax7203.py: run() over ro.serial_link, spec + all 6 carried pins sha-verified, frame arithmetic pre-computed (pair 60+160/162+432; --full reproduces spec L2 counts), ceilings 13/32/4 + own wall 240/900 s (SIGALRM), verdict = bit-exact rows + frames_batched == pre-computed + counters within ceilings; self-test 7/7 (clean PASS, refcell 2 holes + 1 reopen = 9/13 with MARGIN, oracle-lie negative, dead-line negative), --refcell main path PASS rc=0; calibration finding: the rehearsal's own schedule defines the 13 ceiling (stall position alone moves 13→9; resync requeues the whole window) → refcell re-scheduled for strict margin, LESSONS entry; pre-registration concretised in the RTL plan (bitstream sha, counts, ceilings, predicate, owner command); NEW TOOL tri fpga-batch-board (verbatim forward, in the registry, tools 11→12); LOCKS 19→15 (fires 17–20 dropped; firelog archive moved 4 entries, 902→809 lines, lint sound); competitor re-check: lane still EMPTY (fresh search 0 hits; PENSA/TRACE unchanged; Ternarycore v1.0-trets + Zenodo DOI Sep 19; ternfpga README nine phases, on-fabric 1.99 J/tok, still no receipts) — wedge intact, research.md updated; toolsrc refresh 3-new/1-same (caught fire-35's unkept SKILL.md edits); host-side only; no board/pods/RTL; no money |
 
 **UART lock:** before any board command, check `lsof /dev/cu.usbserial-110`.
 If a `tri fpga-run` or runner python process holds it, DO NOTHING to the board —
@@ -318,99 +315,6 @@ live; the live run's log path will be recorded in the table above at launch.
 ## Fire log
 
 Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
-
-- fire 17 (2026-09-29): the tool layer got the sweep its own self-critique
-  asked for, and the sweep's first live run earned its keep immediately.
-  `tri fpga-tools` (board.py TOOL_SELFTESTS registry + run_tool_selftests +
-  cmd_tools + tools_self_test 9/9: dispatch-drift checks, recursion/layering
-  exclusions, aggregation unit test) runs every board-tool's own --self-test
-  — runlog, budget, tmpcheck, decode, repin, pins — in one call with one
-  verdict line; `tri fpga-loopcheck` now runs it as its FOURTH component
-  (specs, keycheck, tools, audit), so every fire re-verifies the whole tool
-  layer after any edit instead of only the tool that changed. First live
-  run: 5/6 — FAIL decode. Root cause NOT decode: its self-test had hardcoded
-  the fire-2 sha `648451ff…` of the reopen spec as a "live" cite; the
-  fire-14/15 repin cascades moved the spec's bytes and the cite went stale,
-  so decode_spec correctly resolved through GENERATE_SPEC_FILE and named the
-  drift, while the test demanded "not drifted". Fix: the hermetic cite now
-  computes the live sha at test time (repin-proof), and the stale fire-2 sha
-  stays as a NEW fixture asserting exactly the live behavior it exposed —
-  a once-real stale sha still resolves and is named "drifted since the run"
-  (decode self-test 17→18). Lesson pinned in SKILL.md: a self-test citing a
-  live file must compute the sha at test time, never hardcode it —
-  hardcoded live state rots at the next cascade. Also fixed the sweep's own
-  first-run interleaving (headers must flush before the subprocess writes).
-  Competitor re-check deliberately skipped: fire 16 refreshed the table
-  hours ago; a same-day re-sweep is noise, and loop-state's own rule says
-  rare. Gates: specs 17/17, keycheck 0 hits, tools 6/6, loopcheck floor =
-  exactly the two known igla anomalies (ahead 18→19, sibling still working).
-  Board, pods, RTL untouched.
-
-- fire 18 (2026-09-29): the coordination file got its own guard, and the guard
-  paid for itself before it was even finished. `tri fpga-loopstate` (board.py
-  lint_loopstate + cmd_loopstate + loopstate_self_test 9/9) lints
-  .claude/loop-state.md — the file every fire reads first — structurally, read
-  only, never a status opinion: required sections, the UART lock paragraph,
-  exactly one IN-PROGRESS lock with a started date (abandoned = older than a
-  day), every table fire present in the fire log, no unknown statuses. Its
-  first live run (mid-fire, 8/9 self-test) caught the LOOP's own protocol gap:
-  my lock row was written at fire start but the fire-log line only at fire
-  end, so mid-fire the table named a fire the log didn't — the exact window a
-  future cron cycle could misread. Protocol fixed in the same edit: lock row
-  AND fire-log stub written together at fire start (recorded in Standing
-  rules); the linter stays strict because the file is now consistent at every
-  instant. `tri fpga-loopcheck` gained it as the FIFTH component (specs,
-  keycheck, tools, loopstate, audit). The self-test ends by linting the live
-  file — a linter that fails the file it protects would be worse than none.
-  SKILL.md notes both the command and the protocol rule. Gates: specs 17/17,
-  keycheck 0 hits, tools 6/6, loopstate 9/9 + live sound, loopcheck floor =
-  the two known igla anomalies. Board, pods, RTL untouched.
-
-- fire 19 (2026-09-29): an honest audit-only fire, plus the one open question
-  READY named, closed with a definitive read-only answer. The question: fire
-  15 left "no re-pin decision is pending unless the sibling's engine change
-  turns semantic" — fire 19 checked. `git log 52be443..HEAD -- c_infer/tc_infer.c`
-  is EMPTY and the diff is empty: the reference engine is byte-identical to
-  the state the C_REF doctrine already covers (on-disk = 52be443's bytes,
-  sha256 cfd640a6…; the pinned OLD-engine bytes stay reachable at 52be443^).
-  The sibling's 8 new commits are tc_fast (a separate C bench harness:
-  --prompt-ids/--samples, pool spin budget revert) and research scripts
-  (t27_bench with per-worker spec-tree copies, t27_repair_ids /
-  resample-with-feedback — both self-flagged negative results in their
-  commit messages). None touches the reference inference path, so
-  C_GREEDY_IDS semantics hold and no re-pin decision pends. Gates: loopcheck
-  five components green to the known floor — specs 17/17, keycheck 0 hits,
-  tools 6/6, loopstate sound (live file), audit rc=2 = exactly the two igla
-  anomalies (LEDGER.md uncommitted; ahead 19, behind 0 — sibling still
-  working; 3 pre-wrapper info lines are informational, not anomalies). No
-  new tool this fire on purpose: pins/tools/loopstate closed the genuine
-  host-side tooling queue over fires 16–18; a sixth component now would be
-  make-work, which READY forbids. Competitor re-check skipped (fire 16
-  refreshed it, rule says rare). Board, pods, RTL untouched.
-
-- fire 20 (2026-09-29): started — weak-spot scan flagged ephemeral pin targets:
-  commit de8ceec7d keeps E3 model inputs pinned in /tmp, and /tmp does not
-  survive a reboot; checking whether the specs gate would notice a missing
-  pinned file loudly or pass silently. Stub written with the lock row.
-  Full entry — the ephemeral-pin question closed empirically, layer by layer,
-  with one self-caught error on the way. (1) `specs --check` with the pinned
-  SDF hidden: rc=0 — by DESIGN, not a hole: the generator verifies REPO pins
-  in both modes (semanticProblems, missing = PROBLEM) and the comment at
-  e3_rx_capture_from_spec.mjs:42 says the /tmp files are "the runner's to
-  check". (2) tmpcheck with the SDF hidden: `GONE kept` row, and
-  `tri fpga-tmpcheck --restore` put it back from the kept blob — live-proven,
-  restored sha == pinned sha b429acfb. (3) audit with the SDF hidden: my
-  first test grepped only "lost|ANOMALY|e3z" and I claimed audit missed it —
-  WRONG, the line says "gone"; the full-output retest shows
-  `info 1 pinned /tmp inputs gone, kept copies exist (audit --heal restores)`.
-  Lesson pinned in SKILL.md: a negative claim needs the full output, not a
-  filtered one. (4) The one genuine gap was protocol: after a reboot the six
-  inputs sit GONE-but-kept, audit reports info, loopcheck stays at the known
-  floor — and until fire 20 nothing OBLIGED a fire to restore them. New
-  standing rule below. No tool changed — every tool already did the right
-  thing; the fix is a rule, not code. Gates after restore: specs 17/17,
-  keycheck 0, tools 6/6, loopstate sound, loopcheck floor = the two igla
-  anomalies (ahead 19→20, sibling still working). Board, pods, RTL untouched.
 
 - fire 21 (2026-09-29): started — the last discipline-dependence in the loop's
   coordination is the fire-START protocol itself (row + stub written together,
@@ -902,3 +806,76 @@ Archived entries (fires without a LOCKS row): .claude/loop/firelog-archive.md
   ignore-line. Loopcheck at close: specs 17/17, keycheck 0, tools 11/11,
   loopstate sound, audit floor = 1 igla anomaly (ahead 1, sibling-owned).
 
+- fire 36 (2026-09-30): A's host half done end-to-end — the batched board arm
+  exists, self-tests green with real margin, and its pre-registration is
+  concrete. Plus LOCKS compaction, the due competitor re-check, and a new tri
+  command.
+
+  The arm (conformance/tern_tc_batch_board_ax7203.py): the rehearsal pair —
+  or with --full the spec's own L2 shapes — through
+  tern_tc_batch_runner.run() over ro.serial_link, every input pinned by sha
+  (the batch spec + the 6 files it carries: harness, mac32 runner, node RTL,
+  sip RTL, reopen spec, the arithmetic plan doc). Frame counts pre-computed
+  from pass dimensions and asserted against the run's credited frames;
+  ceilings all from pinned specs (retransmits 13, resyncs 32, reopens 4) plus
+  the run's own wall ceilings (240 s pair / 900 s full, SIGALRM-guarded);
+  235 s stays unclaimed. Success = every row bit-exact vs the int8 oracle +
+  frames_batched == pre-computed + counters within ceilings; lsof port check
+  enforces the UART lock; setkey ack required in board mode (rc 3 if not
+  credited); the key appears only as a sha256 fingerprint.
+
+  The calibration finding (this fire's lesson): the first refcell copied the
+  runner's 3-hole rehearsal schedule and landed EXACTLY on 13/13 retransmits
+  — the ceiling was calibrated FROM that schedule, so the pass proved
+  nothing about margin. Mechanic: each resync requeues the whole inflight
+  window (+1 per resent frame), so the stall's position dominates the count;
+  moving it from the third-last to the last DOT6 answer alone drops 13→9.
+  The arm's refcell now uses two short holes (one SETX tag, one DOT6 tag) +
+  a last-answer stall: 9/13, 4 resyncs, 1 reopen, 32/32 rows — asserted as
+  0 < rt < ceiling. LESSONS.md entry so no future pre-registration inherits
+  a ceiling from its own rehearsal.
+
+  Gate 0 of the pre-registration green: self-test 7/7, --refcell main path
+  RESULT: PASS rc=0. Gates 1–4 already green (fire 35). The RTL plan's
+  pre-registration now carries every real number: bitstream payload sha
+  48463217… (9,730,792 B), pair counts, ceilings, success predicate, and
+  the owner's one action as a tri command. Lane A's remaining step is
+  exactly one owner-sudo reflash + one arm run — nothing else is left on
+  the host side.
+
+  New tool: tri fpga-batch-board — verbatim forward to the arm (existence
+  check + honest refusal only), registered in TOOL_SELFTESTS so every fire
+  re-verifies it; tools sweep 11→12; the owner's command shortened
+  accordingly in the plan.
+
+  LOCKS compaction: 19→15 DONE rows (fires 17–20 dropped; facts preserved in
+  DONE bullets + git); tri fpga-firelog archive moved the 4 matching entries
+  to firelog-archive.md (loop-state 902→809 lines); lint sound.
+
+  Competitor re-check (due, last fire 26): the lane is still EMPTY — a fresh
+  ternary-FPGA + receipts/verifiable search returns nothing. PENSA unchanged
+  (NeurIPS paper, no verifiability). TRACE unchanged (LF governance Aug 26).
+  Ternarycore: v1.0-trets release + Zenodo DOI + CLA/dual-license (Sep 19,
+  337 commits) — governance maturation, still RTL-correctness only.
+  ternfpga: README now documents nine build phases with on-fabric energy
+  (attention 1.99 J/tok, FFN 1.62 derived, phase-9 co-resident bit-exact
+  45/50 BRAM) — closest anyone in this tier has come to measured silicon
+  energy, still 72 commits, still zero receipts a stranger can verify.
+  research.md updated (narrative + ternfpga row).
+
+  toolsrc refresh (standing rule): 3-new/1-same — it also caught fire-35's
+  SKILL.md edits, which that fire's close-out never re-kept. Secret-scan
+  clean before keep.
+
+  Admissions: (1) fire 35 missed the toolsrc refresh after its tool-layer
+  edits — found and healed by this fire's refresh, not by a sweep (loopcheck
+  does not check snapshot freshness; candidate future gate). (2) The refcell
+  took four build-fix cycles to reach green — each failure was real
+  (rtp.SPEC naming, verdict equality under loss, per_pass['name'], dead-line
+  signature) but the calibration circularity should have been caught at
+  design time by asking where the 13 came from. (3) Classifier flaps again
+  split the fire (Edit blocked, Bash intermittent) — no work dropped,
+  everything retried to green.
+
+  Gates at close: tools 12/12, keycheck 0, loopstate sound, commit
+  docs(loop) + push. Host-side only; no board/pods/RTL; no money.

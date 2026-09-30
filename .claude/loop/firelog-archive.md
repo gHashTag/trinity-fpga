@@ -203,3 +203,96 @@
   rather than close the on-silicon-receipts gap. research.md table updated.
   Specs 17/17, keycheck 0 hits, loopcheck floor = exactly the two known igla
   anomalies. Board, pods, RTL untouched.
+
+- fire 17 (2026-09-29): the tool layer got the sweep its own self-critique
+  asked for, and the sweep's first live run earned its keep immediately.
+  `tri fpga-tools` (board.py TOOL_SELFTESTS registry + run_tool_selftests +
+  cmd_tools + tools_self_test 9/9: dispatch-drift checks, recursion/layering
+  exclusions, aggregation unit test) runs every board-tool's own --self-test
+  — runlog, budget, tmpcheck, decode, repin, pins — in one call with one
+  verdict line; `tri fpga-loopcheck` now runs it as its FOURTH component
+  (specs, keycheck, tools, audit), so every fire re-verifies the whole tool
+  layer after any edit instead of only the tool that changed. First live
+  run: 5/6 — FAIL decode. Root cause NOT decode: its self-test had hardcoded
+  the fire-2 sha `648451ff…` of the reopen spec as a "live" cite; the
+  fire-14/15 repin cascades moved the spec's bytes and the cite went stale,
+  so decode_spec correctly resolved through GENERATE_SPEC_FILE and named the
+  drift, while the test demanded "not drifted". Fix: the hermetic cite now
+  computes the live sha at test time (repin-proof), and the stale fire-2 sha
+  stays as a NEW fixture asserting exactly the live behavior it exposed —
+  a once-real stale sha still resolves and is named "drifted since the run"
+  (decode self-test 17→18). Lesson pinned in SKILL.md: a self-test citing a
+  live file must compute the sha at test time, never hardcode it —
+  hardcoded live state rots at the next cascade. Also fixed the sweep's own
+  first-run interleaving (headers must flush before the subprocess writes).
+  Competitor re-check deliberately skipped: fire 16 refreshed the table
+  hours ago; a same-day re-sweep is noise, and loop-state's own rule says
+  rare. Gates: specs 17/17, keycheck 0 hits, tools 6/6, loopcheck floor =
+  exactly the two known igla anomalies (ahead 18→19, sibling still working).
+  Board, pods, RTL untouched.
+
+- fire 18 (2026-09-29): the coordination file got its own guard, and the guard
+  paid for itself before it was even finished. `tri fpga-loopstate` (board.py
+  lint_loopstate + cmd_loopstate + loopstate_self_test 9/9) lints
+  .claude/loop-state.md — the file every fire reads first — structurally, read
+  only, never a status opinion: required sections, the UART lock paragraph,
+  exactly one IN-PROGRESS lock with a started date (abandoned = older than a
+  day), every table fire present in the fire log, no unknown statuses. Its
+  first live run (mid-fire, 8/9 self-test) caught the LOOP's own protocol gap:
+  my lock row was written at fire start but the fire-log line only at fire
+  end, so mid-fire the table named a fire the log didn't — the exact window a
+  future cron cycle could misread. Protocol fixed in the same edit: lock row
+  AND fire-log stub written together at fire start (recorded in Standing
+  rules); the linter stays strict because the file is now consistent at every
+  instant. `tri fpga-loopcheck` gained it as the FIFTH component (specs,
+  keycheck, tools, loopstate, audit). The self-test ends by linting the live
+  file — a linter that fails the file it protects would be worse than none.
+  SKILL.md notes both the command and the protocol rule. Gates: specs 17/17,
+  keycheck 0 hits, tools 6/6, loopstate 9/9 + live sound, loopcheck floor =
+  the two known igla anomalies. Board, pods, RTL untouched.
+
+- fire 19 (2026-09-29): an honest audit-only fire, plus the one open question
+  READY named, closed with a definitive read-only answer. The question: fire
+  15 left "no re-pin decision is pending unless the sibling's engine change
+  turns semantic" — fire 19 checked. `git log 52be443..HEAD -- c_infer/tc_infer.c`
+  is EMPTY and the diff is empty: the reference engine is byte-identical to
+  the state the C_REF doctrine already covers (on-disk = 52be443's bytes,
+  sha256 cfd640a6…; the pinned OLD-engine bytes stay reachable at 52be443^).
+  The sibling's 8 new commits are tc_fast (a separate C bench harness:
+  --prompt-ids/--samples, pool spin budget revert) and research scripts
+  (t27_bench with per-worker spec-tree copies, t27_repair_ids /
+  resample-with-feedback — both self-flagged negative results in their
+  commit messages). None touches the reference inference path, so
+  C_GREEDY_IDS semantics hold and no re-pin decision pends. Gates: loopcheck
+  five components green to the known floor — specs 17/17, keycheck 0 hits,
+  tools 6/6, loopstate sound (live file), audit rc=2 = exactly the two igla
+  anomalies (LEDGER.md uncommitted; ahead 19, behind 0 — sibling still
+  working; 3 pre-wrapper info lines are informational, not anomalies). No
+  new tool this fire on purpose: pins/tools/loopstate closed the genuine
+  host-side tooling queue over fires 16–18; a sixth component now would be
+  make-work, which READY forbids. Competitor re-check skipped (fire 16
+  refreshed it, rule says rare). Board, pods, RTL untouched.
+
+- fire 20 (2026-09-29): started — weak-spot scan flagged ephemeral pin targets:
+  commit de8ceec7d keeps E3 model inputs pinned in /tmp, and /tmp does not
+  survive a reboot; checking whether the specs gate would notice a missing
+  pinned file loudly or pass silently. Stub written with the lock row.
+  Full entry — the ephemeral-pin question closed empirically, layer by layer,
+  with one self-caught error on the way. (1) `specs --check` with the pinned
+  SDF hidden: rc=0 — by DESIGN, not a hole: the generator verifies REPO pins
+  in both modes (semanticProblems, missing = PROBLEM) and the comment at
+  e3_rx_capture_from_spec.mjs:42 says the /tmp files are "the runner's to
+  check". (2) tmpcheck with the SDF hidden: `GONE kept` row, and
+  `tri fpga-tmpcheck --restore` put it back from the kept blob — live-proven,
+  restored sha == pinned sha b429acfb. (3) audit with the SDF hidden: my
+  first test grepped only "lost|ANOMALY|e3z" and I claimed audit missed it —
+  WRONG, the line says "gone"; the full-output retest shows
+  `info 1 pinned /tmp inputs gone, kept copies exist (audit --heal restores)`.
+  Lesson pinned in SKILL.md: a negative claim needs the full output, not a
+  filtered one. (4) The one genuine gap was protocol: after a reboot the six
+  inputs sit GONE-but-kept, audit reports info, loopcheck stays at the known
+  floor — and until fire 20 nothing OBLIGED a fire to restore them. New
+  standing rule below. No tool changed — every tool already did the right
+  thing; the fix is a rule, not code. Gates after restore: specs 17/17,
+  keycheck 0, tools 6/6, loopstate sound, loopcheck floor = the two igla
+  anomalies (ahead 19→20, sibling still working). Board, pods, RTL untouched.
