@@ -1,7 +1,7 @@
 // tri_mint — Solana (Anchor) mint-on-acceptance program.
 //
 // REFERENCE, UNAUDITED, NOT BUILT HERE. This mirrors the golden oracle
-// src/trinet/mint_authority.zig, which is tested (10/10) with real ed25519
+// src/trinet/mint_authority.zig, which is tested (13/13) with real ed25519
 // signatures. Every rule below must reproduce that oracle; a divergence is a
 // bug in THIS file, not in the oracle. Protocol of record:
 // specs/trinet/mint_on_acceptance.t27.
@@ -129,7 +129,7 @@ fn verify_quorum_via_introspection(
         // Each Ed25519Program instruction may carry several signatures; the
         // runtime has already verified them, so we only match (pubkey, message)
         // against (attestor, digest). Logic verified host-side in
-        // contracts/solana/verify (`cargo test`, 4/4).
+        // contracts/solana/verify (`cargo test`, 5/5).
         for (signed_pubkey, message) in parse_ed25519_ix(&ix.data) {
             if message.as_slice() != &digest[..] {
                 continue; // signed something other than this attestation
