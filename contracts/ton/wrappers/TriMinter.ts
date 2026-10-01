@@ -126,6 +126,22 @@ export function attestorCell(keys: Buffer[]): Cell {
   return beginCell().storeDictDirect(d).endCell()
 }
 
+/** The `op::mint_on_att` message body. */
+export function mintBody(opts: { att: Attestation; sigs: Map<number, Buffer>; queryId?: bigint }): Cell {
+  const a = opts.att
+  return beginCell()
+    .storeUint(OP_MINT_ON_ATT, 32)
+    .storeUint(opts.queryId ?? 0n, 64)
+    .storeBuffer(a.worker, 32)
+    .storeBuffer(a.workId, 32)
+    .storeUint(a.chain, 8)
+    .storeUint(a.amountMtri, 64)
+    .storeUint(a.globalNonce, 128)
+    .storeUint(a.epoch, 32)
+    .storeDict(sigDict(opts.sigs))
+    .endCell()
+}
+
 export type TriMinterConfig = {
   attestors: Buffer[]
   threshold: number
@@ -172,21 +188,10 @@ export class TriMinter implements Contract {
     via: Sender,
     opts: { att: Attestation; sigs: Map<number, Buffer>; value?: bigint; queryId?: bigint },
   ) {
-    const a = opts.att
     await provider.internal(via, {
       value: opts.value ?? 100_000_000n,
       sendMode: SendMode.PAY_GAS_SEPARATELY,
-      body: beginCell()
-        .storeUint(OP_MINT_ON_ATT, 32)
-        .storeUint(opts.queryId ?? 0n, 64)
-        .storeBuffer(a.worker, 32)
-        .storeBuffer(a.workId, 32)
-        .storeUint(a.chain, 8)
-        .storeUint(a.amountMtri, 64)
-        .storeUint(a.globalNonce, 128)
-        .storeUint(a.epoch, 32)
-        .storeDict(sigDict(opts.sigs))
-        .endCell(),
+      body: mintBody(opts),
     })
   }
 
