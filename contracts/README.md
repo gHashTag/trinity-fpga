@@ -84,6 +84,13 @@ here answers that question for them.
 minter's testnet address and a `ton://transfer` link carrying its state init,
 for the operator to pay from a testnet wallet. There is no mainnet flag.
 
+`scripts/testnet.ts` is the testnet operator: `wallet` creates or shows a v5r1
+deployer, `attestors` a 2-of-3 testnet attestor set, then `deploy`, `mint`,
+`status`. Keys live in `~/.tri-testnet` (mode 0600), never in the repository.
+The endpoint is testnet's and there is no network flag. While one operator
+holds all three attestor keys, the testnet quorum is one party with three keys:
+a pipeline test, not a trust model.
+
 ### Known limits (read before any deploy)
 
 - **No deployment domain in the mint digest.** The 93-byte attestation does not
