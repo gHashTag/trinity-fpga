@@ -91,6 +91,12 @@ The endpoint is testnet's and there is no network flag. While one operator
 holds all three attestor keys, the testnet quorum is one party with three keys:
 a pipeline test, not a trust model.
 
+**Deployed on testnet (2026-10-01):**
+[`0QBtPS1btdHCml1vunIhNIBRRS-pfXggMWVbiLhrsvGjbSLS`](https://testnet.tonviewer.com/0QBtPS1btdHCml1vunIhNIBRRS-pfXggMWVbiLhrsvGjbSLS)
+-- code hash `88475d44…79e5`, 2-of-3, epoch 1, admin none, supply 0. V1,
+signer quorum, NOT trustless. No mint has been sent: the first mint is to come
+from a real accepted spec, not a smoke test.
+
 ### Known limits (read before any deploy)
 
 - **No deployment domain in the mint digest.** The 93-byte attestation does not
