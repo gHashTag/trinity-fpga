@@ -110,9 +110,9 @@ test "a settled earning mints through the authority" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     keys(3, &kp, &pk);
-    var spent = mint.SpentSet.init(testing.allocator);
-    defer spent.deinit();
-    var auth = mint.Authority.init(&pk, 2, .ton, 1, &spent);
+    var ledger = mint.SharedLedger.init(testing.allocator);
+    defer ledger.deinit();
+    var auth = mint.Authority.init(&pk, 2, .ton, 1, &ledger);
 
     const e = sampleEarning();
     const att = buildAttestation(e, .ton, 1, 1);
@@ -128,9 +128,9 @@ test "the relayer cannot mint the same earning twice" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     keys(3, &kp, &pk);
-    var spent = mint.SpentSet.init(testing.allocator);
-    defer spent.deinit();
-    var auth = mint.Authority.init(&pk, 2, .ton, 1, &spent);
+    var ledger = mint.SharedLedger.init(testing.allocator);
+    defer ledger.deinit();
+    var auth = mint.Authority.init(&pk, 2, .ton, 1, &ledger);
 
     const e = sampleEarning();
     // Re-submitting with the SAME global_nonce is refused, whatever the relayer does.
