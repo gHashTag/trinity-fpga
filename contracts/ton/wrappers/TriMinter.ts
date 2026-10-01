@@ -254,6 +254,13 @@ export class TriMinter implements Contract {
     const r = await provider.get('is_spent', [{ type: 'int', value: nonce }])
     return r.stack.readBoolean()
   }
+
+  /** The ed25519 key the minter holds at `index`, or null when the slot is empty. */
+  async getAttestorKey(provider: ContractProvider, index: number) {
+    const r = await provider.get('attestor_key', [{ type: 'int', value: BigInt(index) }])
+    const k = r.stack.readBigNumber()
+    return k === 0n ? null : Buffer.from(k.toString(16).padStart(64, '0'), 'hex')
+  }
 }
 
 /** The worker an attestation pays, as the TON address it mints to. */
