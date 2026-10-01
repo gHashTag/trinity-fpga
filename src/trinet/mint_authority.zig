@@ -78,6 +78,43 @@ pub const Attestation = struct {
     }
 };
 
+/// The digest the CURRENT quorum signs to hand the mint to a new attestor set
+/// (the TON minter's `op::rotate`, contracts/ton/tri_minter.fc). Nothing else
+/// can change who mints: the minter has no admin.
+///
+///   keys_hash = fold over the new keys in index order of sha256(h ++ key),
+///               starting from 32 zero bytes
+///   digest    = sha256("TRIR" ++ minter(32) ++ new_epoch(4, BE) ++ M(1) ++ N(1) ++ keys_hash(32))
+///
+/// `minter` is the minter's own account id, so a rotation signed for one
+/// deployment (testnet) cannot be replayed on another (mainnet). The epoch
+/// must be exactly one past the current one, which the contract checks.
+pub fn rotationDigest(
+    minter: [32]u8,
+    new_epoch: u32,
+    threshold: u8,
+    new_keys: []const Ed25519.PublicKey,
+) [32]u8 {
+    std.debug.assert(new_keys.len >= 1 and new_keys.len <= 255);
+    var h = [_]u8{0} ** 32;
+    for (new_keys) |pk| {
+        var hs = Sha256.init(.{});
+        hs.update(&h);
+        hs.update(&pk.bytes);
+        hs.final(&h);
+    }
+    var buf: [4 + 32 + 4 + 1 + 1 + 32]u8 = undefined;
+    @memcpy(buf[0..4], "TRIR");
+    @memcpy(buf[4..36], &minter);
+    std.mem.writeInt(u32, buf[36..40], new_epoch, .big);
+    buf[40] = threshold;
+    buf[41] = @intCast(new_keys.len);
+    @memcpy(buf[42..74], &h);
+    var out: [32]u8 = undefined;
+    Sha256.hash(&buf, &out, .{});
+    return out;
+}
+
 pub const Error = error{
     ZeroAmount,
     SubQuorum,
@@ -430,4 +467,36 @@ test "the cap is 3^21 whole TRI counted in mTRI and fits u64" {
     // decimals 3 means 1 TRI = 10^decimals base units.
     try testing.expectEqual(std.math.pow(u64, 10, decimals), mtri_per_tri);
     try testing.expect(cap_mtri < std.math.maxInt(u64));
+}
+
+test "rotation digest matches the cross-language golden vector" {
+    // Independently computed with Python hashlib: the fold over the three test
+    // keys, then sha256("TRIR" ++ 0x5A*32 ++ epoch 2 ++ M 2 ++ N 3 ++ keys_hash).
+    // The TON sandbox tests (contracts/ton/tests) check the contract against
+    // the same hex.
+    var kp: [3]Ed25519.KeyPair = undefined;
+    var pk: [3]Ed25519.PublicKey = undefined;
+    genKeys(3, &kp, &pk);
+    var golden: [32]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&golden, "49f46c26595ebc0c2ead0e8fb4f9eaa38696db77077f5f3cf1e1b59c85afca77");
+    try testing.expectEqualSlices(u8, &golden, &rotationDigest([_]u8{0x5A} ** 32, 2, 2, &pk));
+    // Any change to the new set changes the digest, so the quorum signs exactly one set.
+    try testing.expect(!std.mem.eql(u8, &golden, &rotationDigest([_]u8{0x5A} ** 32, 2, 2, pk[0..2])));
+    try testing.expect(!std.mem.eql(u8, &golden, &rotationDigest([_]u8{0x5B} ** 32, 2, 2, &pk)));
+}
+
+test "signatures are RFC 8032 deterministic: the chain tests replay these bytes" {
+    // Attestor 0 (seed 01 00..00) over sampleAtt(1, 5, .ton). Any RFC 8032
+    // ed25519 (TweetNaCl in @ton/crypto, ed25519-dalek on Solana) makes the
+    // same 64 bytes from the same seed, which is what lets contracts/ton/tests
+    // use this oracle's keys and signatures unchanged.
+    var kp: [1]Ed25519.KeyPair = undefined;
+    var pk: [1]Ed25519.PublicKey = undefined;
+    genKeys(1, &kp, &pk);
+    var golden_pk: [32]u8 = undefined;
+    var golden_sig: [64]u8 = undefined;
+    _ = try std.fmt.hexToBytes(&golden_pk, "cecc1507dc1ddd7295951c290888f095adb9044d1b73d696e6df065d683bd4fc");
+    _ = try std.fmt.hexToBytes(&golden_sig, "670a391db25b567d13262d640c396b9e1847879b9d63f212bb2e4cfea74bcce64170fa67c516c7ce707da7750e1795a0556554e32d9495b3c27de82df74b8203");
+    try testing.expectEqualSlices(u8, &golden_pk, &pk[0].bytes);
+    try testing.expectEqualSlices(u8, &golden_sig, &sign(kp[0], sampleAtt(1, 5, .ton).digest()));
 }
