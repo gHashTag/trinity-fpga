@@ -1,0 +1,42 @@
+name: TRI minter — oracle and TON VM sandbox
+
+# The TON minter must reproduce the Zig oracle. Both run here: the oracle's own
+# tests, then the contract in a TON VM (@ton/sandbox) replaying its vectors.
+on:
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - 'src/trinet/mint_authority.zig'
+      - '.github/workflows/tri-minter-sandbox.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'contracts/**'
+      - 'src/trinet/mint_authority.zig'
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+      - name: Oracle
+        run: zig test src/trinet/mint_authority.zig
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: contracts/ton/package-lock.json
+      - name: TON VM sandbox
+        working-directory: contracts/ton
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build

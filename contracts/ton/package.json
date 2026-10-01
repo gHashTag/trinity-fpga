@@ -1,0 +1,24 @@
+{
+  "name": "tri-ton-minter",
+  "private": true,
+  "description": "The TRI jetton master (mint-on-acceptance), compiled and executed in a TON VM sandbox against the Zig oracle's vectors.",
+  "type": "module",
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "deploy:testnet": "tsx scripts/deploy-testnet.ts",
+    "testnet": "tsx scripts/testnet.ts"
+  },
+  "devDependencies": {
+    "@ton-community/func-js": "^0.11.0",
+    "@ton/core": "^0.63.1",
+    "@ton/crypto": "^3.3.0",
+    "@ton/sandbox": "^0.45.0",
+    "@ton/ton": "^16.3.0",
+    "@types/node": "^22.20.4",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}

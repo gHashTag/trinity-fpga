@@ -361,6 +361,9 @@ deploy-*.sh
 bin/
 bindings/
 contracts/
+# ...except the TRI minters at the root, which are source (their own
+# .gitignore keeps node_modules/ and build/ out).
+!/contracts/
 demo/
 demos/
 extensions/
