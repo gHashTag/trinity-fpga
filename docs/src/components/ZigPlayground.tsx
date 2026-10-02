@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 interface ZigPlaygroundProps {
   height?: number;
 }
