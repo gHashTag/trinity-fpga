@@ -1,7 +1,7 @@
 ;; tri_minter.fc — TON mint-on-acceptance minter (jetton master's mint gate).
 ;;
 ;; REFERENCE, UNAUDITED, NOT BUILT HERE (no func/fift toolchain on this host).
-;; Mirrors the golden oracle src/trinet/mint_authority.zig, tested 10/10 with
+;; Mirrors the golden oracle src/trinet/mint_authority.zig, tested 13/13 with
 ;; real ed25519 signatures. Every rule here must reproduce that oracle.
 ;; Protocol of record: specs/trinet/mint_on_acceptance.t27.
 ;;
@@ -9,16 +9,24 @@
 ;; with a valid M-of-N attestor quorum. No founder/treasury/liquidity mint.
 ;;
 ;; Storage:
-;;   minted_total : uint64        (mTRI minted so far; starts at 0)
+;;   minted_total : uint64        (mTRI minted ON THIS CHAIN; starts at 0)
 ;;   threshold    : uint8         (M)
 ;;   epoch        : uint32
 ;;   attestors    : cell          (dict: index -> 256-bit ed25519 pubkey, N keys)
-;;   spent        : cell          (dict: global_nonce(128) -> unit; shared view)
+;;   spent        : cell          (dict: global_nonce(128) -> unit; THIS chain only)
+;;
+;; Units: every amount is mTRI, the jetton's base unit (decimals = 3). The cap is
+;; 3^21 WHOLE TRI = 3^21 * 1000 mTRI.
+;;
+;; ONE MINTER: `minted_total` and `spent` are this contract's own. The supply
+;; rule is "sum across all chains <= cap" and the oracle enforces it with one
+;; shared ledger; on-chain nothing shares state without a bridge. So this
+;; contract may be deployed only while it is the only minter (contracts/README.md).
 ;;   jetton_master: slice         (the jetton to mint from)
 
 #include "imports/stdlib.fc";
 
-const int CAP_TRI    = 10460353203;   ;; 3^21
+const int CAP_MTRI   = 10460353203000; ;; 3^21 TRI * 1000 (mTRI)
 const int CHAIN_TON  = 1;             ;; Chain.ton in the oracle
 const int op::mint_on_att = 0x54524931; ;; "TRI1"
 
@@ -100,7 +108,7 @@ int count_quorum(int digest, cell attestors, cell sigs, int n) {
 
     ;; cap checked last, so an over-cap attempt consumes no nonce
     int next = minted_total + amount;
-    throw_if(err::over_cap, next > CAP_TRI);
+    throw_if(err::over_cap, next > CAP_MTRI);
 
     ;; --- spend the nonce, bump the total, persist ---
     spent~udict_set_builder(128, nonce, begin_cell());
