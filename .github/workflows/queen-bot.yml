@@ -71,17 +71,38 @@ jobs:
               core.setFailed('no APPROVED review -- a reviewer bee must approve before the merge');
               return;
             }
-            const commits = await github.paginate(github.rest.pulls.listCommits,
-              { owner, repo, pull_number, per_page: 100 });
-            const head = commits[commits.length - 1];
-            const headAt = head && head.commit.committer && head.commit.committer.date;
+            // The gate judges the head this run will merge (the merge step
+            // pins `sha` to the event's head). A newer head is unreviewed.
+            const headSha = context.payload.pull_request.head.sha;
+            if (pr.head.sha !== headSha) {
+              core.setFailed(`head moved (${headSha} -> ${pr.head.sha}) -- unreviewed code`);
+              return;
+            }
+            // WHEN THE HEAD ARRIVED, not when it was committed. A commit made
+            // at 10:00 and pushed at 10:10 carries 10:00, so a label put on at
+            // 10:05 would pass it unreviewed; a force-push back to an older SHA
+            // carries an older date still. The head's time is the latest of:
+            // its committer date, the first check run GitHub started on it (a
+            // push starts them), and the last force-push of the branch. Same
+            // hardening as gHashTag/t27#5526 (f9a6c9b). Every read throws on an
+            // API error, which fails this step and so skips the merge: fail closed.
+            const { data: commit } = await github.rest.repos.getCommit({ owner, repo, ref: headSha });
+            const commitAt = commit.commit.committer && commit.commit.committer.date;
+            const runs = await github.paginate(github.rest.checks.listForRef,
+              { owner, repo, ref: headSha, per_page: 100 });
+            const runAt = runs.map(r => r.started_at).filter(Boolean).sort()[0];
             const events = await github.paginate(github.rest.issues.listEvents,
               { owner, repo, issue_number: pull_number, per_page: 100 });
+            const pushedAt = events
+              .filter(e => e.event === 'head_ref_force_pushed')
+              .map(e => e.created_at).sort().pop();
+            const stamps = [commitAt, runAt, pushedAt].filter(Boolean).map(t => new Date(t).getTime());
+            const headAt = commitAt ? new Date(Math.max(...stamps)).toISOString() : null;
             const labeledAt = events
               .filter(e => e.event === 'labeled' && e.label && e.label.name === 'bee-reviewed')
               .map(e => e.created_at).sort().pop();
             if (!headAt || !labeledAt || new Date(labeledAt) < new Date(headAt)) {
-              core.setFailed(`bee-reviewed (${labeledAt}) does not post-date the head commit (${headAt})`);
+              core.setFailed(`bee-reviewed (${labeledAt}) does not post-date the head's arrival (${headAt})`);
               return;
             }
             core.info(`reviewer-bee gate passed: approved, bee-reviewed at ${labeledAt} >= head at ${headAt}`);
