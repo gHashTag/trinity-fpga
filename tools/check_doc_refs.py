@@ -170,7 +170,7 @@ for d in DOCS:
             if _hit:
                 # Excluded, but RECORDED. An exclusion nobody can see reads as
                 # coverage. These references resolve only in a sibling repo, so
-                # CI -- which has no siblings -- cannot tell them from rot; that
+                # a checkout without them cannot tell them from rot; that
                 # is a reason to name them, not to drop them silently.
                 cross.append(f"{str(d.relative_to(ROOT))}: names `{p}`" f" -> resolves in {_hit}")
                 continue
@@ -232,12 +232,27 @@ for _name, _rows in LISTS.items():
         for _l in _gone: print(f"  [gone] {_l}")
     hidden += [(_name, _l) for _l in sorted((_now - _have).elements())]
 uniq = sorted(set(fails))
+known = {l for l in BASE.read_text().splitlines() if l.strip()} if exists(BASE) else set()
+# A baseline entry that no longer reproduces is a pre-approved defect: the
+# reference was fixed, or now resolves somewhere, and the line stays in the
+# baseline -- so if it breaks again, nothing says so. Seven sat there for
+# weeks: references that resolve in a sibling were counted twice, as known rot
+# AND as published cross-repo exclusions, so a sibling deleting the target
+# would have passed in silence. PHPStan (reportUnmatchedIgnoredErrors) and
+# ESLint's bulk suppressions fail on an unmatched entry for this reason; so
+# does this gate. --prune-baseline only REMOVES entries (baseline & current):
+# it cannot add one, so pruning never launders a new dangling reference, which
+# is what --update-baseline would do.
+stale = sorted(known - set(uniq))
+if "--prune-baseline" in _s.argv:
+    kept = sorted(known & set(uniq))
+    BASE.write_text("\n".join(kept) + ("\n" if kept else ""))
+    print(f"baseline pruned: {len(stale)} removed, {len(kept)} kept")
 if "--update-baseline" in _s.argv:
     BASE.write_text("\n".join(uniq) + ("\n" if uniq else ""))
     print(f"baseline written: {len(uniq)} known")
-if "--update-lists" in _s.argv or "--update-baseline" in _s.argv:
+if any(f in _s.argv for f in ("--update-lists", "--update-baseline", "--prune-baseline")):
     _s.exit(0)
-known = {l for l in BASE.read_text().splitlines() if l.strip()} if exists(BASE) else set()
 new = sorted(set(uniq) - known)
 if new:
     print(f"\nFAIL: {len(new)} NEW dangling reference(s)\n")
@@ -246,13 +261,12 @@ if hidden:
     print(f"\nFAIL: {len(hidden)} exclusion(s) not in the published lists -- "
           f"run with --update-lists and commit them:\n")
     for _name, _l in hidden: print(f"  tools/{_name}: {_l}")
-if new or hidden:
+if stale:
+    print(f"\nFAIL: {len(stale)} baseline entry/entries no longer reproduce -- "
+          f"run with --prune-baseline and commit tools/doc_refs_baseline.txt:\n")
+    for f in stale: print(f"  [stale] {f}")
+if new or hidden or stale:
     _s.exit(1)
-print(f"OK: no new dangling references ({len(known)} known), "
+print(f"OK: no new dangling references ({len(known)} known, all still reproduce), "
       f"every exclusion published")
 _s.exit(0)
-if fails:
-    print(f"\nFAIL: {len(fails)} reference(s) to files that are not there\n")
-    for f in sorted(set(fails)): print(f"  {f}")
-    sys.exit(1)
-print("OK: every file named in a document exists")
