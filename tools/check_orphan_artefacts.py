@@ -63,10 +63,33 @@ def produced(a):
                 return True
     return False
 
-orphans = [str(a.relative_to(ROOT)) for a in arts if not produced(a)]
+# A DRAWN figure has no generator by nature: an illustration plate is made, not
+# computed, and no script will ever name it as an output. Counting such plates as
+# orphans kept eighty of them in the failure list for weeks, where they buried
+# the thirteen measurement records that were a real question. They are not
+# waved through silently either: a directory opts out only by DECLARING it, in a
+# README.md beside the files carrying the marker below, and every run prints how
+# many artefacts rely on a declaration. Only figures can be declared -- a .json
+# is data, and data that no code produces is never "drawn".
+DRAWN_MARK = "<!-- orphan-artefacts: drawn-not-computed -->"
+DRAWN_KINDS = (".png", ".pdf", ".svg")
+_drawn_dirs = {}
+def declared_drawn(a):
+    if a.suffix not in DRAWN_KINDS: return False
+    if a.parent not in _drawn_dirs:
+        rd = a.parent / "README.md"
+        _drawn_dirs[a.parent] = rd.exists() and DRAWN_MARK in rd.read_text(errors="ignore")
+    return _drawn_dirs[a.parent]
+
+unproduced = [a for a in arts if not produced(a)]
+drawn = [a for a in unproduced if declared_drawn(a)]
+orphans = [str(a.relative_to(ROOT)) for a in unproduced if not declared_drawn(a)]
 
 BASE = pathlib.Path(__file__).with_name("orphan_artefacts_baseline.txt")
 print(f"artefacts scanned: {len(arts)}   producers scanned: {len(producers)}")
+for d in sorted({a.parent for a in drawn}):
+    n = sum(1 for a in drawn if a.parent == d)
+    print(f"declared drawn, not computed: {n} in {d.relative_to(ROOT)}/ (see its README.md)")
 uniq = sorted(set(orphans))
 if "--update-baseline" in sys.argv:
     BASE.write_text("\n".join(uniq) + ("\n" if uniq else ""))
