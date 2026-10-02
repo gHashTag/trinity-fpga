@@ -80,6 +80,14 @@ for s, e in zones:
         AFTER = ("at a median of", "median of five", "seed median", "five-seed")
         if any(k in before for k in BEFORE) or any(k in after for k in AFTER):
             continue
+        # A goodness-of-fit belongs to the fit the withdrawal offers in place
+        # of the claim, never to the claim withdrawn: nobody withdraws an R^2
+        # without withdrawing its fit. The abstract withdraws the MHz/LUT
+        # ranking and replaces it with F ~ LUT^-0.648 at $R^2=0.92$, and
+        # reading that 0.92 as withdrawn flagged the 0.92x accuracy ratio in
+        # the tab:acc caption -- a different quantity sharing two digits.
+        if re.search(r"r\^\{?2\}?\s*=\s*$", before):
+            continue
         # A value that is a simple dyadic fraction -- 0.5, 0.25, 0.125 -- is not
         # distinctive: it names a bit width in one sentence and a storage cost in
         # another, and matching on the digits alone conflates them.
