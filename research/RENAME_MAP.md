@@ -36,7 +36,8 @@ renamed things it should not have. Never glob a bare `gft` prefix.
 A reference resolving only in `t27`, `trinity-s3ai`, `claim-audit-lab`,
 `tri-net`, `trios-mesh` or `zig-golden-float` is a real reference, not rot. CI
 has no siblings in its checkout and cannot tell the two apart, which is why
-`tools/check_doc_refs.py` counts them in its summary and writes them to
-`tools/doc_refs_crossrepo.txt` rather than dropping them silently. Write such a
+`tools/check_doc_refs.py` counts them in its summary and publishes them in
+`tools/doc_refs_crossrepo.txt` rather than dropping them silently (regenerate
+with `--update-lists`; a run fails on an exclusion that list does not name). Write such a
 reference qualified -- `t27:specs/fpga/mac.t27` -- so a reader knows which tree
 to look in.
