@@ -1,7 +1,10 @@
 # Measurement records backing the TNF paper
 
-Every file here is a machine-written record produced by a script in this
-repository, copied verbatim. Nothing in this directory was edited by hand.
+Most files here are machine-written records produced by a script in this
+repository, copied verbatim under a dated name. Not all: one record was
+transcribed by hand and three carry fields no script in this tree writes. They
+are named under [Provenance of campaign records](#provenance-of-campaign-records)
+rather than covered by a sentence that is not true of them.
 
 | file | what it records | status |
 |---|---|---|
@@ -51,3 +54,48 @@ EOF
 The second line is the one that matters. A file this table names and the
 directory does not hold is a broken index; a file the directory holds and this
 table does not name is simply a record that backs no published figure.
+
+## Provenance of campaign records
+
+The orphan-artefacts gate (`tools/check_orphan_artefacts.py`) asks of every
+record whether code produces it. For the records below the answer was never
+written down, so the gate counted them as written without a script. Some were;
+most were not. Each row says which.
+
+A script writes under its own name and the record was copied here under a dated
+one, so the second column gives both. `T27_WORK` defaults to the script's own
+directory.
+
+| record | producer and the name it writes | status |
+|---|---|---|
+| `oracle_rtl_2026-08-20.json` | `research/arxiv_tnf/oracle_rtl.py` -> `$T27_WORK/oracle_rtl/oracle_rtl.json` | generated |
+| `structural_2026-08-20.json` | `research/arxiv_tnf/structural.py` -> `$T27_WORK/structural/structural.json` | generated |
+| `stability_2026-08-20.json` | `research/arxiv_tnf/stability.py`, `TASK=mnist EPOCHS=3`, `INIT_PCT` unset -> `$T27_WORK/stability_mnist_gs_3ep.json` | generated |
+| `stability_pct_init_2026-08-20.json` | the same, with `INIT_PCT=0.999` (the percentile recipe of `docs/FALSIFY-ME.md`) -> `$T27_WORK/stability_mnist_pct0.999_3ep.json` | generated |
+| `stability_kmnist_2026-08-20.json` | the same script, `TASK=kmnist EPOCHS=3`; `INIT_PCT` not recorded (below) | generated |
+| `stability_mnist_10ep_2026-08-20.json` | the same script, `TASK=mnist EPOCHS=10`; `INIT_PCT` not recorded | generated |
+| `stability_mnist_30ep_2026-08-20.json` | the same script, `TASK=mnist EPOCHS=30`; `INIT_PCT` not recorded | generated |
+| `stability_fashion_10ep_2026-08-20.json` | the same script, `TASK=fashion EPOCHS=10`; `INIT_PCT` not recorded | generated |
+| `stability_fashion_30ep_2026-08-20.json` | the same script, `TASK=fashion EPOCHS=30`; `INIT_PCT` not recorded | generated |
+| `placer_router_sweep_2026-08-19.json` | per-seed Fmax from `gen_placer_router_sweep.py` -> `$T27_WORK/cfg_results.json`; the spreads, `note` and `finding` were added by a step that is not in this tree | partly generated |
+| `placer_router_full_2026-08-19.json` | the same sweep over all 21 designs; `inversions`, `inversion_pairs`, `note` and `finding` come from a step that is not in this tree | partly generated |
+| `verdict_stability_2026-08-19.json` | **no generator in this tree.** Its `method` field states the computation | not reproducible from the tree |
+| `hardware_scan_2026-08-20.json` | **no generator.** Transcribed by hand from a read-only `openFPGALoader` JTAG scan, as its own `measured_by` field says | hand-written |
+
+Three things a reader would otherwise have to find out the hard way:
+
+- **The stability records do not record `INIT_PCT`.** `task`, `seeds` and
+  `epochs` are in the file; the quantiser recipe is not, so the max-scale and
+  percentile runs of the same task are told apart only by the filename, and
+  for the KMNIST, Fashion and longer runs the filename does not say either.
+- **`verdict_stability` cannot be recomputed from `placer_router_full`.** It counts,
+  seed by seed, how often design X beats design Y, but `placer_router_full`
+  stores each `fmax_by_seed` list **sorted**, so which value belongs to which
+  seed is gone. Recomputing from those lists gives 22 unstable pairs for
+  `heap/router1`, not 25.
+- **`verdict_stability` disagrees with itself.** Its `configs` count 25, 27 and
+  37 unstable pairs of 210; its own `finding` says "20-34". The commit that
+  added it says 20, 23 and 34. The paper quotes none of these figures, so
+  nothing published depends on which is right, but the record cannot be cited
+  until it is regenerated from per-seed data.
+
