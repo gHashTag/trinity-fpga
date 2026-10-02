@@ -20,9 +20,9 @@ The supply is derived from the **Trinity Identity**: the number of unique states
 |----------|-------|
 | Token Symbol | $TRI |
 | Token Name | Trinity Token |
-| Decimals | 18 |
-| Total Supply | 10,460,353,203 (3^21) |
-| Network | **TON** and **Solana** (multi-chain) |
+| Decimals | 3 (base unit = 1 mTRI, the unit the ledger settles in) |
+| Total Supply | 10,460,353,203 TRI (3^21) = 10,460,353,203,000 mTRI on-chain |
+| Network | **TON** first (chain of record); Solana only once a bridge shares one ledger |
 
 ## Allocation
 
