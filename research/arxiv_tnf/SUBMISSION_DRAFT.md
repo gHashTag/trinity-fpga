@@ -48,9 +48,29 @@ analysis audience; posit and takum papers usually sit in `cs.AR` or `cs.MS`.
 ```
 146 pages, 89 figures, 61 tables. Reference implementations and the derivation
 harness are released; every published figure is recomputed from committed records
-by a single script (679 checks). Twenty-two retractions of the authors' own
-claims are marked in place.
+by a single script (536 checks, three named open divergences). Twenty-two
+retractions of the authors' own claims are marked in place.
 ```
+
+Derive the check count at submission time; never quote a stale one. Run
+`research/arxiv_tnf/verify_numbers.py` and read its own ИТОГ line — today
+that is 536 checks executed (533 agree, 3 diverge). The 679 this section
+used to quote was never re-derived and matched nothing the script reports.
+
+The three open divergences, named:
+
+1. `dot4: подтверждено размещений` — the text cites two placed dies;
+   `measurements/confirm_w990.json` records `placements_done: 1` for
+   `gft_signed_dot4`.
+2. `dot4: обе площадки различны` — the both-sites-distinct claim cites two
+   sites; one recorded placement cannot establish distinctness.
+3. `чтения канонизированы` — one confirm record predates the
+   `die_reads_canonical` field and does not carry it.
+
+Until each is resolved or the paper text stops claiming it, the comments
+field says "three named open divergences" — a more credible sentence than
+an unqualified success, because the instrument that would contradict it
+ships in the same directory.
 
 The retraction count is worth stating in the comments. It is unusual, it is true,
 and a referee who sees it before the abstract reads the rest differently.
