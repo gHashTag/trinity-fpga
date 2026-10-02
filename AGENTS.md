@@ -296,9 +296,16 @@ tri x7-audit / x7-fasm / x7-writer / x7-mutate / x7-part
 
 # Z: the t27.ai blog
 tri blog list | check | lint | preview <slug> | build | live <slug>
-tri blog gif record CAST -- "cmd" ...   # real commands in a pty, saved as an asciicast
-tri blog gif render CAST GIF            # the GIF; long silences shortened and labelled in-frame
+tri cast record CAST -- "cmd" ...       # real commands in a pty, saved as an asciicast
+tri cast render CAST GIF                # the GIF for GitHub; long silences shortened and labelled in-frame
+tri cast publish CAST ID --title … --desc … --at S   # t27.ai/term/ID/: player, X/OG preview card, gallery
 ```
+
+**Every post — t27.ai blog, GitHub PR / issue / release note, X — that reports
+what a command did carries the recording of that command.** How, and the
+honesty rules a recording must keep: the `terminal-cast` skill
+(`~/skills/terminal-cast/SKILL.md`). The project's name in all of it is
+**Trinity S³AI**, and its triangle points down.
 
 The board rules (one attempt per run name, SRAM only and never SPI flash, the
 key never leaves the machine) live in the `xilinx7-bitstream-loop` and
