@@ -194,24 +194,62 @@ print(f"excluded as vendored (relative to their own root):   {len(vendored)}")
 print(f"excluded as upstream (third-party, repo-qualified):  {len(upstream)}")
 print(f"excluded by declaration (documents recording absent names): {len(by_design)}")
 [print(f"    {b}") for b in by_design]
-(pathlib.Path(__file__).with_name("doc_refs_crossrepo.txt")
- .write_text("\n".join(sorted(cross)) + ("\n" if cross else "")))
-# Written for the same reason as the cross-repo list: an exclusion nobody can
-# see reads as coverage. These are the references the gate deliberately does
-# not verify, in a file someone can read.
-(pathlib.Path(__file__).with_name("doc_refs_upstream.txt")
- .write_text("\n".join(sorted(upstream)) + ("\n" if upstream else "")))
+# The exclusions are PUBLISHED, because an exclusion nobody can see reads as
+# coverage: the references the gate deliberately does not verify, in files
+# someone can read. They used to be rewritten on every run. That dirtied the
+# tree of anyone who ran the gate, and nothing compared the committed copies
+# with what the gate computed -- so both went stale for weeks while the docs
+# moved on (#817), and "a file someone can read" was not what the gate had
+# excluded. Now they are written only with --update-lists, and a run checks
+# them like a ratchet:
+#
+#   an exclusion the published list does not name  -> FAIL (a hidden exclusion)
+#   a published entry this run no longer excludes   -> note (shrink the list)
+#
+# Same shape as the baseline below and check_artefact_agreement's: fail on
+# what is new, report what has gone. The cross-repo list depends on the
+# siblings next to this checkout -- CI materialises them with
+# tools/materialise_siblings.sh, and so should anyone regenerating the list.
+# --update-lists is separate from --update-baseline on purpose: refreshing the
+# published exclusions must not also launder new dangling references into the
+# baseline.
+from collections import Counter as _Counter
+LISTS = {"doc_refs_crossrepo.txt": cross, "doc_refs_upstream.txt": upstream}
+hidden = []
+for _name, _rows in LISTS.items():
+    _path = pathlib.Path(__file__).with_name(_name)
+    if "--update-lists" in _s.argv:
+        _path.write_text("\n".join(sorted(_rows)) + ("\n" if _rows else ""))
+        print(f"list written: tools/{_name} ({len(_rows)})")
+        continue
+    _have = _Counter(l for l in (_path.read_text().splitlines() if _path.exists() else [])
+                     if l.strip())
+    _now = _Counter(_rows)
+    _gone = sorted((_have - _now).elements())
+    if _gone:
+        print(f"\n{len(_gone)} entry/entries in tools/{_name} no longer excluded -- "
+              f"run with --update-lists to shrink it:")
+        for _l in _gone: print(f"  [gone] {_l}")
+    hidden += [(_name, _l) for _l in sorted((_now - _have).elements())]
 uniq = sorted(set(fails))
 if "--update-baseline" in _s.argv:
     BASE.write_text("\n".join(uniq) + ("\n" if uniq else ""))
-    print(f"baseline written: {len(uniq)} known"); _s.exit(0)
+    print(f"baseline written: {len(uniq)} known")
+if "--update-lists" in _s.argv or "--update-baseline" in _s.argv:
+    _s.exit(0)
 known = {l for l in BASE.read_text().splitlines() if l.strip()} if exists(BASE) else set()
 new = sorted(set(uniq) - known)
 if new:
     print(f"\nFAIL: {len(new)} NEW dangling reference(s)\n")
     for f in new: print(f"  {f}")
+if hidden:
+    print(f"\nFAIL: {len(hidden)} exclusion(s) not in the published lists -- "
+          f"run with --update-lists and commit them:\n")
+    for _name, _l in hidden: print(f"  tools/{_name}: {_l}")
+if new or hidden:
     _s.exit(1)
-print(f"OK: no new dangling references ({len(known)} known)")
+print(f"OK: no new dangling references ({len(known)} known), "
+      f"every exclusion published")
 _s.exit(0)
 if fails:
     print(f"\nFAIL: {len(fails)} reference(s) to files that are not there\n")
