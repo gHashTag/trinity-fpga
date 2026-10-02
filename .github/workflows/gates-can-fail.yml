@@ -58,7 +58,10 @@ env:
   # 8 -> 9: check_doc_refs became testable once this job materialised the
   # sibling namespaces it resolves against (tools/materialise_siblings.sh, the
   # same script doc-refs.yml runs). Without them it was red on a clean tree.
-  MIN_TESTABLE: '9'
+  # 9 -> 10: check_withdrawn_live became testable once the paper marked the
+  # withdrawn 0.1797 MHz/LUT cell in tab:fullthroughput (#820). It was red on
+  # main for that one cell, so the harness could not plant its defect.
+  MIN_TESTABLE: '10'
 
 jobs:
   gates-can-fail:
