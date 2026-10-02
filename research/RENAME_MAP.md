@@ -34,8 +34,10 @@ renamed things it should not have. Never glob a bare `gft` prefix.
 ## Sibling repositories
 
 A reference resolving only in `t27`, `trinity-s3ai`, `claim-audit-lab`,
-`tri-net`, `trios-mesh` or `zig-golden-float` is a real reference, not rot. CI
-has no siblings in its checkout and cannot tell the two apart, which is why
+`tri-net`, `trios-mesh` or `zig-golden-float` is a real reference, not rot. A
+checkout without the siblings cannot tell the two apart -- CI materialises the
+five public ones with `tools/materialise_siblings.sh`, and `trios-mesh` is
+private, so CI never sees it -- which is why
 `tools/check_doc_refs.py` counts them in its summary and publishes them in
 `tools/doc_refs_crossrepo.txt` rather than dropping them silently (regenerate
 with `--update-lists`; a run fails on an exclusion that list does not name). Write such a
