@@ -213,6 +213,10 @@ fn runMultiplePings(fd: std.posix.fd_t, count: u32) !void {
         std.debug.print("Min: {d:.3} μs\n", .{min_us});
         std.debug.print("Max: {d:.3} μs\n", .{max_us});
     }
+
+    // Any dropped ping is a UART failure the caller must see in the exit
+    // code, consistent with `fpga-flash flash`/`verify-pid` (#427, #428).
+    if (success < count) return error.UartTestFailed;
 }
 
 fn runLoopbackTest(fd: std.posix.fd_t) !void {
@@ -259,4 +263,8 @@ fn runLoopbackTest(fd: std.posix.fd_t) !void {
     }
 
     std.debug.print("\nResult: {d}/{d} bytes matched\n", .{ success, pattern.len });
+
+    // A partial match is a failed loopback: exit non-zero so scripts and CI
+    // see it, consistent with `fpga-flash flash`/`verify-pid` (#427, #428).
+    if (success < pattern.len) return error.UartTestFailed;
 }
