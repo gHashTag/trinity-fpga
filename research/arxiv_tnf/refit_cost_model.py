@@ -184,7 +184,8 @@ def main(argv):
     print("\nStatus of every number above: yosys stat is [modelled], nextpnr "
           "post-route is [measured CI-synth]. Neither is a hardware measurement; "
           "hardware requires a UART transcript from the AX7203 with a green CI "
-          "URL, an artefact SHA256 and IDCODE 0x13636093 on issue #199.")
+          "URL, an artefact SHA256 and an AX7203 IDCODE (0x13636093 or its "
+          "version-0 variant 0x03636093, #633) on issue #199.")
     return 0
 
 
