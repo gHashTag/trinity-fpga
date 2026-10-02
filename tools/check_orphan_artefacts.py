@@ -24,11 +24,19 @@ SKIP_NAME = re.compile(r"(_paper|_baseline|cases|package(-lock)?)\.", re.I)
 # an artefact that "no code produces" is a category error, not a finding.
 SKIP_DIR = {"node_modules", ".git", "__pycache__", "arxiv_submission", ".gate_cache"}
 
+# A gate is not a producer. tools/check_*.py name files in order to CHECK them,
+# and the harness that proves each gate can fail (check_gates_can_fail.py)
+# names the very orphan it plants. Counting the gates as producers made this
+# gate pass its own defect the first day it was green: the planted file was
+# "produced" by the line that planted it.
+GATE = re.compile(r"^check_.*\.py$")
+
 # everything a producer might be
 producers = []
 for pat in ("**/*.py", "**/*.sh", "**/Makefile", "**/*.mk", "**/*.md", "**/*.yml"):
     for f in ROOT.glob(pat):
         if any(p in SKIP_DIR for p in f.parts): continue
+        if f.parent == ROOT / "tools" and GATE.match(f.name): continue
         try: producers.append((f, f.read_text(errors="ignore")))
         except Exception: pass
 
@@ -56,10 +64,18 @@ def produced(a):
     # six was too strict: awq_test.py writes f"awq_{TAG}.json" and the whole
     # family read as orphaned. The extension must appear in the same file too,
     # which is what keeps a three-letter prefix from matching anything.
+    #
+    # The prefix must START a name. Matched as a bare substring, "gate_{" was
+    # found inside f"lineD_actgate_{MDIR}.json", so that one script "produced"
+    # every gate_*.json in the tree -- including the orphan that
+    # check_gates_can_fail plants to prove this gate can fail. The substring
+    # test stays as a cheap filter; the boundary is checked only on a hit.
     for cut in range(len(stem), 2, -1):
         pref = stem[:cut]
         for needle in (pref + "{", pref + "_{"):
-            if any(needle in src and ext in src for _, src in producers):
+            at_start = re.compile(r"(?<![A-Za-z0-9_])" + re.escape(needle))
+            if any(needle in src and ext in src and at_start.search(src)
+                   for _, src in producers):
                 return True
     return False
 
