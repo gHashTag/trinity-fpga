@@ -110,7 +110,6 @@ pub const SharedLedger = struct {
 
 /// The mint authority. In production its state lives on-chain; here it is the
 /// reference against which the TON and Solana implementations are checked.
-
 pub const Authority = struct {
     attestors: []const Ed25519.PublicKey,
     threshold: u8, // M of N
