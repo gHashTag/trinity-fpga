@@ -249,8 +249,11 @@ test "Stress: Reticular Formation - poll under load" {
             },
         });
 
-        // Small delay to ensure different timestamps
-        tri_time.sleep(1 * std.time.ns_per_us);
+        // Timestamps are milliseconds and paging resumes strictly after the
+        // last one seen, so events sharing a millisecond with a page boundary
+        // are skipped. One millisecond apart keeps them distinct; a
+        // microsecond never could.
+        tri_time.sleep(1 * std.time.ns_per_ms);
     }
 
     // Poll in batches

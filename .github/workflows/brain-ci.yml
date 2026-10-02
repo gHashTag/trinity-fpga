@@ -294,19 +294,31 @@ jobs:
       - name: Run Stress Test
         id: stress
         run: |
-          # Run stress test and capture output
-          zig build test-brain-stress -Dci=true 2>&1 | tee /tmp/stress-output.txt
-
-          # Extract score from output
-          STRESS_SCORE=$(grep "Score:" /tmp/stress-output.txt | tail -1 | grep -oE "[0-9]+" || echo "0")
-          echo "STRESS_SCORE=$STRESS_SCORE" >> $GITHUB_OUTPUT
-
-          # Check if passed
-          if grep -q "PASS" /tmp/stress-output.txt; then
+          # HISTORY. No test prints "Score:", so the extraction below always
+          # fell back to 0 and this step reported "score 0 below threshold
+          # 270" on every run, including runs where every test passed. It
+          # also could not see a failing test: without pipefail, `| tee`
+          # reports tee's exit code and not zig's.
+          #
+          # The verdict is now the test run itself. As with the health score
+          # above, a missing score is a notice, not a zero. The threshold
+          # check is untouched and starts gating again the moment a test
+          # prints a Score: line.
+          set -o pipefail
+          if zig build test-brain-stress -Dci=true 2>&1 | tee /tmp/stress-output.txt; then
             echo "PASSED=true" >> $GITHUB_OUTPUT
           else
             echo "PASSED=false" >> $GITHUB_OUTPUT
+            echo "::error::Brain stress tests failed -- see the test output above"
+            exit 1
           fi
+
+          if ! grep -q "Score:" /tmp/stress-output.txt; then
+            echo "::notice::No stress score to check -- no stress test prints a Score: line, so the verdict is the test run above. This step gates on STRESS_TEST_THRESHOLD again the moment one does."
+            exit 0
+          fi
+          STRESS_SCORE=$(grep "Score:" /tmp/stress-output.txt | tail -1 | grep -oE "[0-9]+")
+          echo "STRESS_SCORE=$STRESS_SCORE" >> $GITHUB_OUTPUT
 
           # Fail if below threshold
           if [ "$STRESS_SCORE" -lt "$STRESS_TEST_THRESHOLD" ]; then
@@ -330,16 +342,13 @@ jobs:
             const status = passed ? 'PASS' : 'FAIL';
             const color = passed ? 'green' : 'red';
 
+            // The per-phase table this comment used to print was a constant
+            // 100/100 on every run, pass or fail. It reported nothing, so it
+            // is gone; the score line says plainly when there is no score.
             const body = `## 🧪 Brain Stress Test Results\n\n` +
-              `**Score:** ${score}/300\n` +
+              `**Score:** ${score ? `${score}/300` : 'not measured (no stress test prints a Score: line)'}\n` +
               `**Status:** :${color}_circle: ${status}\n` +
               `**Threshold:** ${threshold}/300\n\n` +
-              `### Test Phases\n` +
-              `| Phase | Score |\n` +
-              `|-------|-------|\n` +
-              `| Basal Ganglia | 100/100 |\n` +
-              `| Locus Coeruleus | 100/100 |\n` +
-              `| Reticular Formation | 100/100 |\n\n` +
               `${passed ? 'X' : 'x'} Stress test ${passed ? 'passed' : 'failed'}`;
 
             // Find or create comment
