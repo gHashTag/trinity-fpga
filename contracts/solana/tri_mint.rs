@@ -1,7 +1,7 @@
 // tri_mint — Solana (Anchor) mint-on-acceptance program.
 //
 // REFERENCE, UNAUDITED, NOT BUILT HERE. This mirrors the golden oracle
-// src/trinet/mint_authority.zig, which is tested (10/10) with real ed25519
+// src/trinet/mint_authority.zig, which is tested (13/13) with real ed25519
 // signatures. Every rule below must reproduce that oracle; a divergence is a
 // bug in THIS file, not in the oracle. Protocol of record:
 // specs/trinet/mint_on_acceptance.t27.
@@ -22,7 +22,15 @@ use anchor_spl::token::{self, Mint, MintTo, Token, TokenAccount};
 
 declare_id!("Tri1111111111111111111111111111111111111111"); // placeholder
 
-pub const CAP_TRI: u64 = 10_460_353_203; // 3^21
+// Amounts are in mTRI, the token's base unit: the SPL mint has decimals = 3.
+// The ceiling is 3^21 WHOLE TRI, so in base units it is 3^21 * 1000. It was
+// once compared against mTRI while written in whole TRI (1000x too low).
+//
+// `minted_total` below counts THIS chain only. The supply rule is "sum across
+// all chains <= cap", which a per-chain counter cannot enforce: this program
+// may be deployed only while it is the ONE minter (contracts/README.md).
+pub const CAP_MTRI: u64 = 10_460_353_203_000; // 3^21 TRI * 1000
+pub const DECIMALS: u8 = 3;
 pub const CHAIN_ID: u8 = 2; // Chain.solana in the oracle
 
 #[program]
@@ -76,7 +84,7 @@ pub mod tri_mint {
             .minted_total
             .checked_add(att.amount_mtri)
             .ok_or(TriErr::OverCap)?;
-        require!(next <= CAP_TRI, TriErr::OverCap);
+        require!(next <= CAP_MTRI, TriErr::OverCap);
         a.minted_total = next;
 
         // Mint SPL TRI to the worker's token account. Authority is the PDA.
@@ -121,7 +129,7 @@ fn verify_quorum_via_introspection(
         // Each Ed25519Program instruction may carry several signatures; the
         // runtime has already verified them, so we only match (pubkey, message)
         // against (attestor, digest). Logic verified host-side in
-        // contracts/solana/verify (`cargo test`, 4/4).
+        // contracts/solana/verify (`cargo test`, 5/5).
         for (signed_pubkey, message) in parse_ed25519_ix(&ix.data) {
             if message.as_slice() != &digest[..] {
                 continue; // signed something other than this attestation
