@@ -63,7 +63,7 @@ LINK = {
     "ci":   re.compile(r"github\.com/[^\s)]*/(?:actions/runs|runs)/\d+", re.I),
     "sha":  re.compile(r"\b[0-9a-f]{64}\b", re.I),
     "uart": re.compile(r"HW RESULT:\s*\d+/\d+\s*bit-exact", re.I),
-    "id":   re.compile(r"0x13636093", re.I),
+    "id":   re.compile(r"0x[01]3636093", re.I),
 }
 OP = re.compile(r"\b(decode|add|mul|sub)\b", re.I)
 RESULT = re.compile(r"HW RESULT:\s*(\d+)/(\d+)", re.I)

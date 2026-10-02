@@ -13,7 +13,7 @@ requires:
     a public CI run URL          github.com/.../actions/runs/N
     a bitstream SHA-256          a 64-hex-digit string
     a UART conformance line      HW RESULT: N/N bit-exact
-    a matching IDCODE            0x13636093
+    a matching IDCODE            0x13636093 (or its version-0 variant 0x03636093)
 
 and the cell it proves is the backticked name in its `### Tier-E proof:` title, with the
 operation taken from the trailing `-op` or the parenthesised note. Both readings of
@@ -43,7 +43,7 @@ REPO = "gHashTag/trinity-fpga"
 CI = re.compile(r"actions/runs/\d+")
 SHA = re.compile(r"\b[0-9a-f]{64}\b")
 UART = re.compile(r"HW RESULT:\s*[\d,]+\s*/\s*[\d,]+\s*bit-?exact", re.I)
-IDCODE = re.compile(r"0x13636093", re.I)
+IDCODE = re.compile(r"0x[01]3636093", re.I)
 TITLE = re.compile(r"Tier-E proof:\s*`([^`]+)`\s*(?:\(([^)]*)\))?", re.I)
 
 LINKS = (("ci_url", CI), ("sha256", SHA), ("uart_log", UART), ("idcode", IDCODE))

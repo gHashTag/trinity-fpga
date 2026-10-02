@@ -27,7 +27,7 @@ LINKS = {
     "ci": re.compile(r"github\.com/[^\s)]*/(?:actions/runs|runs)/\d+", re.I),
     "sha": re.compile(r"\b[0-9a-f]{64}\b", re.I),
     "uart": re.compile(r"HW RESULT:\s*(\d+)/(\d+)\s*bit-exact", re.I),
-    "idcode": re.compile(r"0x13636093", re.I),
+    "idcode": re.compile(r"0x[01]3636093", re.I),
 }
 
 CELL = re.compile(r"\b(gf\d+|gfternary|bcd|binary\d+|decimal\d+|fp8_e\dm\d|fp8|"
