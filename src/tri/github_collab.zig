@@ -41,7 +41,9 @@
 //!   GITHUB_CLIENT_SECRET      OAuth app client secret
 //!   GITHUB_WEBHOOK_SECRET     shared secret for webhook HMAC
 //!   PUBLIC_ORIGIN             e.g. https://t27-collab.up.railway.app
-//!   ALLOWED_ORIGIN            e.g. https://t27.ai  (CORS)
+//!   ALLOWED_ORIGIN            comma-separated CORS allowlist, first entry is
+//!                             where the OAuth flow returns; default
+//!                             https://t27.ai,https://app.t27.ai
 //!   PORT                      injected by Railway
 
 const std = @import("std");
@@ -51,6 +53,8 @@ pub const Config = struct {
     client_secret: []const u8,
     webhook_secret: []const u8,
     public_origin: []const u8,
+    /// Comma-separated list. Read it through `primaryOrigin` / `corsOrigin`,
+    /// never as a header value directly.
     allowed_origin: []const u8,
     port: u16,
 
@@ -66,7 +70,7 @@ pub const Config = struct {
             .client_secret = try need(env, "GITHUB_CLIENT_SECRET"),
             .webhook_secret = try need(env, "GITHUB_WEBHOOK_SECRET"),
             .public_origin = try need(env, "PUBLIC_ORIGIN"),
-            .allowed_origin = env.get("ALLOWED_ORIGIN") orelse "https://t27.ai",
+            .allowed_origin = env.get("ALLOWED_ORIGIN") orelse DEFAULT_ALLOWED_ORIGINS,
             .port = blk: {
                 const p = env.get("PORT") orelse break :blk 8080;
                 break :blk std.fmt.parseInt(u16, p, 10) catch 8080;
@@ -81,6 +85,38 @@ pub const Config = struct {
         };
     }
 };
+
+/// The board is served from both hosts: t27.ai and app.t27.ai (the player
+/// embeds it under /queen/). A single hard-coded origin made every request
+/// from the second host fail CORS.
+pub const DEFAULT_ALLOWED_ORIGINS = "https://t27.ai,https://app.t27.ai";
+
+/// First entry of the allowlist: where the OAuth callback sends the browser.
+pub fn primaryOrigin(list: []const u8) []const u8 {
+    var it = std.mem.splitScalar(u8, list, ',');
+    while (it.next()) |raw| {
+        const o = std.mem.trim(u8, raw, " \t");
+        if (o.len > 0) return o;
+    }
+    return list;
+}
+
+/// The value for `access-control-allow-origin`: the request's own Origin when
+/// it is on the list, otherwise the primary origin (which the browser will
+/// then refuse, as it should). Never "*" -- these requests carry a cookie.
+///
+/// The result is a slice of `list`, not of `request_origin`, so it stays valid
+/// after the request body is read and the head strings are invalidated.
+pub fn corsOrigin(list: []const u8, request_origin: ?[]const u8) []const u8 {
+    if (request_origin) |want| {
+        var it = std.mem.splitScalar(u8, list, ',');
+        while (it.next()) |raw| {
+            const o = std.mem.trim(u8, raw, " \t");
+            if (o.len > 0 and std.mem.eql(u8, o, want)) return o;
+        }
+    }
+    return primaryOrigin(list);
+}
 
 // ---------------------------------------------------------------------------
 // Webhook signature
@@ -461,4 +497,17 @@ test "authorizeUrl asks for public_repo and nothing wider" {
     // `repo` would grant private-repo write; make sure it never creeps in.
     try std.testing.expect(std.mem.indexOf(u8, url, "scope=repo") == null);
     try std.testing.expect(std.mem.indexOf(u8, url, "state=nonce123") != null);
+}
+
+test "corsOrigin echoes an allowlisted origin and nothing else" {
+    const list = DEFAULT_ALLOWED_ORIGINS;
+    try std.testing.expectEqualStrings("https://t27.ai", corsOrigin(list, "https://t27.ai"));
+    try std.testing.expectEqualStrings("https://app.t27.ai", corsOrigin(list, "https://app.t27.ai"));
+    // Unknown, look-alike and missing origins all get the primary one back.
+    try std.testing.expectEqualStrings("https://t27.ai", corsOrigin(list, "https://evil.example"));
+    try std.testing.expectEqualStrings("https://t27.ai", corsOrigin(list, "https://app.t27.ai.evil.example"));
+    try std.testing.expectEqualStrings("https://t27.ai", corsOrigin(list, null));
+    // Whitespace around commas is tolerated; a single origin still works.
+    try std.testing.expectEqualStrings("https://b.test", corsOrigin(" https://a.test , https://b.test ", "https://b.test"));
+    try std.testing.expectEqualStrings("https://a.test", primaryOrigin("https://a.test"));
 }
