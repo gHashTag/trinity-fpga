@@ -57,11 +57,15 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
     var server = std.http.Server.init(&reader.interface, &writer.interface);
     var request = server.receiveHead() catch return;
 
+    // Resolved before any body is read: reading the body invalidates the head
+    // strings, and `corsOrigin` returns a slice of the config, not of them.
+    const origin = collab.corsOrigin(cfg.allowed_origin, headerValue(&request, "origin"));
+
     const target = request.head.target;
     const path = if (std.mem.indexOfScalar(u8, target, '?')) |q| target[0..q] else target;
 
     if (std.mem.eql(u8, path, "/health")) {
-        return respondJson(&request, cfg, .ok, "{\"status\":\"ok\",\"service\":\"github-collab\"}");
+        return respondJson(&request, origin, .ok, "{\"status\":\"ok\",\"service\":\"github-collab\"}");
     }
 
     if (std.mem.eql(u8, path, "/auth/github")) {
@@ -96,20 +100,20 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
     if (std.mem.eql(u8, path, "/auth/callback")) {
         const query = if (std.mem.indexOfScalar(u8, target, '?')) |q| target[q + 1 ..] else "";
         const code = findParam(query, "code") orelse
-            return respondJson(&request, cfg, .bad_request, "{\"error\":\"missing code\"}");
+            return respondJson(&request, origin, .bad_request, "{\"error\":\"missing code\"}");
         const state = findParam(query, "state") orelse
-            return respondJson(&request, cfg, .bad_request, "{\"error\":\"missing state\"}");
+            return respondJson(&request, origin, .bad_request, "{\"error\":\"missing state\"}");
 
         // Compare against the cookie set at /auth/github. Without this the
         // callback accepts any code anyone can produce.
         const cookie_state = headerValue(&request, "cookie") orelse "";
         if (!cookieHas(cookie_state, "t27_state", state)) {
-            return respondJson(&request, cfg, .bad_request, "{\"error\":\"state mismatch\"}");
+            return respondJson(&request, origin, .bad_request, "{\"error\":\"state mismatch\"}");
         }
 
         const tok = collab.exchangeCode(gpa, io, cfg, code) catch |err| {
             std.log.warn("token exchange failed: {s}", .{@errorName(err)});
-            return respondJson(&request, cfg, .bad_gateway, "{\"error\":\"token exchange failed\"}");
+            return respondJson(&request, origin, .bad_gateway, "{\"error\":\"token exchange failed\"}");
         };
         defer gpa.free(tok.access_token);
         defer gpa.free(tok.scope);
@@ -123,7 +127,7 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
         );
         defer gpa.free(cookie);
 
-        const back = try std.fmt.allocPrint(gpa, "{s}/#/specs?connected=1", .{cfg.allowed_origin});
+        const back = try std.fmt.allocPrint(gpa, "{s}/#/specs?connected=1", .{collab.primaryOrigin(cfg.allowed_origin)});
         defer gpa.free(back);
 
         return request.respond("", .{
@@ -141,7 +145,7 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
         // header access into a panic -- and the slices point into the head
         // buffer, which the body read is free to reuse.
         const sig_raw = headerValue(&request, "x-hub-signature-256") orelse
-            return respondJson(&request, cfg, .unauthorized, "{\"error\":\"unsigned\"}");
+            return respondJson(&request, origin, .unauthorized, "{\"error\":\"unsigned\"}");
         const sig = try gpa.dupe(u8, sig_raw);
         defer gpa.free(sig);
 
@@ -154,18 +158,18 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
 
         if (!collab.verifySignature(cfg.webhook_secret, body, sig)) {
             std.log.warn("webhook signature rejected", .{});
-            return respondJson(&request, cfg, .unauthorized, "{\"error\":\"bad signature\"}");
+            return respondJson(&request, origin, .unauthorized, "{\"error\":\"bad signature\"}");
         }
 
         std.log.info("webhook accepted: {s} ({d} bytes)", .{ event, body.len });
-        return respondJson(&request, cfg, .ok, "{\"ok\":true}");
+        return respondJson(&request, origin, .ok, "{\"ok\":true}");
     }
 
     if (std.mem.eql(u8, path, "/api/propose")) {
-        if (request.head.method == .OPTIONS) return respondJson(&request, cfg, .no_content, "");
+        if (request.head.method == .OPTIONS) return respondJson(&request, origin, .no_content, "");
         // Same ordering rule as /webhook: header before body, and copied.
         const token_raw = cookieValue(headerValue(&request, "cookie") orelse "", "t27_gh") orelse
-            return respondJson(&request, cfg, .unauthorized, "{\"error\":\"not connected\"}");
+            return respondJson(&request, origin, .unauthorized, "{\"error\":\"not connected\"}");
         const token = try gpa.dupe(u8, token_raw);
         defer gpa.free(token);
 
@@ -180,7 +184,7 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
             title: []const u8,
             body: []const u8,
         }, gpa, body, .{ .ignore_unknown_fields = true }) catch
-            return respondJson(&request, cfg, .bad_request, "{\"error\":\"bad json\"}");
+            return respondJson(&request, origin, .bad_request, "{\"error\":\"bad json\"}");
         defer parsed.deinit();
 
         var nonce_bytes: [6]u8 = undefined;
@@ -202,7 +206,7 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
                 error.GitHubUnprocessable => "{\"error\":\"nothing to change, or branch exists\"}",
                 else => "{\"error\":\"could not open the pull request\"}",
             };
-            return respondJson(&request, cfg, .bad_gateway, msg);
+            return respondJson(&request, origin, .bad_gateway, msg);
         };
         defer gpa.free(pr.url);
 
@@ -212,15 +216,15 @@ fn serve(gpa: std.mem.Allocator, io: std.Io, cfg: collab.Config, conn: std.Io.ne
             .{ std.json.fmt(pr.url, .{}), pr.number },
         );
         defer gpa.free(out);
-        return respondJson(&request, cfg, .ok, out);
+        return respondJson(&request, origin, .ok, out);
     }
 
-    return respondJson(&request, cfg, .not_found, "{\"error\":\"no such endpoint\"}");
+    return respondJson(&request, origin, .not_found, "{\"error\":\"no such endpoint\"}");
 }
 
 fn respondJson(
     request: *std.http.Server.Request,
-    cfg: collab.Config,
+    origin: []const u8,
     status: std.http.Status,
     body: []const u8,
 ) !void {
@@ -229,9 +233,9 @@ fn respondJson(
         .extra_headers = &.{
             .{ .name = "content-type", .value = "application/json" },
             // The page lives on another origin, so it needs CORS -- scoped to
-            // that one origin, never "*", because these requests carry a
-            // credentialed cookie.
-            .{ .name = "access-control-allow-origin", .value = cfg.allowed_origin },
+            // the allowlist via `corsOrigin`, never "*", because these
+            // requests carry a credentialed cookie.
+            .{ .name = "access-control-allow-origin", .value = origin },
             .{ .name = "access-control-allow-credentials", .value = "true" },
             .{ .name = "access-control-allow-headers", .value = "content-type" },
             .{ .name = "vary", .value = "origin" },
