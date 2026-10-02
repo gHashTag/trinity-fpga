@@ -37,11 +37,13 @@ on:
   push:
     paths:
       - 'tools/check_*.py'
+      - 'tools/materialise_siblings.sh'
       - 'research/arxiv_tnf/**'
       - '.github/workflows/gates-can-fail.yml'
   pull_request:
     paths:
       - 'tools/check_*.py'
+      - 'tools/materialise_siblings.sh'
       - 'research/arxiv_tnf/**'
       - '.github/workflows/gates-can-fail.yml'
   workflow_dispatch:
@@ -53,7 +55,10 @@ env:
   # as producers of the files they name, and a producer's f-string prefix
   # must start a name ("corona_decode_{" no longer produces "decoder_*.json",
   # nor "lineD_actgate_{" every "gate_*.json").
-  MIN_TESTABLE: '8'
+  # 8 -> 9: check_doc_refs became testable once this job materialised the
+  # sibling namespaces it resolves against (tools/materialise_siblings.sh, the
+  # same script doc-refs.yml runs). Without them it was red on a clean tree.
+  MIN_TESTABLE: '9'
 
 jobs:
   gates-can-fail:
@@ -63,6 +68,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: false   # the gitlink is unfetchable; see README
+
+      # check_doc_refs resolves references against sibling repositories next to
+      # this checkout. Without them it is red on a clean tree, and a gate that is
+      # red before its defect is injected cannot be shown to fail.
+      - name: Materialise the sibling namespaces
+        run: bash tools/materialise_siblings.sh
 
       - name: Every gate must reject its own defect
         run: |
