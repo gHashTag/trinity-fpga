@@ -190,6 +190,14 @@ for d in DOCS:
 # Ratchet: the tree carries historical documents naming files removed long ago.
 # Blocking on that debt would make the gate useless; fail only on NEW ones.
 import sys as _s
+# Refused before ANYTHING is written: placed beside the baseline writes, it
+# still let --update-lists rewrite the published lists first, so "exit 2,
+# nothing written" held only for the two flags alone.
+if "--prune-baseline" in _s.argv and "--update-baseline" in _s.argv:
+    # Together, the rewrite would win and silently undo the prune's promise.
+    print("refusing --prune-baseline with --update-baseline: the update can add "
+          "entries, the prune exists so that nothing is added -- pick one")
+    _s.exit(2)
 BASE = pathlib.Path(__file__).with_name("doc_refs_baseline.txt")
 print(f"documents scanned: {checked}   path references: {refs}")
 print(f"excluded as cross-repo (target exists in a sibling): {len(cross)}")
@@ -247,11 +255,6 @@ known = {l for l in BASE.read_text().splitlines() if l.strip()} if exists(BASE) 
 # it cannot add one, so pruning never launders a new dangling reference, which
 # is what --update-baseline would do.
 stale = sorted(known - set(uniq))
-if "--prune-baseline" in _s.argv and "--update-baseline" in _s.argv:
-    # Together, the rewrite would win and silently undo the prune's promise.
-    print("refusing --prune-baseline with --update-baseline: the update can add "
-          "entries, the prune exists so that nothing is added -- pick one")
-    _s.exit(2)
 if "--prune-baseline" in _s.argv:
     kept = sorted(known & set(uniq))
     BASE.write_text("\n".join(kept) + ("\n" if kept else ""))

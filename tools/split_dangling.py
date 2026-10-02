@@ -18,8 +18,14 @@ rot can be worked on and the convention problem is not mistaken for it.
 import pathlib, re, sys, collections
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SIBLINGS = ["t27", "trinity-s3ai", "claim-audit-lab", "tri-net", "trios-mesh",
-            "zig-golden-float"]
+# The sibling list is read from check_doc_refs.py (SIBLING_NAMES), not copied:
+# a hand copy of that list in the checker itself had lost zig-golden-float
+# (#822). Parsed, not imported -- the checker runs on import.
+import ast
+SIBLINGS = next(ast.literal_eval(n.value) for n in ast.parse(
+    (ROOT / "tools" / "check_doc_refs.py").read_text()).body
+    if isinstance(n, ast.Assign)
+    and any(getattr(t_, "id", None) == "SIBLING_NAMES" for t_ in n.targets))
 BASE = ROOT / "tools" / "doc_refs_baseline.txt"
 
 def resolves_in(root: pathlib.Path, p: str) -> bool:
