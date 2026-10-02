@@ -2,7 +2,7 @@
 
 Most files here are machine-written records produced by a script in this
 repository, copied verbatim under a dated name. Not all: one record was
-transcribed by hand and three carry fields no script in this tree writes. They
+transcribed by hand and six carry fields no script in this tree writes. They
 are named under [Provenance of campaign records](#provenance-of-campaign-records)
 rather than covered by a sentence that is not true of them.
 
@@ -79,6 +79,9 @@ directory.
 | `stability_fashion_30ep_2026-08-20.json` | the same script, `TASK=fashion EPOCHS=30`; `INIT_PCT` not recorded | generated |
 | `placer_router_sweep_2026-08-19.json` | per-seed Fmax from `gen_placer_router_sweep.py` -> `$T27_WORK/cfg_results.json`; the spreads, `note` and `finding` were added by a step that is not in this tree | partly generated |
 | `placer_router_full_2026-08-19.json` | the same sweep over all 21 designs; `inversions`, `inversion_pairs`, `note` and `finding` come from a step that is not in this tree | partly generated |
+| `decoder_seed_spread_2026-08-19.json` | per-seed Fmax from `gen_decoder_seed_spread.py` -> `fmax_results.json` in a scratchpad path hard-coded to the session that ran it; `spread_min_pct`, `spread_max_pct`, `note` and `finding` come from a step that is not in this tree | partly generated |
+| `decoder_full_observation_2026-08-19.json` | the same driver over the full-observation harnesses, `gen_decoder_full_observation.py` (reads `wmap.json`) -> `wmax_results.json`, same hard-coded path; `control`, `entries_below_control`, the spreads and `finding` come from a step that is not in this tree | partly generated |
+| `decoder_cost_2026-08-20.json` | the LUT(N) fits from `fpga/tnet/gen_replicated.py` (its `generated_by` field) -> `fit.json`; `method`, `metric` and `caveats` are not written by that script | partly generated |
 | `verdict_stability_2026-08-19.json` | **no generator in this tree.** Its `method` field states the computation | not reproducible from the tree |
 | `hardware_scan_2026-08-20.json` | **no generator.** Transcribed by hand from a read-only `openFPGALoader` JTAG scan, as its own `measured_by` field says | hand-written |
 
