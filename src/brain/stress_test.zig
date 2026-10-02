@@ -57,7 +57,7 @@ test "Stress: Basal Ganglia - 10,000 sequential claims" {
     }
 
     try std.testing.expectEqual(STRESS_TASK_COUNT, successful);
-    try std.testing.expectEqual(STRESS_TASK_COUNT, registry.claims.count());
+    try std.testing.expectEqual(STRESS_TASK_COUNT, registry.count());
 }
 
 test "Stress: Basal Ganglia - claim completion cycle" {
@@ -91,7 +91,7 @@ test "Stress: Basal Ganglia - claim completion cycle" {
 
     // Note: Completed claims remain in registry with status=.completed
     // They are not automatically removed
-    try std.testing.expectEqual(@as(usize, 1000), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, 1000), registry.count());
 }
 
 test "Stress: Basal Ganglia - heartbeat refresh under load" {
@@ -160,7 +160,7 @@ test "Stress: Basal Ganglia - memory pressure with large IDs" {
         _ = try registry.claim(allocator, task_id, agent_id, 60000);
     }
 
-    try std.testing.expectEqual(@as(usize, 100), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, 100), registry.count());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -694,7 +694,7 @@ test "Stress: Integration - full brain circuit under load" {
             const stats = event_bus.getStats();
             const point = telemetry.TelemetryPoint{
                 .timestamp = tri_time.milliTimestamp(),
-                .active_claims = registry.claims.count(),
+                .active_claims = registry.count(),
                 .events_published = stats.published,
                 .events_buffered = stats.buffered,
                 .health_score = 100.0,
@@ -746,7 +746,7 @@ test "Stress: Integration - concurrent agent simulation" {
     }
 
     // All unique tasks should be claimed
-    try std.testing.expectEqual(@as(usize, num_agents * tasks_per_agent), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, num_agents * tasks_per_agent), registry.count());
 
     // All events published
     const stats = event_bus.getStats();
@@ -803,7 +803,7 @@ test "Stress: Integration - failure recovery simulation" {
     // Note: Since we reuse the same task_id for each cycle,
     // the registry removes old (completed) claims and adds new ones.
     // So we have 100 total claims (one per unique task_id)
-    try std.testing.expectEqual(@as(usize, 100), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, 100), registry.count());
 
     // Verify events
     const stats = event_bus.getStats();
@@ -823,7 +823,7 @@ test "Stress: Edge case - empty string IDs" {
     try std.testing.expect(claimed);
 
     // Should be able to retrieve
-    const entry = registry.claims.get("");
+    const entry = registry.getClaim("");
     try std.testing.expect(entry != null);
 }
 
@@ -836,7 +836,7 @@ test "Stress: Edge case - very long IDs" {
     const claimed = try registry.claim(allocator, long_id, "agent-long", 60000);
     try std.testing.expect(claimed);
 
-    try std.testing.expectEqual(@as(usize, 1), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, 1), registry.count());
 }
 
 test "Stress: Edge case - special characters in IDs" {
@@ -860,7 +860,7 @@ test "Stress: Edge case - special characters in IDs" {
         try std.testing.expect(claimed);
     }
 
-    try std.testing.expectEqual(special_ids.len, registry.claims.count());
+    try std.testing.expectEqual(special_ids.len, registry.count());
 }
 
 test "Stress: Edge case - zero TTL" {
@@ -874,7 +874,7 @@ test "Stress: Edge case - zero TTL" {
 
     // The claim is created but TTL of 0 means it's at the boundary
     // Let's just verify it was claimed successfully
-    const entry = registry.claims.get("zero-ttl-task");
+    const entry = registry.getClaim("zero-ttl-task");
     try std.testing.expect(entry != null);
     try std.testing.expectEqual(@as(u64, 0), entry.?.ttl_ms);
 }
@@ -889,7 +889,7 @@ test "Stress: Edge case - maximum TTL" {
     try std.testing.expect(claimed);
 
     // Should be valid
-    const entry = registry.claims.get("max-ttl-task");
+    const entry = registry.getClaim("max-ttl-task");
     if (entry) |claim| {
         try std.testing.expect(claim.isValid());
     }
@@ -919,7 +919,7 @@ test "Stress: Edge case - rapid claim/release cycles" {
 
     // All claims are completed but remain in registry
     // Since we reuse the same task_id, we have 100 claims (one per unique task)
-    try std.testing.expectEqual(@as(usize, 100), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, 100), registry.count());
 }
 
 test "Stress: Edge case - event bus timestamp boundaries" {
@@ -1003,11 +1003,11 @@ test "Stress: Memory - allocate and free 10,000 claims" {
         allocator.free(agent_id);
     }
 
-    try std.testing.expectEqual(@as(usize, 10_000), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, 10_000), registry.count());
 
     // Free all
     registry.reset();
-    try std.testing.expectEqual(@as(usize, 0), registry.claims.count());
+    try std.testing.expectEqual(@as(usize, 0), registry.count());
 }
 
 test "Stress: Memory - event buffer memory pressure" {
