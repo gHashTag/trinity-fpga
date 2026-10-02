@@ -31,7 +31,8 @@ env = "PORT"
 #   GITHUB_CLIENT_SECRET   OAuth app client secret   <- secret
 #   GITHUB_WEBHOOK_SECRET  webhook shared secret     <- secret
 #   PUBLIC_ORIGIN          https://<this-service>.up.railway.app
-#   ALLOWED_ORIGIN         https://t27.ai
+#   ALLOWED_ORIGIN         https://t27.ai,https://app.t27.ai  (comma-separated;
+#                          the first entry is where OAuth returns)
 #
 # PORT is injected by Railway. The service exits at boot if any required
 # variable is missing, rather than starting and failing every request -- a

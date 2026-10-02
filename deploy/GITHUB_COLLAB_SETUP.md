@@ -61,7 +61,7 @@ file that gets committed**:
 | `GITHUB_CLIENT_SECRET` | from step 1 — secret |
 | `GITHUB_WEBHOOK_SECRET` | 32 random bytes — secret (see below) |
 | `PUBLIC_ORIGIN` | `https://<railway-service>.up.railway.app` |
-| `ALLOWED_ORIGIN` | `https://t27.ai` |
+| `ALLOWED_ORIGIN` | `https://t27.ai,https://app.t27.ai` — comma-separated; the first entry is where the OAuth callback returns |
 
 `PORT` is injected by Railway.
 
@@ -134,5 +134,7 @@ good signature -> 200
   `mem.eql` leaks how many leading bytes matched, which is enough to forge a
   value byte by byte.
 - **CORS is scoped to `ALLOWED_ORIGIN`, never `*`**, because these requests
-  carry a credentialed cookie.
+  carry a credentialed cookie. The service echoes the request's `Origin` only
+  when it is on that list (and sends `Vary: Origin`); any other origin gets the
+  first entry back, which the browser then refuses.
 - The token is held only in the visitor's cookie. The service stores nothing.
