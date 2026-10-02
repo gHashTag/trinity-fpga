@@ -9,7 +9,9 @@ use sha2::{Digest, Sha256};
 
 pub const CHAIN_TON: u8 = 1;
 pub const CHAIN_SOLANA: u8 = 2;
-pub const CAP_TRI: u64 = 10_460_353_203; // 3^21
+/// 3^21 whole TRI in base units (mTRI, decimals = 3). Mirrors the oracle's cap_mtri.
+pub const CAP_MTRI: u64 = 10_460_353_203_000;
+pub const DECIMALS: u8 = 3;
 
 pub struct Attestation {
     pub worker: [u8; 32],
@@ -194,5 +196,12 @@ mod tests {
         let other = [0xABu8; 32];
         let ix = build_ed25519_ix(&a0.verifying_key().to_bytes(), &a0.sign(&other).to_bytes(), &other);
         assert_eq!(count_quorum(&d, &attestors, &[&ix]), 0);
+    }
+
+    #[test]
+    fn cap_is_three_pow_21_whole_tri_in_base_units() {
+        // Mirrors the oracle's cap_mtri: decimals 3, so 1 TRI = 1000 base units.
+        assert_eq!(CAP_MTRI, 3u64.pow(21) * 10u64.pow(DECIMALS as u32));
+        assert_eq!(CAP_MTRI, 10_460_353_203_000);
     }
 }
