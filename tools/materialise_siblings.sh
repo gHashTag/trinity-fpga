@@ -39,19 +39,26 @@ EOF
 ) || { echo "::error::cannot read SIBLING_NAMES from tools/check_doc_refs.py"; exit 1; }
 
 cd "$dest" || exit 1
-for s in $names; do
-  if [ -e "$s" ] && [ ! -d "$s.git" ]; then
+while IFS= read -r s; do
+  [ -n "$s" ] || continue
+  # A directory with its own .git is a real checkout, whatever sits beside it.
+  # Re-materialising one would truncate every tracked file in it to zero bytes
+  # -- and the default dest is a developer's home, where a real "$s" next to a
+  # leftover "$s.git" is one manual clone away.
+  if [ -e "$s/.git" ] || { [ -e "$s" ] && [ ! -d "$s.git" ]; }; then
     echo "$s: already present at $dest/$s -- left as is"
     continue
   fi
   if [ -d "$s.git" ] || git clone -q --filter=blob:none --no-checkout --depth 1 \
-       "https://github.com/gHashTag/$s" "$s.git" 2>/dev/null; then
+       "https://github.com/gHashTag/$s" "$s.git" </dev/null 2>/dev/null; then
     n=0
-    while IFS= read -r p; do
+    # -z: without it ls-tree C-quotes any path with a non-ASCII byte or a
+    # quote, and the quoted form was created verbatim ("\320\267..." files).
+    while IFS= read -r -d '' p; do
       mkdir -p "$s/$(dirname "$p")" && : > "$s/$p" && n=$((n+1))
-    done < <(git -C "$s.git" ls-tree -r --name-only HEAD)
+    done < <(git -C "$s.git" ls-tree -r -z --name-only HEAD)
     echo "$s: $n paths"
   else
     echo "$s: UNREACHABLE (private or gone) -- references resolving only there read as dangling"
   fi
-done
+done <<< "$names"
