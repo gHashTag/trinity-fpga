@@ -13,11 +13,15 @@
    320/320. Log: `conformance/board_runs/x7-board-gif.log`.
 
 `x7-board.gif` is `tri blog gif render x7-board.cast x7-board.gif --max-idle 2 --colors 16`
-(967×598, 107 frames).
+(967×598, 110 frames).
 
 **Staged:** the prompt and the key-by-key typing of each command.
 
 **Real:** every byte the commands printed, at the time they printed it.
+
+**Translated:** the owner's quote passed to `--owner-yes` was in Russian on the
+day. The recording shows it in English, both where it is typed and where it is
+echoed back. The board logs never contained it.
 
 **Shortened:** any silence longer than 2 s is shown for 2 s, and that frame
 carries a note saying so, e.g. "waited 56 s, shown 2 s" over the fasm2frames
