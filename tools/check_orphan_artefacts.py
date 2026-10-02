@@ -106,10 +106,16 @@ def declared_drawn(a):
 # that opened it (so ```` can quote ```), and a line indented four columns or
 # more, which is an indented code block. Toggling on ``` alone let a ~~~ fence,
 # an indented block, or a ``` nested in ```` declare the directory after all.
-FENCE = re.compile(r"[ \t]*(`{3,}|~{3,})(.*)$")
+# A fence line is indented at most three columns. Four or more is an indented
+# code line, never a fence -- so it can neither open one nor close one. Let it
+# close one and a marker quoted after it, still inside the block, declared.
+# Tabs are expanded before matching, so a tab counts as four columns.
+FENCE = re.compile(r" {0,3}(`{3,}|~{3,})(.*)$")
 def declares(text):
     fence = None
-    for line in text.splitlines():
+    # A UTF-8 byte-order mark is not part of the first line; left in, it made a
+    # marker on line one fail to equal DRAWN_MARK.
+    for line in text.lstrip("\ufeff").splitlines():
         line = line.expandtabs(4)
         m = FENCE.match(line)
         if m and m.group(1)[0] == "`" and "`" in m.group(2):
