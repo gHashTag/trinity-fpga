@@ -828,8 +828,6 @@ src/tri/geometry/sacred.zig
 src/tri/geometry/sacred_bridge.zig
 src/tri/geometry/spiral.zig
 src/tri/git/auto_git_commit.zig
-src/tri/github_collab.zig
-src/tri/github_collab_server.zig
 src/tri/github_commands.zig
 src/tri/golden_chain.zig
 src/tri/handoff.zig
