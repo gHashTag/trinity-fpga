@@ -1,3 +1,4 @@
+import type { JSX } from 'react';
 import Playground from './Playground';
 
 interface MathVerifyProps {
