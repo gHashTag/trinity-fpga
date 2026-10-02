@@ -83,8 +83,12 @@ jobs:
       - name: Every gate must reject its own defect
         run: |
           set -o pipefail
-          python3 tools/check_gates_can_fail.py 2>&1 | tee gates.log
-          rc=$?
+          # The step shell is `bash -e`: with pipefail a failing harness would end
+          # the step on the pipe itself, before the message below. `|| rc=$?`
+          # keeps the verdict and lets the step say WHY it is red (planted: a
+          # harness printing FAIL and exiting 1 gave rc 1 with no ::error:: line).
+          rc=0
+          python3 tools/check_gates_can_fail.py 2>&1 | tee gates.log || rc=$?
           echo
 
           # The script's own verdict comes first: a gate that PASSES a defect it
