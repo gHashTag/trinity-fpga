@@ -349,14 +349,14 @@ fn logEvent(timestamp: i64, token_name: []const u8, event_type: []const u8, dura
     const io = tri_io.get();
     std.Io.Dir.cwd().createDirPath(io, ".trinity") catch {};
 
-    var file_obj = std.Io.Dir.cwd().openFile(io, log_path, .{}) catch |err| {
-        if (err == error.FileNotFound) {
-            const new_file = try std.Io.Dir.cwd().createFile(io, log_path, .{});
-            new_file.close(io);
-            return;
-        } else {
-            return err;
-        }
+    // Opened write-only: OpenFileOptions.mode defaults to read_only, and a
+    // positional write on a read-only handle is EBADF -- until now the event
+    // was never logged once the file existed (#770). A first creation goes
+    // through createPrivateFile too: the log carries token names, so it is
+    // born 0600 like the token state file instead of the 0644 default.
+    var file_obj = std.Io.Dir.cwd().openFile(io, log_path, .{ .mode = .write_only }) catch |err| blk: {
+        if (err != error.FileNotFound) return err;
+        break :blk try createPrivateFile(io, log_path);
     };
     defer file_obj.close(io);
 

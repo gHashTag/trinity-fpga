@@ -249,7 +249,15 @@ fn runTriCmd(buf: *[MAX_OUTPUT]u8, args: []const []const u8) []const u8 {
     defer gpa.free(result.stderr);
 
     if (result.stdout.len == 0) {
-        return copyToBuf(buf, "OK (no output — check stderr)");
+        // tri_proc pipes and captures the child's stderr, so telling the user
+        // to "check stderr" pointed at a stream nobody could see (#770).
+        // Surface what was captured; say so when it was empty too.
+        if (result.stderr.len > 0) {
+            const len = @min(result.stderr.len, MAX_OUTPUT);
+            @memcpy(buf[0..len], result.stderr[0..len]);
+            return buf[0..len];
+        }
+        return copyToBuf(buf, "OK (no output, no stderr)");
     }
 
     const len = @min(result.stdout.len, MAX_OUTPUT);
