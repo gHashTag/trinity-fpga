@@ -5,17 +5,17 @@ name: Document references
 # unguarded. A document naming a file, a script or a gate makes a checkable claim
 # about the tree, and a path in prose does not update itself when the tree moves.
 #
-# Ratcheted: 250 historical dangling references are baselined and the job fails
-# only on new ones. Temporary paths, sibling-repository paths, and files a
-# document names precisely to record their absence are excluded explicitly.
+# Ratcheted both ways: historical dangling references are baselined in
+# tools/doc_refs_baseline.txt, the job fails on a new one, and it fails on a
+# baseline entry that no longer reproduces (prune it with --prune-baseline),
+# so a fixed reference cannot rot again in silence. Temporary paths,
+# sibling-repository paths, and files a document names precisely to record
+# their absence are excluded explicitly.
 #
 # THE SIBLINGS. check_doc_refs.py resolves references against sibling checkouts
 # next to this repository -- t27, trinity-s3ai, claim-audit-lab, tri-net,
 # trios-mesh, zig-golden-float -- and its own comment says why their absence is
-# a problem:
-#
-#   CI -- which has no siblings -- cannot tell them from rot; that is a reason
-#   to name them, not to drop them silently.
+# a problem: a checkout without them cannot tell them from rot.
 #
 # So the baseline could only ever be generated somewhere the siblings exist, and
 # CI reported the difference as failures. Five of the six are public and are
