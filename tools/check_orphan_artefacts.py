@@ -115,7 +115,13 @@ def declares(text):
     fence = None
     # A UTF-8 byte-order mark is not part of the first line; left in, it made a
     # marker on line one fail to equal DRAWN_MARK.
-    for line in text.lstrip("\ufeff").splitlines():
+    #
+    # Markdown ends a line only at \n, \r\n or \r. str.splitlines() also breaks
+    # at \f, \v, \x1c-\x1e, \x85, U+2028 and U+2029, so a ``` glued to quoted
+    # text by one of those closed the fence here while the renderer kept it
+    # open, and a marker quoted below it declared the directory.
+    text = text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+    for line in text.split("\n"):
         line = line.expandtabs(4)
         m = FENCE.match(line)
         if m and m.group(1)[0] == "`" and "`" in m.group(2):
