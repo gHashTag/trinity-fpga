@@ -1,0 +1,144 @@
+{
+  "top": "trinet_node_v2_ax7203",
+  "part": "xc7a200tfbg484-2",
+  "node": 0,
+  "params": {
+    "USE_DNA": "0",
+    "FALLBACK_NODE_ID": "32'h5452494E",
+    "BAUD_DIV_P": "60"
+  },
+  "rev": null,
+  "placer_seed": [
+    "heap",
+    1
+  ],
+  "freq": "50.0",
+  "yosys_script": "read_verilog /tmp/x7board/node0/src/trinet_siphash24.v /tmp/x7board/node0/src/trinet_node_core.v /tmp/x7board/node0/src/trinet_node_v2_ax7203.v; chparam -set USE_DNA 0 -set FALLBACK_NODE_ID 32'h5452494E -set BAUD_DIV_P 60 trinet_node_v2_ax7203; synth_xilinx -flatten -abc9 -nocarry -nodsp -arch xc7 -top trinet_node_v2_ax7203; setundef -zero -params; write_json /tmp/x7board/node0/node.json",
+  "chipdb": "/Users/playra/openxc7-src/chipdb/xc7a200tfbg484-2.bin",
+  "db_root": "/Users/playra/.cache/openxc7/prjxray-db-ab1fc60/artix7",
+  "required_features_fasm": false,
+  "inputs": {
+    "trinet_siphash24.v": "d08931b803a42ef1cf459b3abc49bf7d32bbebf8f0206660a839a68c25dc41a8",
+    "trinet_node_core.v": "fc22d2c14b2acfd05a250385e96bbd88cc56bf41c6bb825a4f9a3916d7200f45",
+    "trinet_node_v2_ax7203.v": "7178311bb53b0f24edd2346adbed165bd8e1222cb4e2535a6ae8a17e40a46bee",
+    "gf16_clean_ax7203.xdc": "7256eb2516f4ae90d83d1527dd88b9866df70e5dc554775d714ec17667e7d378"
+  },
+  "tools": {
+    "yosys": "Yosys 0.67+post (git sha1 b8e7da6f40ae8f552c116bf6c359b07c6533e159, Release, AppleClang clang++ 21.0.0.21000099)",
+    "nextpnr-xilinx": "\"nextpnr-xilinx\" -- Next Generation Place and Route (Version 0.9.2-107-g7037c948)",
+    "python3": "3.14.6",
+    "prjxray": "c9f02d85 Thu Jun 5 17:15:54 2025 +0200",
+    "nextpnr-xilinx-src": "b608fd2c Wed Aug 12 13:45:25 2026 +0700",
+    "yosys-bin": "/opt/homebrew/Cellar/yosys/0.67/bin/yosys sha256 edb5e7c4a160a2474c24899da0ea06593ac672056edcc3cc85c54b5b0a10a5d8",
+    "nextpnr-xilinx-bin": "/Users/playra/openxc7-src/nextpnr-xilinx/build/nextpnr-xilinx sha256 45bea8479370df75bebab2d4b60287f7b0ff59417f14702d3f52bc9c3bacd926"
+  },
+  "steps": [
+    {
+      "step": "yosys",
+      "cmd": [
+        "yosys",
+        "-q",
+        "-l",
+        "/tmp/x7board/node0/yosys.full.log",
+        "-p",
+        "read_verilog /tmp/x7board/node0/src/trinet_siphash24.v /tmp/x7board/node0/src/trinet_node_core.v /tmp/x7board/node0/src/trinet_node_v2_ax7203.v; chparam -set USE_DNA 0 -set FALLBACK_NODE_ID 32'h5452494E -set BAUD_DIV_P 60 trinet_node_v2_ax7203; synth_xilinx -flatten -abc9 -nocarry -nodsp -arch xc7 -top trinet_node_v2_ax7203; setundef -zero -params; write_json /tmp/x7board/node0/node.json"
+      ],
+      "rc": 0,
+      "log": "/tmp/x7board/node0/yosys.log",
+      "wall_s": 25.44,
+      "max_rss_mb": 320.2,
+      "peak_footprint_mb": 321.9
+    },
+    {
+      "step": "nextpnr",
+      "cmd": [
+        "nextpnr-xilinx",
+        "--chipdb",
+        "/Users/playra/openxc7-src/chipdb/xc7a200tfbg484-2.bin",
+        "--xdc",
+        "/tmp/x7board/node0/src/gf16_clean_ax7203.xdc",
+        "--json",
+        "/tmp/x7board/node0/node.json",
+        "--write",
+        "/tmp/x7board/node0/node_routed.json",
+        "--fasm",
+        "/tmp/x7board/node0/node.fasm",
+        "--freq",
+        "50.0",
+        "--seed",
+        "1",
+        "--placer",
+        "heap",
+        "--router",
+        "router1",
+        "--timing-allow-fail"
+      ],
+      "rc": 0,
+      "log": "/tmp/x7board/node0/nextpnr.log",
+      "wall_s": 128.22,
+      "max_rss_mb": 512.8,
+      "peak_footprint_mb": 280.0,
+      "fmax_mhz": {
+        "mclk": 25.16
+      },
+      "placer": "heap",
+      "seed": 1
+    },
+    {
+      "step": "fasm2frames",
+      "cmd": [
+        "/opt/homebrew/opt/python@3.14/bin/python3.14",
+        "/Users/playra/openxc7-src/prjxray/utils/fasm2frames.py",
+        "--db-root",
+        "/Users/playra/.cache/openxc7/prjxray-db-ab1fc60/artix7",
+        "--part",
+        "xc7a200tfbg484-2",
+        "/tmp/x7board/node0/node.fasm",
+        "/tmp/x7board/node0/node.frames"
+      ],
+      "rc": 0,
+      "log": "/tmp/x7board/node0/fasm2frames.log",
+      "wall_s": 71.45,
+      "max_rss_mb": 728.0,
+      "peak_footprint_mb": 782.1
+    },
+    {
+      "step": "frames2bit",
+      "cmd": [
+        "xc7frames2bit",
+        "--part_file",
+        "/Users/playra/.cache/openxc7/prjxray-db-ab1fc60/artix7/xc7a200tfbg484-2/part.yaml",
+        "--part_name",
+        "xc7a200tfbg484-2",
+        "--frm_file",
+        "/tmp/x7board/node0/node.frames",
+        "--output_file",
+        "/tmp/x7board/node0/trinet_node0.bit"
+      ],
+      "rc": 0,
+      "log": "/tmp/x7board/node0/frames2bit.log",
+      "wall_s": 0.36,
+      "max_rss_mb": 45.1,
+      "peak_footprint_mb": 40.6
+    }
+  ],
+  "outputs": {
+    "node.json": {
+      "bytes": 16454916,
+      "sha256": "81575462dad6711a88f816647876926dbe62cc76c933b323f7d74656a7d41fff"
+    },
+    "node.fasm": {
+      "bytes": 4330633,
+      "sha256": "e413fb51f92e88cbee0cdd82d588aaaed8313d5ddbc3b5c25177c465329995f4"
+    },
+    "node.frames": {
+      "bytes": 22698060,
+      "sha256": "c05abae418e6677f812fc74035ad1d1b039ea9fd6abc6eab65efd4d28520dc29"
+    },
+    "trinet_node0.bit": {
+      "bytes": 9730774,
+      "sha256": "68249475b57e623f05564e3d839cfb0c7e7b3e21fe89a014953f12fdd53f95b3",
+      "payload_sha256": "48463217d7580535d9f1acd5ccc91145e31040ad3b9e2868814322ac11d791d8"
+    }
+  }
+}
