@@ -4723,14 +4723,18 @@ codes. The storage column is the packed word of the module that was placed, so t
 16-bit rung reads 17 bits and $2^{17}$ codes: that module predates the
 reconciliation to $M = 11$, which would make the packed word 19 bits and the
 exhaustive sweep $524{,}288$ codes. That rung has not been re-placed, and no
-number in this table should be read as the reconciled 16-bit format.}
+number in this table should be read as the reconciled 16-bit format.
+$^{\dagger}$: the ranking this cell heads was withdrawn in the abstract. Every
+area figure behind it measured a design whose on-die check logic had been folded
+to constants at synthesis, so the cell is kept as the record of what was
+withdrawn, not as a result, and GFTernary is not claimed to lead this table.}
 \label{tab:fullthroughput}
 \small\setlength{\tabcolsep}{4pt}
 \begin{tabular}{rlrrrrrl}
 \toprule
 & format & storage & LUT & MHz & MHz/LUT & spread & conformance \\
 \midrule
-1 & \textbf{GFTernary} (ours) & 2 bits & 463 & $83.19^{\ast}$ & \textbf{0.1797} & $6.61$ & all 4 codes \\
+1 & \textbf{GFTernary} (ours) & 2 bits & 463 & $83.19^{\ast}$ & \textbf{0.1797}$^{\dagger}$ & $6.61$ & all 4 codes \\
 2 & binary32 & 32 bits & 472 & $77.00^{\ast}$ & 0.1631 & $6.37$ & not swept \\
 3 & fp8 e5m2 & 8 bits & 480 & $67.06^{\ast}$ & 0.1397 & $5.46$ & 6 of 256 wrong \\
 4 & VAX F & 32 bits & 527 & $73.51^{\ast}$ & 0.1395 & $4.43$ & not swept \\
