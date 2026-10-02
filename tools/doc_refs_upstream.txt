@@ -1,3 +1,8 @@
+AGENTS.md: names `gHashTag/trinity/apps/website/public/agents.t27`
+AGENTS.md: names `gHashTag/trinity/apps/website/specs/catalog/onboarding.t27`
+CLAUDE.md: names `gHashTag/trinity/apps/website/public/agents.t27`
+CLAUDE.md: names `gHashTag/trinity/apps/website/specs/catalog/onboarding.t27`
+docs/CLI_DEMOS_README.md: names `gHashTag/trinity/README.md`
 docs/HW_CAMPAIGN_AX7203_2026_07_30.md: names `gHashTag/t27/fpga/vivado/gf16_matmul4x4_top.v`
 docs/ICA_W40_001.md: names `gHashTag/t27/trios-coq/Physics/SparsityMask.v`
 docs/IDCODE.md: names `gHashTag/t27/fpga/HARDWARE_SSOT.md`
@@ -6,9 +11,18 @@ docs/R18_LAYER_FROZEN.md: names `gHashTag/t27/FROZEN.md`
 docs/ZENODO_UPLOAD_GUIDE.md: names `gHashTag/t27/.github/workflows/zenodo-publish.yml`
 docs/competitive/TOPS_LEVERS_W28_PRE_2026-05-15.md: names `gHashTag/t27/coq/IGLA/RMarker.v`
 docs/docs/architecture/SA-2_EXECUTION_GRAPH.md: names `gHashTag/t27/.github/workflows/release.yml`
+docs/docs/research/fpga-autoregressive-llm-report.md: names `gHashTag/trinity/README.md`
+docs/docs/research/fpga-autoregressive-llm-report.md: names `gHashTag/trinity/README.md`
+docs/docs/research/fpga-autoregressive-llm-report.md: names `gHashTag/trinity/README.md`
+docs/docs/research/fpga-autoregressive-llm-report.md: names `gHashTag/trinity/README.md`
 docs/docs/research/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
 docs/handoff/HANDOFF_AGENT.md: names `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`
+docs/lab/papers/patent-strategy/full-analysis.md: names `gHashTag/trinity/README.md`
 docs/papers/ARXIV_SUBMISSION_CONFIRMATION.md: names `gHashTag/trios/docs/infrastructure/zenodo-registry.md`
+docs/reddit/t27ai/EXAMPLE_POSTS.md: names `gHashTag/trinity/README.md`
+docs/reddit/t27ai/EXAMPLE_POSTS.md: names `gHashTag/trinity/README.md`
+docs/reddit/t27ai/SIDEBAR.md: names `gHashTag/trinity/README.md`
+docs/research/sacred_formats_fpga.md: names `gHashTag/trinity/README.md`
 research/ARXIV_ABSTRACTS_READY_TO_PASTE.md: names `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`
 research/ARXIV_ABSTRACTS_READY_TO_PASTE.md: names `gHashTag/t27/conformance/vectors/INDEX_all_formats.json`
 research/ARXIV_GFT16_SNIPPET.md: names `gHashTag/t27/specs/numeric/gft16.t27`
