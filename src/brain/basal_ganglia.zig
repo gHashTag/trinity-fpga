@@ -579,6 +579,20 @@ pub const Registry = struct {
         return .not_found;
     }
 
+    /// Returns a copy of the claim for `task_id`, or null if there is none.
+    ///
+    /// The copy's `task_id` and `agent_id` slices are owned by the registry and
+    /// stay valid only until that claim is replaced or removed.
+    ///
+    /// # Thread Safety
+    /// Acquires a shared lock on the task's shard
+    pub fn getClaim(self: *Registry, task_id: []const u8) ?TaskClaim {
+        const shard = self.getShard(task_id);
+        shard.rwlock.lockShared();
+        defer shard.rwlock.unlockShared();
+        return shard.claims.get(task_id);
+    }
+
     /// ClaimInfo - Public information about a claim (read-only)
     pub const ClaimInfo = struct {
         task_id: []const u8,

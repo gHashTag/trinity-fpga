@@ -10,6 +10,14 @@ on:
     # Weekly stress test (every Sunday at 00:00 UTC)
     - cron: '0 0 * * 0'
 
+# The comment steps below write to the PR conversation. Without an explicit
+# grant the token is read-only and they fail with "Resource not accessible by
+# integration", which turned a passing health check red.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 env:
   BRAIN_HEALTH_THRESHOLD: "80"  # Minimum health score for merge
   STRESS_TEST_THRESHOLD: "270"  # Minimum stress test score (270/300 = 90%)
@@ -66,14 +74,19 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: Run Brain Health Check
         id: health
         run: |
           # Run health check and capture output
-          ./zig-out/bin/tri stress --health 2>&1 | tee /tmp/health-output.txt || true
+          # tri_or_stub.sh passes a declared stub and fails anything else; the
+          # `|| true` that stood here also hid a binary that was never built.
+          set -o pipefail
+          tools/tri_or_stub.sh stress --health 2>&1 | tee /tmp/health-output.txt
 
           # Extract health score
           #
@@ -122,6 +135,9 @@ jobs:
 
       - name: Comment Health on PR
         if: github.event_name == 'pull_request'
+        # A comment is a courtesy, not a verdict: fork PRs get a read-only token
+        # whatever this file asks for, and that must not fail the gate.
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -194,8 +210,10 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
   # =========================================================================
   # Phase 2: Unit Tests — Individual Brain Regions
@@ -283,19 +301,31 @@ jobs:
       - name: Run Stress Test
         id: stress
         run: |
-          # Run stress test and capture output
-          zig build test-brain-stress -Dci=true 2>&1 | tee /tmp/stress-output.txt
-
-          # Extract score from output
-          STRESS_SCORE=$(grep "Score:" /tmp/stress-output.txt | tail -1 | grep -oE "[0-9]+" || echo "0")
-          echo "STRESS_SCORE=$STRESS_SCORE" >> $GITHUB_OUTPUT
-
-          # Check if passed
-          if grep -q "PASS" /tmp/stress-output.txt; then
+          # HISTORY. No test prints "Score:", so the extraction below always
+          # fell back to 0 and this step reported "score 0 below threshold
+          # 270" on every run, including runs where every test passed. It
+          # also could not see a failing test: without pipefail, `| tee`
+          # reports tee's exit code and not zig's.
+          #
+          # The verdict is now the test run itself. As with the health score
+          # above, a missing score is a notice, not a zero. The threshold
+          # check is untouched and starts gating again the moment a test
+          # prints a Score: line.
+          set -o pipefail
+          if zig build test-brain-stress -Dci=true 2>&1 | tee /tmp/stress-output.txt; then
             echo "PASSED=true" >> $GITHUB_OUTPUT
           else
             echo "PASSED=false" >> $GITHUB_OUTPUT
+            echo "::error::Brain stress tests failed -- see the test output above"
+            exit 1
           fi
+
+          if ! grep -q "Score:" /tmp/stress-output.txt; then
+            echo "::notice::No stress score to check -- no stress test prints a Score: line, so the verdict is the test run above. This step gates on STRESS_TEST_THRESHOLD again the moment one does."
+            exit 0
+          fi
+          STRESS_SCORE=$(grep "Score:" /tmp/stress-output.txt | tail -1 | grep -oE "[0-9]+")
+          echo "STRESS_SCORE=$STRESS_SCORE" >> $GITHUB_OUTPUT
 
           # Fail if below threshold
           if [ "$STRESS_SCORE" -lt "$STRESS_TEST_THRESHOLD" ]; then
@@ -305,6 +335,9 @@ jobs:
 
       - name: Comment Stress Test on PR
         if: github.event_name == 'pull_request'
+        # A comment is a courtesy, not a verdict: fork PRs get a read-only token
+        # whatever this file asks for, and that must not fail the gate.
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -316,16 +349,13 @@ jobs:
             const status = passed ? 'PASS' : 'FAIL';
             const color = passed ? 'green' : 'red';
 
+            // The per-phase table this comment used to print was a constant
+            // 100/100 on every run, pass or fail. It reported nothing, so it
+            // is gone; the score line says plainly when there is no score.
             const body = `## 🧪 Brain Stress Test Results\n\n` +
-              `**Score:** ${score}/300\n` +
+              `**Score:** ${score ? `${score}/300` : 'not measured (no stress test prints a Score: line)'}\n` +
               `**Status:** :${color}_circle: ${status}\n` +
               `**Threshold:** ${threshold}/300\n\n` +
-              `### Test Phases\n` +
-              `| Phase | Score |\n` +
-              `|-------|-------|\n` +
-              `| Basal Ganglia | 100/100 |\n` +
-              `| Locus Coeruleus | 100/100 |\n` +
-              `| Reticular Formation | 100/100 |\n\n` +
               `${passed ? 'X' : 'x'} Stress test ${passed ? 'passed' : 'failed'}`;
 
             // Find or create comment
@@ -398,23 +428,25 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: CLI Commands Test
         run: |
-          echo "Testing tri task commands..."
-          ./zig-out/bin/tri task stats || true
-          ./zig-out/bin/tri task list || true
+          # The smoke test proper: the binary exists and starts.
+          ./zig-out/bin/tri version
 
-          echo "Testing tri event commands..."
-          ./zig-out/bin/tri event stats || true
-
-          echo "Running tri stress --health..."
-          ./zig-out/bin/tri stress --health
-
-          echo "Testing tri stress --scan..."
-          ./zig-out/bin/tri stress --scan
+          # Each subcommand passes, or is a stub that says so (issue 768), or
+          # fails the job. See tools/tri_or_stub.sh for why not `|| true`.
+          rc=0
+          tools/tri_or_stub.sh task stats      || rc=1
+          tools/tri_or_stub.sh task list       || rc=1
+          tools/tri_or_stub.sh event stats     || rc=1
+          tools/tri_or_stub.sh stress --health || rc=1
+          tools/tri_or_stub.sh stress --scan   || rc=1
+          exit $rc
 
   # =========================================================================
   # Phase 6: Brain Metrics Export (Prometheus format)
@@ -437,14 +469,16 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: Export Metrics
         run: |
           echo "# Brain Metrics Export" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          ./zig-out/bin/tri stress --metrics >> $GITHUB_STEP_SUMMARY
+          tools/tri_or_stub.sh stress --metrics >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Metrics Artifact
         uses: actions/upload-artifact@v4
@@ -500,7 +534,10 @@ jobs:
           fi
 
       - name: Critical State Notification
-        if: failure() && needs.detect-build.outputs.present == 'true'
+        # Only a pull request has a conversation to post into; on push and
+        # schedule context.issue.number is undefined and the call 404s.
+        if: failure() && github.event_name == 'pull_request' && needs.detect-build.outputs.present == 'true'
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -539,8 +576,10 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: Run Full Stress Test
         run: |
