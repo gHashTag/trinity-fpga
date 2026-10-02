@@ -190,6 +190,9 @@ fn runUartTest() !void {
         std.debug.print("   - Wrong bitstream (hslm_full_top instead of uart_bridge)\n", .{});
         std.debug.print("   - Pin mapping mismatch\n", .{});
         std.debug.print("   - UART bridge logic broken\n\n", .{});
+        // A test that reports its own failure must exit non-zero, like
+        // `fpga-flash flash` and `verify-pid` already do (#427, #428).
+        return error.UartTestFailed;
     } else if (std.mem.indexOf(u8, result, "aaaa") != null) {
         std.debug.print("\n\x1b[32m✅ UART echo working!\x1b[0m\n\n", .{});
     }
