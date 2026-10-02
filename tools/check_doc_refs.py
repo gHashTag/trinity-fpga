@@ -160,7 +160,10 @@ for d in DOCS:
             continue
         # Sibling repositories are part of this work and a document may name a
         # path in one of them; that is a real reference, not a dangling one.
-        SIBLINGS = ["t27", "trinity-s3ai", "claim-audit-lab", "tri-net", "trios-mesh"]
+        # One list: this used to be a hand copy of SIBLING_NAMES that had lost
+        # zig-golden-float, so a path in that repo was "rot" here and a known
+        # sibling to materialise_siblings.sh.
+        SIBLINGS = SIBLING_NAMES
         cands = [ROOT / p, ROOT / "tools" / p, ROOT / "conformance" / p,
                  ROOT.parent / p, d.parent / p] + [ROOT.parent / sib / p for sib in SIBLINGS]
         # a bare filename may live anywhere in the tree
@@ -176,8 +179,8 @@ for d in DOCS:
                 continue
         _sib = next((sib for sib in SIBLINGS if exists(ROOT.parent / sib / p)), None)
         if _sib and not exists(ROOT / p):
-            # Same rule as the bare-name case: excluded, but named. CI has no
-            # siblings, so it cannot tell this from rot -- which is why the
+            # Same rule as the bare-name case: excluded, but named. A checkout
+            # without the siblings cannot tell this from rot -- which is why the
             # exclusion belongs in a file rather than in the checker's silence.
             cross.append(f"{str(d.relative_to(ROOT))}: names `{p}` -> resolves in {_sib}")
             continue
@@ -244,6 +247,11 @@ known = {l for l in BASE.read_text().splitlines() if l.strip()} if exists(BASE) 
 # it cannot add one, so pruning never launders a new dangling reference, which
 # is what --update-baseline would do.
 stale = sorted(known - set(uniq))
+if "--prune-baseline" in _s.argv and "--update-baseline" in _s.argv:
+    # Together, the rewrite would win and silently undo the prune's promise.
+    print("refusing --prune-baseline with --update-baseline: the update can add "
+          "entries, the prune exists so that nothing is added -- pick one")
+    _s.exit(2)
 if "--prune-baseline" in _s.argv:
     kept = sorted(known & set(uniq))
     BASE.write_text("\n".join(kept) + ("\n" if kept else ""))
