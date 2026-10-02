@@ -98,6 +98,20 @@ CASES = {
     "check_undefined_outputs": (
         "append", "fpga/tnet/cf_binary32.txt", "4294967295 xxxxxxxx\n",
     ),
+    # A workflow step that pipes a build into tee under the default shell,
+    # which has no pipefail: the failure of the build ends green.
+    "check_tee_pipefail": (
+        "create", ".github/workflows/gate-selftest-tee.yml",
+        "# Written by check_gates_can_fail and removed again.\n"
+        "on: workflow_dispatch\n"
+        "jobs:\n"
+        "  selftest:\n"
+        "    runs-on: ubuntu-latest\n"
+        "    steps:\n"
+        "      - name: Synthesis whose failure ends green\n"
+        "        run: |\n"
+        "          yosys -p synth.ys 2>&1 | tee synth.log\n",
+    ),
     "check_withdrawn_live": (
         "\\paragraph{Withdrawn.} The earlier claim of $77.31\\times$ is withdrawn: "
         "it was measured against the broken oracle.\n\n"

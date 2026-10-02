@@ -1,0 +1,83 @@
+# Workflow steps that pipe into tee under a shell with no pipefail, as found
+# when tools/check_tee_pipefail.py was written (2026-10-03). Each one can end
+# green over a failed yosys/nextpnr/iverilog run. The list may only shrink:
+# fix a workflow, then run `python3 tools/check_tee_pipefail.py --prune-baseline`.
+# A step not listed here fails the gate; an entry that no longer reproduces
+# fails it too. Format: <workflow> :: <job> :: <step name>
+.github/workflows/ax7203-blinky-bitstream.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-blinky-bitstream.yml :: bitstream :: nextpnr place and route
+.github/workflows/ax7203-corona-decode.yml :: bitstream :: Yosys
+.github/workflows/ax7203-dual-clk-heartbeat.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-format-cost.yml :: report :: Assemble table
+.github/workflows/ax7203-format-cost.yml :: synth :: Extract metrics
+.github/workflows/ax7203-format-cost.yml :: synth :: Yosys (canonical, -nocarry)
+.github/workflows/ax7203-format-cost.yml :: synth :: Yosys (control, carry allowed)
+.github/workflows/ax7203-gf10-add.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf10-mul.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf10-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf12-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf12-mul-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf12-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf14-add.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf14-mul.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf14-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf16-clean.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-gf16-conformance.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-gf16-mul-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf16-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf20-clean.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-gf20-mul-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf20-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf24-clean.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-gf24-mul-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf24-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf32-add.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf32-mul.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf32-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf4-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf4-mul-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf4-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf6-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf6-mul-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf6-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf8-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf8-mul-clean.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gf8-sub.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gfternary-mul.yml :: bitstream :: Yosys
+.github/workflows/ax7203-gfternary-mul.yml :: bitstream :: fasm2bit
+.github/workflows/ax7203-identity-echo.yml :: bitstream :: Yosys
+.github/workflows/ax7203-led-onehot.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-led-onehot.yml :: bitstream :: nextpnr place and route
+.github/workflows/ax7203-rx-echo-hb.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-trinet-baud.yml :: baud :: Yosys
+.github/workflows/ax7203-trinet-baud.yml :: baud :: fasm2bit
+.github/workflows/ax7203-trinet-dna-probe.yml :: bitstream :: Yosys
+.github/workflows/ax7203-trinet-dna-probe.yml :: bitstream :: fasm2bit
+.github/workflows/ax7203-trinet-dna-probe.yml :: golden :: DNA read sequence and framing (iverilog)
+.github/workflows/ax7203-trinet-fleet.yml :: fleet :: Yosys
+.github/workflows/ax7203-trinet-fleet.yml :: fleet :: fasm2bit
+.github/workflows/ax7203-trinet-mac32.yml :: bitstream :: Yosys
+.github/workflows/ax7203-trinet-mac32.yml :: bitstream :: fasm2bit
+.github/workflows/ax7203-trinet-mac32.yml :: golden :: RTL simulation vs golden vectors (iverilog)
+.github/workflows/ax7203-trinet-node-v2.yml :: bitstream :: Yosys
+.github/workflows/ax7203-trinet-node-v2.yml :: bitstream :: fasm2bit
+.github/workflows/ax7203-trinet-node-v2.yml :: golden :: Node v2 keyed receipts vs the Python golden (iverilog)
+.github/workflows/ax7203-trinet-node-v2.yml :: golden :: SipHash core vs the published vectors (iverilog)
+.github/workflows/ax7203-uart-loopback.yml :: bitstream :: Yosys synthesis
+.github/workflows/ax7203-uart-tx-probe.yml :: bitstream :: Yosys synthesis
+.github/workflows/bench007-probe-ax7203.yml :: bitstream :: fasm2frames + xc7frames2bit
+.github/workflows/brain-ci.yml :: brain-trend-report :: Run Full Stress Test
+.github/workflows/fpga-ci.yml :: regression-test :: Build and run tests
+.github/workflows/fpga-hslm-bitstream.yml :: bitstream :: Yosys synthesis
+.github/workflows/fpga-hslm-bitstream.yml :: bitstream :: nextpnr place and route
+.github/workflows/gf-adder-ref-tb.yml :: ref-tb :: Run parameterized ref-TB for all GF widths
+.github/workflows/jit-forensics.yml :: forensics :: Read the core
+.github/workflows/openxc7-vs-vivado-openxc7-half.yml :: measure :: Record the machine
+.github/workflows/tnf-cost-sweep.yml :: pnr :: Place and route the Q1/Q2 arms
+.github/workflows/tnf-cost-sweep.yml :: refit :: Refit the cost model and report against the published one
+.github/workflows/tnf-cost-sweep.yml :: yosys :: Yosys stat
+.github/workflows/tnf-format-throughput.yml :: pnr :: Place and route the arms
+.github/workflows/tnf-format-throughput.yml :: report :: Compare CI rows against MATRIX.md and tab:untraced
+.github/workflows/tnf-format-throughput.yml :: yosys :: Yosys synth
+.github/workflows/tri-build.yml :: build :: Does any usage error still report success?
+.github/workflows/trinet-portability.yml :: equivalence :: Keyed receipts, board wrapper over portable core

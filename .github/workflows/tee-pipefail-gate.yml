@@ -1,0 +1,31 @@
+name: Tee pipefail gate
+
+# A step with no `shell:` runs as `bash -e {0}` -- no pipefail -- so
+# `yosys ... 2>&1 | tee synth.log` takes tee's exit status and ends green over
+# a synthesis that failed. tnf-boundary-gate and reachability-ratchet closed it
+# with `defaults: run: shell: bash -eo pipefail {0}`; 77 other steps had not.
+# They are listed in tools/tee_pipefail_baseline.txt, which may only shrink.
+# See tools/check_tee_pipefail.py.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'tools/check_tee_pipefail.py'
+      - 'tools/tee_pipefail_baseline.txt'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'tools/check_tee_pipefail.py'
+      - 'tools/tee_pipefail_baseline.txt'
+  workflow_dispatch:
+
+jobs:
+  tee-pipefail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: No new step may hide a failure behind tee
+        run: python3 tools/check_tee_pipefail.py

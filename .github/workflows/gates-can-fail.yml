@@ -14,7 +14,8 @@
 # Measured before landing, on main's tree: 7 of 10 gates rejected their injected
 # defect, 3 were UNTESTABLE because they were already red on a clean tree, and the
 # script exited 0. So it was safe as a blocking gate from day one -- it was not
-# added in the hope that it passes. Since #825 all 10 are testable (floor 10).
+# added in the hope that it passes. Since #825 all 10 are testable (floor 10);
+# check_tee_pipefail joined as the 11th, testable from its first commit.
 #
 # ## The coverage floor, and why it is not optional
 #
@@ -63,7 +64,9 @@ env:
   # 9 -> 10: check_withdrawn_live became testable once the paper marked the
   # withdrawn 0.1797 MHz/LUT cell in tab:fullthroughput (#820). It was red on
   # main for that one cell, so the harness could not plant its defect.
-  MIN_TESTABLE: '10'
+  # 10 -> 11: check_tee_pipefail added to the harness, green on main from its
+  # first commit (its known steps sit in tools/tee_pipefail_baseline.txt).
+  MIN_TESTABLE: '11'
 
 jobs:
   gates-can-fail:
