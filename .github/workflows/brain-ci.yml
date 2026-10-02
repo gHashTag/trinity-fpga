@@ -10,6 +10,14 @@ on:
     # Weekly stress test (every Sunday at 00:00 UTC)
     - cron: '0 0 * * 0'
 
+# The comment steps below write to the PR conversation. Without an explicit
+# grant the token is read-only and they fail with "Resource not accessible by
+# integration", which turned a passing health check red.
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 env:
   BRAIN_HEALTH_THRESHOLD: "80"  # Minimum health score for merge
   STRESS_TEST_THRESHOLD: "270"  # Minimum stress test score (270/300 = 90%)
@@ -122,6 +130,9 @@ jobs:
 
       - name: Comment Health on PR
         if: github.event_name == 'pull_request'
+        # A comment is a courtesy, not a verdict: fork PRs get a read-only token
+        # whatever this file asks for, and that must not fail the gate.
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -305,6 +316,9 @@ jobs:
 
       - name: Comment Stress Test on PR
         if: github.event_name == 'pull_request'
+        # A comment is a courtesy, not a verdict: fork PRs get a read-only token
+        # whatever this file asks for, and that must not fail the gate.
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
@@ -500,7 +514,10 @@ jobs:
           fi
 
       - name: Critical State Notification
-        if: failure() && needs.detect-build.outputs.present == 'true'
+        # Only a pull request has a conversation to post into; on push and
+        # schedule context.issue.number is undefined and the call 404s.
+        if: failure() && github.event_name == 'pull_request' && needs.detect-build.outputs.present == 'true'
+        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
