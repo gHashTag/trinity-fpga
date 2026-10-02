@@ -48,7 +48,12 @@ on:
 
 env:
   # Measured on main at f32467d4f. Ratchet upward only.
-  MIN_TESTABLE: '7'
+  # 7 -> 8: check_orphan_artefacts became testable once main's orphan list
+  # was answered, and it rejects its defect now that gates no longer count
+  # as producers of the files they name, and a producer's f-string prefix
+  # must start a name ("corona_decode_{" no longer produces "decoder_*.json",
+  # nor "lineD_actgate_{" every "gate_*.json").
+  MIN_TESTABLE: '8'
 
 jobs:
   gates-can-fail:

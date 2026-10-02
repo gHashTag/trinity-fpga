@@ -71,6 +71,10 @@ compiler run.
 
 ## Reference interfaces (unaudited, not for deployment)
 
+Amounts are mTRI (decimals = 3) and `CAP_MTRI = 3^21 × 1000`. Each sketch's
+`minted_total` counts its own chain, so only one of them may be live until a
+bridge shares one ledger (see `contracts/README.md`).
+
 TON jetton minter -- the only mint path is a verified quorum attestation:
 
 ```
@@ -78,7 +82,7 @@ TON jetton minter -- the only mint path is a verified quorum attestation:
 () recv_mint(slice attestation, slice signatures) impure {
     throw_unless(ERR_QUORUM,   check_quorum(signatures, attestation, M, N));
     throw_unless(ERR_REPLAYED, nonce_unspent(attestation.global_nonce));
-    throw_unless(ERR_OVERCAP,  minted_total + attestation.amount <= CAP);
+    throw_unless(ERR_OVERCAP,  minted_total + attestation.amount <= CAP_MTRI);
     mark_nonce_spent(attestation.global_nonce);
     minted_total += attestation.amount;
     mint_jetton_to(attestation.worker_address, attestation.amount);
@@ -93,7 +97,7 @@ Solana mint -- an SPL mint whose mint authority is a PDA that only signs inside
 pub fn mint_on_attestation(ctx: Context<MintOnAttestation>, att: Attestation, sigs: Vec<Sig>) -> Result<()> {
     require!(verify_quorum(&sigs, &att, M, N), Err::Quorum);
     require!(!ctx.accounts.nonce_set.contains(att.global_nonce), Err::Replayed);
-    require!(ctx.accounts.state.minted + att.amount <= CAP, Err::OverCap);
+    require!(ctx.accounts.state.minted + att.amount <= CAP_MTRI, Err::OverCap);
     ctx.accounts.nonce_set.insert(att.global_nonce);
     ctx.accounts.state.minted += att.amount;
     token::mint_to(/* authority = PDA */, att.worker_address, att.amount)?;
