@@ -84,12 +84,27 @@ def declared_drawn(a):
 # The marker DECLARES only on a line of its own, outside a code fence. Matched
 # anywhere in the text, a README that merely quoted it -- to explain the gate,
 # or inline in a sentence -- exempted its whole directory without meaning to.
+#
+# "Outside a code fence" means every way Markdown quotes a line: ``` and ~~~
+# fences, a fence closed only by its own character at least as long as the one
+# that opened it (so ```` can quote ```), and a line indented four columns or
+# more, which is an indented code block. Toggling on ``` alone let a ~~~ fence,
+# an indented block, or a ``` nested in ```` declare the directory after all.
+FENCE = re.compile(r"[ \t]*(`{3,}|~{3,})(.*)$")
 def declares(text):
-    fenced = False
+    fence = None
     for line in text.splitlines():
-        if line.lstrip().startswith("```"):
-            fenced = not fenced
-        elif not fenced and line.strip() == DRAWN_MARK:
+        line = line.expandtabs(4)
+        m = FENCE.match(line)
+        if m and m.group(1)[0] == "`" and "`" in m.group(2):
+            m = None  # ```x``` is inline code, not a fence
+        if fence:
+            if (m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence)
+                    and not m.group(2).strip()):
+                fence = None
+        elif m:
+            fence = m.group(1)
+        elif len(line) - len(line.lstrip()) < 4 and line.strip() == DRAWN_MARK:
             return True
     return False
 
