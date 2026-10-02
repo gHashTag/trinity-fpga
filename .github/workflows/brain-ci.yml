@@ -74,14 +74,19 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: Run Brain Health Check
         id: health
         run: |
           # Run health check and capture output
-          ./zig-out/bin/tri stress --health 2>&1 | tee /tmp/health-output.txt || true
+          # tri_or_stub.sh passes a declared stub and fails anything else; the
+          # `|| true` that stood here also hid a binary that was never built.
+          set -o pipefail
+          tools/tri_or_stub.sh stress --health 2>&1 | tee /tmp/health-output.txt
 
           # Extract health score
           #
@@ -205,8 +210,10 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
   # =========================================================================
   # Phase 2: Unit Tests — Individual Brain Regions
@@ -421,23 +428,25 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: CLI Commands Test
         run: |
-          echo "Testing tri task commands..."
-          ./zig-out/bin/tri task stats || true
-          ./zig-out/bin/tri task list || true
+          # The smoke test proper: the binary exists and starts.
+          ./zig-out/bin/tri version
 
-          echo "Testing tri event commands..."
-          ./zig-out/bin/tri event stats || true
-
-          echo "Running tri stress --health..."
-          ./zig-out/bin/tri stress --health
-
-          echo "Testing tri stress --scan..."
-          ./zig-out/bin/tri stress --scan
+          # Each subcommand passes, or is a stub that says so (issue 768), or
+          # fails the job. See tools/tri_or_stub.sh for why not `|| true`.
+          rc=0
+          tools/tri_or_stub.sh task stats      || rc=1
+          tools/tri_or_stub.sh task list       || rc=1
+          tools/tri_or_stub.sh event stats     || rc=1
+          tools/tri_or_stub.sh stress --health || rc=1
+          tools/tri_or_stub.sh stress --scan   || rc=1
+          exit $rc
 
   # =========================================================================
   # Phase 6: Brain Metrics Export (Prometheus format)
@@ -460,14 +469,16 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: Export Metrics
         run: |
           echo "# Brain Metrics Export" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          ./zig-out/bin/tri stress --metrics >> $GITHUB_STEP_SUMMARY
+          tools/tri_or_stub.sh stress --metrics >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Metrics Artifact
         uses: actions/upload-artifact@v4
@@ -565,8 +576,10 @@ jobs:
           submodules: recursive
 
       - name: Build TRI Binary
+        # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
+        # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri -Dci=true
+          zig build tri-compile -Dci=true
 
       - name: Run Full Stress Test
         run: |
