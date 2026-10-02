@@ -23,7 +23,7 @@ LINKS = [
     re.compile(r"github\.com/[^\s)]*/(?:actions/runs|runs)/\d+", re.I),
     re.compile(r"\b[0-9a-f]{64}\b", re.I),
     re.compile(r"HW RESULT:\s*\d+/\d+\s*bit-exact", re.I),
-    re.compile(r"0x13636093", re.I),
+    re.compile(r"0x[01]3636093", re.I),
 ]
 
 

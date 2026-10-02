@@ -20,7 +20,7 @@ spelling, and count the four links in each one individually.
     1. a public CI run URL
     2. a bitstream SHA-256
     3. a UART "HW RESULT: N/N bit-exact" line
-    4. the IDCODE 0x13636093
+    4. the IDCODE (0x13636093, or its version-0 variant 0x03636093)
 
 The claim under test is an existential one -- "there is no such comment" -- so a
 single counterexample settles it, and the script exits non-zero if it finds one.
@@ -49,7 +49,7 @@ LINKS = {
     "CI url":   re.compile(r"github\.com/[^\s)]*/(?:actions/runs|runs)/\d+", re.I),
     "sha256":   re.compile(r"\b[0-9a-f]{64}\b", re.I),
     "UART log": re.compile(r"HW RESULT:\s*\d+/\d+\s*bit-exact", re.I),
-    "IDCODE":   re.compile(r"0x13636093", re.I),
+    "IDCODE":   re.compile(r"0x[01]3636093", re.I),
 }
 
 # A board reading that is NOT a conformance count. Comment 4958733671 carries

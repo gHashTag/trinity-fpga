@@ -49,7 +49,7 @@ SPEC = str(ROOT / "specs/numeric/catalog_coverage_delta.t27")
 CI = re.compile(r"actions/runs/\d+")
 SHA = re.compile(r"\b[0-9a-f]{64}\b")
 UART = re.compile(r"HW RESULT:\s*[\d,]+\s*/\s*[\d,]+\s*bit-?exact", re.I)
-IDCODE = re.compile(r"0x13636093", re.I)
+IDCODE = re.compile(r"0x[01]3636093", re.I)
 TITLE = re.compile(r"Tier-E proof:\s*`([^`]+)`", re.I)
 
 LINKS = (CI, SHA, UART, IDCODE)
