@@ -372,9 +372,10 @@ comment, so it stays readable to anything that cannot compile it.
 The test: *is this file the project speaking about itself?* If yes, it speaks
 our language. If it is plumbing, it speaks the plumbing's.
 
-**Worked example, compiler-checked rather than asserted:** in `gHashTag/trinity`,
-`apps/website/public/t27/files/specs/catalog/onboarding.t27` generates
-`/llms.txt` and `/agents.t27` byte-identically, gated in CI as
+**Worked example, compiler-checked rather than asserted:**
+`gHashTag/trinity/apps/website/specs/catalog/onboarding.t27` generates
+`https://t27.ai/llms.txt` and `https://t27.ai/agents.t27` byte-identically
+(`gHashTag/trinity/apps/website/public/agents.t27`), gated in CI as
 `check:onboarding`. The generator evaluates the spec's own `test` blocks --
 `typecheck.ok` stays true for `assert 1 > 2`, so a compiler saying "this parses"
 is not a compiler saying "this is true" -- and re-compiles the rendered document
