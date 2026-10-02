@@ -1,12 +1,26 @@
-name: queen-bot · PR auto-merger (S-173, G-81)
+name: queen-bot · PR merger, reviewer-bee gated (S-173, G-81)
 # Wave v25 HOLD-A closure · maps LANG→SI MERGE (0xDE) to repo layer
 # Anchor: phi^2 + phi^-2 = 3 · DOI 10.5281/zenodo.19227877
+#
+# ONLY WHAT A REVIEWER BEE PASSED. Owner's rule, 2026-10-02: "the Queen must
+# not merge by herself!! the Queen only manages!" and "take the merge right
+# away from the board merger too". No automation merges on its own verdict.
+# A merge happens only after a reviewer bee -- a code-review agent with real
+# tools -- has reviewed and verified the pull request. Its signals:
+#   1. at least one APPROVED review, and
+#   2. the `bee-reviewed` label, applied AFTER the head commit (a push after
+#      the review is unreviewed code).
+# `charter:r2-pass` and green CI are still required, but neither is a merge
+# trigger on its own any more. Same gate as gHashTag/t27#5526
+# (.github/workflows/auto-merge-ready-prs.yml).
+#
+# Reviewer order: approve first, then add `bee-reviewed`. The `labeled` event
+# is what runs this; a label added before the approval is re-checked only on
+# the next opened/synchronize/labeled event.
 
 on:
   pull_request_target:
     types: [opened, synchronize, labeled, ready_for_review]
-  check_suite:
-    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -23,23 +37,54 @@ jobs:
   decide-and-merge:
     if: >-
       github.event.pull_request.draft == false &&
-      contains(github.event.pull_request.labels.*.name, 'charter:r2-pass')
+      contains(github.event.pull_request.labels.*.name, 'charter:r2-pass') &&
+      contains(github.event.pull_request.labels.*.name, 'bee-reviewed')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout PR head
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 1
-
+      # No checkout: under pull_request_target this job holds a write token,
+      # and nothing below needs the PR's files. The PR body is passed through
+      # env, never interpolated into the script, so it cannot inject shell.
       - name: Verify phi-anchor footer
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          body="${{ github.event.pull_request.body }}"
-          if ! echo "$body" | grep -q "phi\^2 + phi\^-2 = 3"; then
+          if ! printf '%s' "$PR_BODY" | grep -q "phi\^2 + phi\^-2 = 3"; then
             echo "::error::PR body missing phi-anchor footer · queen-bot refuses"
             exit 1
           fi
+
+      - name: Reviewer-bee gate (APPROVED review + bee-reviewed after head)
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.payload.pull_request.number;
+            const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number });
+            if (!pr.labels.some(l => l.name === 'bee-reviewed')) {
+              core.setFailed('no bee-reviewed label -- only a reviewer bee\'s review merges');
+              return;
+            }
+            const reviews = await github.paginate(github.rest.pulls.listReviews,
+              { owner, repo, pull_number, per_page: 100 });
+            if (!reviews.some(r => r.state === 'APPROVED')) {
+              core.setFailed('no APPROVED review -- a reviewer bee must approve before the merge');
+              return;
+            }
+            const commits = await github.paginate(github.rest.pulls.listCommits,
+              { owner, repo, pull_number, per_page: 100 });
+            const head = commits[commits.length - 1];
+            const headAt = head && head.commit.committer && head.commit.committer.date;
+            const events = await github.paginate(github.rest.issues.listEvents,
+              { owner, repo, issue_number: pull_number, per_page: 100 });
+            const labeledAt = events
+              .filter(e => e.event === 'labeled' && e.label && e.label.name === 'bee-reviewed')
+              .map(e => e.created_at).sort().pop();
+            if (!headAt || !labeledAt || new Date(labeledAt) < new Date(headAt)) {
+              core.setFailed(`bee-reviewed (${labeledAt}) does not post-date the head commit (${headAt})`);
+              return;
+            }
+            core.info(`reviewer-bee gate passed: approved, bee-reviewed at ${labeledAt} >= head at ${headAt}`);
 
       - name: Wait for CI green
         uses: actions/github-script@v7
@@ -60,31 +105,36 @@ jobs:
             }
             core.setFailed('G-81 falsified: CI did not green within 5 min');
 
-      - name: Auto-merge (squash)
+      - name: Merge (squash) what the reviewer bee passed
         uses: actions/github-script@v7
         with:
           script: |
             const pr = context.payload.pull_request;
+            // `sha` pins the merge to the head the gate above checked: if a
+            // commit landed in between, GitHub refuses rather than merging
+            // unreviewed code.
             await github.rest.pulls.merge({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: pr.number,
+              sha: pr.head.sha,
               merge_method: 'squash',
               commit_title: `${pr.title} (#${pr.number})`,
-              commit_message: `Auto-merged by queen-bot · charter:r2-pass · phi^2+phi^-2=3`
+              commit_message: `Merged by queen-bot after reviewer-bee review · bee-reviewed + APPROVED · charter:r2-pass · phi^2+phi^-2=3`
             });
-            core.notice(`PR #${pr.number} merged by queen-bot`);
+            core.notice(`PR #${pr.number} merged by queen-bot after a reviewer bee's review`);
 
       - name: Audit log
         if: always()
         run: |
           mkdir -p .audit/queen-bot
-          cat > .audit/queen-bot/$(date -u +%Y%m%dT%H%M%SZ)-pr${{ github.event.pull_request.number }}.json <<EOF
+          cat > ".audit/queen-bot/$(date -u +%Y%m%dT%H%M%SZ)-pr${{ github.event.pull_request.number }}.json" <<EOF2
           {
             "pr": ${{ github.event.pull_request.number }},
             "head_sha": "${{ github.event.pull_request.head.sha }}",
             "decided_at_utc": "$(date -u +%FT%TZ)",
             "outcome": "${{ job.status }}",
+            "gate": "bee-reviewed+APPROVED",
             "anchor": "phi^2+phi^-2=3"
           }
-          EOF
+          EOF2
