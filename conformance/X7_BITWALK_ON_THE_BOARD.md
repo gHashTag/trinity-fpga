@@ -6,7 +6,7 @@
 
 `tri fpga-build --out /tmp/x7board/node0`: trinet node 0 (`trinet_node_v2_ax7203`,
 `USE_DNA=0`, `FALLBACK_NODE_ID=32'h5452494E`, `BAUD_DIV_P=60`), yosys 0.67 →
-nextpnr-xilinx 0.9.2-107-g7037c948 (heap placer, seed 1, mclk Fmax 25.16 MHz) →
+nextpnr-xilinx 0.9.2-107-g7037c948 (heap placer, seed 1) →
 prjxray `fasm2frames.py` → `xc7frames2bit`, db `prjxray-db-ab1fc60/artix7`,
 part `xc7a200tfbg484-2`. The FASM has 121,587 lines; the frames file 20,230
 frames.

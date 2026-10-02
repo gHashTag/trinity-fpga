@@ -1,0 +1,52 @@
+# start 2026-10-02T20:02:01Z
+# usb DIRECT ['0x1100000']
+# usb clients 5 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 2}
+# usb driver AppleUSBSLCOM (com.apple.DriverKit-AppleUSBSLCOM) -> /dev/cu.usbserial-110
+# load 44.6 43.6 60.5 on 8 cpus (BUSY: 1-min load above 2 per cpu)
+# cmd openFPGALoader -c digilent_hs2 --write-sram /tmp/x7board/node0/ours.bit
+empty
+write to ram
+Jtag frequency : requested 6.00MHz    -> real 6.00MHz   
+Open file DONE
+Parse file DONE
+load program
+
+Load SRAM: [===                                               ] 6.00%
+
+Load SRAM: [=======                                           ] 13.00%
+
+Load SRAM: [==========                                        ] 20.00%
+
+Load SRAM: [=============                                     ] 26.00%
+
+Load SRAM: [=================                                 ] 33.00%
+
+Load SRAM: [====================                              ] 40.00%
+
+Load SRAM: [=======================                           ] 45.00%
+
+Load SRAM: [==========================                        ] 52.00%
+
+Load SRAM: [==============================                    ] 59.00%
+
+Load SRAM: [=================================                 ] 66.00%
+
+Load SRAM: [=====================================             ] 73.00%
+
+Load SRAM: [=========================================         ] 81.00%
+
+Load SRAM: [============================================      ] 88.00%
+
+Load SRAM: [================================================  ] 96.00%
+
+Load SRAM: [==================================================] 100.00%
+
+Done
+Shift IR 35
+ir: 1 isc_done 1 isc_ena 0 init 1 done 1
+real 15.59
+user 0.29
+sys 1.44
+# exit=0
+# load 44.6 43.7 60.3 on 8 cpus (BUSY: 1-min load above 2 per cpu)
+# end 2026-10-02T20:02:17Z

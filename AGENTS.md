@@ -276,6 +276,34 @@ Example: task "Fix PHI in constants.t27" → Agent T:
 5. **Phase 5 (Verdict)**: V analyzes whether the change is toxic (does it change the invariant φ² + 1/φ² = 3?)
 6. **Phase 6 (Evolve)**: E records the experience, W seals the tri cell commit
 
+### K · F · Z — THE BITSTREAM BACK HALF, ON THE BOARD
+
+The openXC7 back half (FASM → frames → .bit) has a spec-derived replacement,
+`bitwalk`, generated from gHashTag/t27 `specs/xilinx7`. **K** owns the board
+runs, **F** the byte-compare against openXC7, **Z** the write-up. What it showed
+the first time, with logs: `conformance/X7_BITWALK_ON_THE_BOARD.md`.
+
+```bash
+# K + F: one real 200T design, ours against openXC7's, then the AX7203
+tri x7-board build                    # tri fpga-build: yosys → nextpnr-xilinx → fasm2frames → xc7frames2bit
+tri x7-board compare --ref            # bitwalk --fasm / --write, byte-compared and timed; exit 1 = differs
+tri x7-board load NAME --owner-yes "<owner's words>"   # SRAM load only (openFPGALoader --write-sram)
+tri x7-board receipts NAME [--quick]  # harness run; PASS only on "receipts verified (tag) : N/N"
+tri x7-board all NAME --owner-yes "<owner's words>" [--quick]
+
+# F: the spec gates the loop runs every fire
+tri x7-audit / x7-fasm / x7-writer / x7-mutate / x7-part
+
+# Z: the t27.ai blog
+tri blog list | check | lint | preview <slug> | build | live <slug>
+tri blog gif record CAST -- "cmd" ...   # real commands in a pty, saved as an asciicast
+tri blog gif render CAST GIF            # the GIF; long silences shortened and labelled in-frame
+```
+
+The board rules (one attempt per run name, SRAM only and never SPI flash, the
+key never leaves the machine) live in the `xilinx7-bitstream-loop` and
+`ax7203-board-loop` skills; the commands enforce the ones they can.
+
 ---
 
 ## NUMERICAL STRUCTURE OF THE ALPHABET
