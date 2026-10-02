@@ -451,8 +451,14 @@ pub const EventBus = struct {
     pub fn poll(self: *EventBus, since: i64, allocator: std.mem.Allocator, max_events: usize) ![]AgentEventRecord {
         self.mutex.lock();
 
-        // First pass: count matching events for exact capacity
-        const limit = if (max_events == 0) self.count else @min(self.count, max_events);
+        // First pass: count matching events for exact capacity.
+        //
+        // Scan the whole buffer; `max_events` caps the RESULT, not the scan.
+        // Capping the scan at `max_events` made every poll look only at the
+        // oldest `max_events` slots, so `poll(last_ts, _, 100)` on a buffer
+        // of 1000 returned nothing after the first page and paging stopped
+        // at 100 -- found by the stress test the day it compiled again.
+        const limit = self.count;
         var match_count: usize = 0;
         var i: usize = 0;
         while (i < limit) : (i += 1) {
