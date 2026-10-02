@@ -22,8 +22,20 @@ const std = @import("std");
 const Ed25519 = std.crypto.sign.Ed25519;
 const Sha256 = std.crypto.hash.sha2.Sha256;
 
-/// 3^21, the Trinity identity. Enforced on-chain as the mint ceiling.
+/// 3^21, the Trinity identity, in WHOLE TRI. Enforced on-chain as the ceiling.
 pub const cap_tri: u64 = 10_460_353_203;
+
+/// THE ONE BASE UNIT. Every amount in this module is in mTRI, the unit the
+/// ledger already settles in (src/trinet/ledger.zig: reward_per_job_mtri) and
+/// the relayer passes through unchanged. On-chain it is the token's smallest
+/// unit, so the jetton and the SPL mint carry decimals = 3.
+///
+/// Until 2026-10-01 the cap was compared against mTRI amounts while being
+/// written in whole TRI, which made the real ceiling 1000x lower than 3^21 TRI.
+/// One unit, named once, is the fix: the cap is converted here and nowhere else.
+pub const mtri_per_tri: u64 = 1000;
+pub const decimals: u8 = 3;
+pub const cap_mtri: u64 = cap_tri * mtri_per_tri;
 
 /// The signature is valid for exactly one chain, so a quorum for TON cannot be
 /// replayed onto Solana. The nonce set is shared across chains regardless.
@@ -36,6 +48,7 @@ pub const Attestation = struct {
     /// hash(accepted spec/job + its receipt): ties the mint to specific work.
     work_id: [32]u8,
     chain: Chain,
+    /// In mTRI (see `mtri_per_tri`): the ledger's unit and the token's base unit.
     amount_mtri: u64,
     /// Unique across ALL chains; the minters share one spent set.
     global_nonce: u128,
@@ -74,27 +87,47 @@ pub const Error = error{
     OverCap,
 };
 
+/// WHAT EVERY CHAIN'S MINTER MUST CONSULT AS ONE: the spent nonces AND the
+/// minted total. Sharing only the nonces stopped one earning from minting
+/// twice, but each chain kept its own total, so TON and Solana together could
+/// mint twice the cap. The supply rule is "sum across all chains <= cap"
+/// (mint_on_acceptance.t27, CROSS_CHAIN_DOUBLE_MINT), so the total is shared
+/// by reference exactly like the nonces. On real chains nothing can share a
+/// counter without a bridge: until one exists, exactly one minter is deployed
+/// (contracts/README.md).
+pub const SharedLedger = struct {
+    spent: std.AutoHashMap(u128, void),
+    minted_mtri: u64 = 0, // starts at zero: no pre-mine
+
+    pub fn init(allocator: std.mem.Allocator) SharedLedger {
+        return .{ .spent = std.AutoHashMap(u128, void).init(allocator) };
+    }
+
+    pub fn deinit(self: *SharedLedger) void {
+        self.spent.deinit();
+    }
+};
+
 /// The mint authority. In production its state lives on-chain; here it is the
 /// reference against which the TON and Solana implementations are checked.
-pub const SpentSet = std.AutoHashMap(u128, void);
 
 pub const Authority = struct {
     attestors: []const Ed25519.PublicKey,
     threshold: u8, // M of N
     chain: Chain,
     epoch: u32,
-    minted_total: u64 = 0, // starts at zero: no pre-mine
-    /// The spent-nonce ledger, shared by REFERENCE across every chain's
-    /// authority: the TON and Solana minters must consult ONE set, or the same
-    /// earning mints on both chains. The authority does not own it.
-    spent: *SpentSet,
+    /// Spent nonces and minted total, shared by REFERENCE across every chain's
+    /// authority: the TON and Solana minters must consult ONE ledger, or the
+    /// same earning mints on both chains and the cap is counted twice. The
+    /// authority does not own it.
+    shared: *SharedLedger,
 
     pub fn init(
         attestors: []const Ed25519.PublicKey,
         threshold: u8,
         chain: Chain,
         epoch: u32,
-        spent: *SpentSet,
+        shared: *SharedLedger,
     ) Authority {
         std.debug.assert(threshold >= 1);
         std.debug.assert(threshold <= attestors.len);
@@ -103,7 +136,7 @@ pub const Authority = struct {
             .threshold = threshold,
             .chain = chain,
             .epoch = epoch,
-            .spent = spent,
+            .shared = shared,
         };
     }
 
@@ -141,15 +174,15 @@ pub const Authority = struct {
         if (att.amount_mtri == 0) return Error.ZeroAmount;
         if (att.chain != self.chain) return Error.WrongChain;
         if (att.epoch != self.epoch) return Error.WrongEpoch;
-        if (self.spent.contains(att.global_nonce)) return Error.ReplayedNonce;
+        if (self.shared.spent.contains(att.global_nonce)) return Error.ReplayedNonce;
         if (!self.quorumReached(att.digest(), sigs)) return Error.SubQuorum;
         // Cap is checked last so an over-cap attempt cannot consume a nonce.
-        const next = std.math.add(u64, self.minted_total, att.amount_mtri) catch
+        const next = std.math.add(u64, self.shared.minted_mtri, att.amount_mtri) catch
             return Error.OverCap;
-        if (next > cap_tri) return Error.OverCap;
+        if (next > cap_mtri) return Error.OverCap;
 
-        self.spent.put(att.global_nonce, {}) catch return Error.OverCap;
-        self.minted_total = next;
+        self.shared.spent.put(att.global_nonce, {}) catch return Error.OverCap;
+        self.shared.minted_mtri = next;
         return att.amount_mtri;
     }
 };
@@ -187,57 +220,58 @@ fn sampleAtt(nonce: u128, amount: u64, chain: Chain) Attestation {
     };
 }
 
-fn newSpent() SpentSet {
-    return SpentSet.init(testing.allocator);
+fn newLedger() SharedLedger {
+    return SharedLedger.init(testing.allocator);
 }
 
 test "genesis minted supply is zero" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    const auth = Authority.init(&pk, 2, .ton, 1, &spent);
-    try testing.expectEqual(@as(u64, 0), auth.minted_total);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    const auth = Authority.init(&pk, 2, .ton, 1, &ledger);
+    try testing.expect(auth.shared == &ledger); // the authority holds no total of its own
+    try testing.expectEqual(@as(u64, 0), ledger.minted_mtri);
 }
 
 test "a valid M-of-N quorum mints exactly the amount" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    var auth = Authority.init(&pk, 2, .ton, 1, &spent);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var auth = Authority.init(&pk, 2, .ton, 1, &ledger);
 
     const att = sampleAtt(1, 5, .ton);
     const d = att.digest();
     const sigs = [_][64]u8{ sign(kp[0], d), sign(kp[1], d) };
 
     try testing.expectEqual(@as(u64, 5), try auth.authorizeMint(att, &sigs));
-    try testing.expectEqual(@as(u64, 5), auth.minted_total);
+    try testing.expectEqual(@as(u64, 5), ledger.minted_mtri);
 }
 
 test "a sub-quorum mints nothing" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    var auth = Authority.init(&pk, 2, .ton, 1, &spent);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var auth = Authority.init(&pk, 2, .ton, 1, &ledger);
 
     const att = sampleAtt(1, 5, .ton);
     const sigs = [_][64]u8{sign(kp[0], att.digest())}; // 1 of 3, need 2
     try testing.expectError(Error.SubQuorum, auth.authorizeMint(att, &sigs));
-    try testing.expectEqual(@as(u64, 0), auth.minted_total);
+    try testing.expectEqual(@as(u64, 0), ledger.minted_mtri);
 }
 
 test "a repeated signature from one attestor cannot stuff the quorum" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    var auth = Authority.init(&pk, 2, .ton, 1, &spent);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var auth = Authority.init(&pk, 2, .ton, 1, &ledger);
 
     const att = sampleAtt(1, 5, .ton);
     const one = sign(kp[0], att.digest());
@@ -249,10 +283,10 @@ test "a non-attestor signature counts for nothing" {
     var kp: [4]Ed25519.KeyPair = undefined;
     var pk: [4]Ed25519.PublicKey = undefined;
     genKeys(4, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
+    var ledger = newLedger();
+    defer ledger.deinit();
     // Only the first three are attestors; kp[3] is an outsider.
-    var auth = Authority.init(pk[0..3], 2, .ton, 1, &spent);
+    var auth = Authority.init(pk[0..3], 2, .ton, 1, &ledger);
 
     const att = sampleAtt(1, 5, .ton);
     const d = att.digest();
@@ -264,9 +298,9 @@ test "a spent nonce is refused — no double-mint" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    var auth = Authority.init(&pk, 2, .ton, 1, &spent);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var auth = Authority.init(&pk, 2, .ton, 1, &ledger);
 
     const att = sampleAtt(1, 5, .ton);
     const d = att.digest();
@@ -274,7 +308,7 @@ test "a spent nonce is refused — no double-mint" {
 
     _ = try auth.authorizeMint(att, &sigs);
     try testing.expectError(Error.ReplayedNonce, auth.authorizeMint(att, &sigs));
-    try testing.expectEqual(@as(u64, 5), auth.minted_total); // still 5, not 10
+    try testing.expectEqual(@as(u64, 5), ledger.minted_mtri); // still 5, not 10
 }
 
 test "the same global nonce cannot mint on a second chain" {
@@ -283,10 +317,10 @@ test "the same global nonce cannot mint on a second chain" {
     genKeys(3, &kp, &pk);
 
     // ONE spent set, shared by both chains' authorities — the production invariant.
-    var spent = newSpent();
-    defer spent.deinit();
-    var ton = Authority.init(&pk, 2, .ton, 1, &spent);
-    var sol = Authority.init(&pk, 2, .solana, 1, &spent);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var ton = Authority.init(&pk, 2, .ton, 1, &ledger);
+    var sol = Authority.init(&pk, 2, .solana, 1, &ledger);
 
     const att_ton = sampleAtt(42, 5, .ton);
     const dt = att_ton.digest();
@@ -305,9 +339,9 @@ test "a TON quorum does not authorise a Solana mint (chain is signed)" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    var sol = Authority.init(&pk, 2, .solana, 1, &spent);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var sol = Authority.init(&pk, 2, .solana, 1, &ledger);
 
     // Signatures made over a TON attestation, submitted to the Solana authority.
     const att_ton = sampleAtt(1, 5, .ton);
@@ -322,16 +356,16 @@ test "a mint over the cap is refused and consumes no nonce" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    var auth = Authority.init(&pk, 2, .ton, 1, &spent);
-    auth.minted_total = cap_tri - 3; // near the ceiling
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var auth = Authority.init(&pk, 2, .ton, 1, &ledger);
+    ledger.minted_mtri = cap_mtri - 3; // near the ceiling
 
     const att = sampleAtt(1, 5, .ton); // 5 would cross the cap
     const d = att.digest();
     const sigs = [_][64]u8{ sign(kp[0], d), sign(kp[1], d) };
     try testing.expectError(Error.OverCap, auth.authorizeMint(att, &sigs));
-    try testing.expect(!auth.spent.contains(1)); // nonce not consumed
+    try testing.expect(!ledger.spent.contains(1)); // nonce not consumed
 }
 
 test "digest matches the cross-language golden vector" {
@@ -351,11 +385,49 @@ test "a zero-amount attestation is refused" {
     var kp: [3]Ed25519.KeyPair = undefined;
     var pk: [3]Ed25519.PublicKey = undefined;
     genKeys(3, &kp, &pk);
-    var spent = newSpent();
-    defer spent.deinit();
-    var auth = Authority.init(&pk, 2, .ton, 1, &spent);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var auth = Authority.init(&pk, 2, .ton, 1, &ledger);
     const att = sampleAtt(1, 0, .ton);
     const d = att.digest();
     const sigs = [_][64]u8{ sign(kp[0], d), sign(kp[1], d) };
     try testing.expectError(Error.ZeroAmount, auth.authorizeMint(att, &sigs));
+}
+
+test "two chains together cannot cross the cap" {
+    var kp: [3]Ed25519.KeyPair = undefined;
+    var pk: [3]Ed25519.PublicKey = undefined;
+    genKeys(3, &kp, &pk);
+    var ledger = newLedger();
+    defer ledger.deinit();
+    var ton = Authority.init(&pk, 2, .ton, 1, &ledger);
+    var sol = Authority.init(&pk, 2, .solana, 1, &ledger);
+    ledger.minted_mtri = cap_mtri - 7; // the network is 7 mTRI from the ceiling
+
+    // TON takes 5 of the remaining 7.
+    const a = sampleAtt(1, 5, .ton);
+    const da = a.digest();
+    _ = try ton.authorizeMint(a, &[_][64]u8{ sign(kp[0], da), sign(kp[1], da) });
+
+    // Solana, with a FRESH nonce and a valid quorum, asks for 5 more. With a
+    // per-chain total this was allowed and the two chains held cap + 3.
+    const b = sampleAtt(2, 5, .solana);
+    const db = b.digest();
+    try testing.expectError(
+        Error.OverCap,
+        sol.authorizeMint(b, &[_][64]u8{ sign(kp[0], db), sign(kp[1], db) }),
+    );
+    try testing.expectEqual(cap_mtri - 2, ledger.minted_mtri);
+    try testing.expect(!ledger.spent.contains(2));
+}
+
+test "the cap is 3^21 whole TRI counted in mTRI and fits u64" {
+    var three_pow_21: u64 = 1;
+    for (0..21) |_| three_pow_21 *= 3;
+    try testing.expectEqual(three_pow_21, cap_tri);
+    try testing.expectEqual(three_pow_21 * 1000, cap_mtri);
+    try testing.expectEqual(@as(u64, 10_460_353_203_000), cap_mtri);
+    // decimals 3 means 1 TRI = 10^decimals base units.
+    try testing.expectEqual(std.math.pow(u64, 10, decimals), mtri_per_tri);
+    try testing.expect(cap_mtri < std.math.maxInt(u64));
 }
