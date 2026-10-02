@@ -11,10 +11,10 @@
 #
 # The instrument that would have caught both was sitting in tools/. This runs it.
 #
-# Measured before landing, on main's tree: 7 of 10 gates reject their injected
-# defect, 3 are UNTESTABLE because they are already red on a clean tree, and the
-# script exits 0. So this is safe as a blocking gate today -- it is not being
-# added in the hope that it passes.
+# Measured before landing, on main's tree: 7 of 10 gates rejected their injected
+# defect, 3 were UNTESTABLE because they were already red on a clean tree, and the
+# script exited 0. So it was safe as a blocking gate from day one -- it was not
+# added in the hope that it passes. Since #825 all 10 are testable (floor 10).
 #
 # ## The coverage floor, and why it is not optional
 #
@@ -26,8 +26,10 @@
 # would produce "0 of 10 tested" and a pass.
 #
 # So the floor below is the actual gate. If fewer than MIN_TESTABLE gates can be
-# tested, this job fails and names the drop. Raise the floor when the three
-# currently-red gates are fixed; never lower it to make a red build green.
+# tested, this job fails and names the drop. The floor now equals the number of
+# gates, so a gate ADDED to the harness must raise it in the same PR -- otherwise
+# that gate, or any other, can drop out unnoticed. Never lower it to make a red
+# build green.
 #
 # phi^2 + 1/phi^2 = 3 = TRINITY
 
@@ -49,7 +51,7 @@ on:
   workflow_dispatch:
 
 env:
-  # Measured on main at f32467d4f. Ratchet upward only.
+  # First measured on main at f32467d4f (floor 7). Ratchet upward only.
   # 7 -> 8: check_orphan_artefacts became testable once main's orphan list
   # was answered, and it rejects its defect now that gates no longer count
   # as producers of the files they name, and a producer's f-string prefix
@@ -110,4 +112,11 @@ jobs:
             echo "would have exited 0 regardless -- that is why this floor is here."
             grep 'UNTESTABLE' gates.log || true
             exit 1
+          fi
+          # A ratchet that is not raised is a ratchet with slack: with 10 testable
+          # and a floor of 9, one gate could drop out unnoticed. 9 -> 10 (#825)
+          # was spotted by hand; say it here instead. A warning, not an error: a
+          # gate that just went testable should not turn its own fix red.
+          if [ "$tested" -gt "$MIN_TESTABLE" ]; then
+            echo "::warning::$tested gates are testable but the floor is $MIN_TESTABLE -- raise MIN_TESTABLE to $tested."
           fi
