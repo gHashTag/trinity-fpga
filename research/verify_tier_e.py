@@ -6,7 +6,7 @@ main_ru.tex defines Tier-E as requiring ALL FOUR of:
   1. a public openXC7 CI run reporting success, with the URL
   2. the SHA-256 of the specific bitstream
   3. a UART log "HW RESULT: N/N bit-exact (fails=0)" at 160000 baud from the board
-  4. a matching IDCODE 0x13636093
+  4. a matching IDCODE (0x13636093, or its version-0 variant 0x03636093)
 
 and states that a GREEN commit message or a passing simulation does NOT count. The
 proofs are said to be published per-cell in gHashTag/trinity-fpga#199.
@@ -30,7 +30,7 @@ LINKS = {
     "CI url":   re.compile(r"github\.com/[^\s)]*/(?:actions/runs|runs)/\d+", re.I),
     "sha256":   re.compile(r"\b[0-9a-f]{64}\b", re.I),
     "UART log": re.compile(r"HW RESULT:\s*\d+/\d+\s*bit-exact", re.I),
-    "IDCODE":   re.compile(r"0x13636093", re.I),
+    "IDCODE":   re.compile(r"0x[01]3636093", re.I),
 }
 
 

@@ -47,7 +47,8 @@ ISSUE = "repos/gHashTag/trinity-fpga/issues/199/comments?per_page=100&page=%d"
 UART = re.compile(r"HW RESULT:\s*\d+/\d+\s*bit-exact", re.I)
 SHA = re.compile(r"\b[0-9a-f]{64}\b", re.I)
 CI = re.compile(r"actions/runs/\d+")
-IDCODE = "0x13636093"
+# Low 28 bits only: rev-1 silicon reads 0x13636093, the bench reads 0x03636093 (#633)
+IDCODE = re.compile(r"0x[01]3636093", re.I)
 PROOF = re.compile(r"Tier-E proof:\s*`?([\w_]+)`?\s*\(([^)]*)\)")
 COMPUTE = re.compile(r"compute HW cell|compute-HW", re.I)
 GF2 = re.compile(r"GF\(2([⁰¹²³⁴-⁹]+)\)")
@@ -72,7 +73,7 @@ def comments(path=None):
 def complete(cs):
     return [c for c in cs
             if UART.search(c["body"]) and SHA.search(c["body"])
-            and CI.search(c["body"]) and IDCODE in c["body"]]
+            and CI.search(c["body"]) and IDCODE.search(c["body"])]
 
 
 def main():
