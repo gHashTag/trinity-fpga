@@ -1,0 +1,26 @@
+# start 2026-10-02T20:13:55Z
+# usb DIRECT ['0x1100000']
+# usb clients 5 {'BrowserOS': 1, 'BrowserOS neo': 1, 'Comet': 1, 'FwUpdateManagerd': 2}
+# usb driver AppleUSBSLCOM (com.apple.DriverKit-AppleUSBSLCOM) -> /dev/cu.usbserial-110
+# load 15.8 19.0 36.9 on 8 cpus
+# cmd /opt/homebrew/opt/python@3.14/bin/python3.14 tern_tc_layer_ax7203.py --mats down --layers 5 --act int8 --n_x 1 --setkey --port /dev/cu.usbserial-110 --baud 1144744 --keys ../trinet-keys.txt --model /Users/playra/igla-coder-gpu/c_infer/model.bin
+model.bin: 1 matrices, 320 rows, 276480 ternary weights (61.8% nonzero)
+jobs: 51840 (32-trit chunks x 1 x-vectors x 6 digit planes)
+setkey: key installed on node 0x5452494e; ack tag verifies
+  [ok ] L5/down      320/320    rows bit-exact
+------------------------------------------------------------------
+jobs sent               : 51840 of 51840 planned (window 24)
+receipts verified (tag) : 51840/51840 under node 0x5452494e
+rejected                : none
+rows bit-exact          : 320/320  (activations: int8)
+elapsed                 : 11.00 s (4713 answers/s)
+longest host pause      : 15.2 ms (after 3992 answers)
+------------------------------------------------------------------
+RESULT: every row above computed on the AX7203 bit-exact against the
+        int8-weight oracle, and every receipt verified under the key.
+real 11.25
+user 1.96
+sys 0.48
+# exit=0
+# load 16.0 18.9 36.5 on 8 cpus (BUSY: 1-min load above 2 per cpu)
+# end 2026-10-02T20:14:06Z
