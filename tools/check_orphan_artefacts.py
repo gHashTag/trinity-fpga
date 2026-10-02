@@ -111,29 +111,47 @@ def declared_drawn(a):
 # close one and a marker quoted after it, still inside the block, declared.
 # Tabs are expanded before matching, so a tab counts as four columns.
 FENCE = re.compile(r" {0,3}(`{3,}|~{3,})(.*)$")
+# Those column counts hold only at the top level of the document. Inside a list
+# item a fence is indented relative to the item, so "    ```" under "- see:"
+# opens a fence that a top-level reading calls an indented line; a list item, a
+# blockquote or an HTML block can also swallow a ``` line that a top-level
+# reading takes for a fence and so put the tracker out of step with the
+# renderer. Rather than parse every container, stop at the first line that may
+# open one: a marker after it does not declare. A marker belongs at the top of
+# its README, before any list, quote or HTML, where nothing can be quoting it.
+# (A one-line <!-- comment --> ends where it starts, so it is allowed.)
+CONTAINER = re.compile(r" {0,3}(>|[-+*](?: |$)|[0-9]{1,9}[.)](?: |$)|<)")
+ONE_LINE_COMMENT = re.compile(r" {0,3}<!--.*-->")
 def declares(text):
     fence = None
     # A UTF-8 byte-order mark is not part of the first line; left in, it made a
-    # marker on line one fail to equal DRAWN_MARK.
-    #
+    # marker on line one fail to equal DRAWN_MARK. Only one is a mark: a second
+    # is text, as it is to the renderer.
+    if text.startswith("\ufeff"):
+        text = text[1:]
     # Markdown ends a line only at \n, \r\n or \r. str.splitlines() also breaks
     # at \f, \v, \x1c-\x1e, \x85, U+2028 and U+2029, so a ``` glued to quoted
     # text by one of those closed the fence here while the renderer kept it
     # open, and a marker quoted below it declared the directory.
-    text = text.lstrip("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
     for line in text.split("\n"):
         line = line.expandtabs(4)
         m = FENCE.match(line)
         if m and m.group(1)[0] == "`" and "`" in m.group(2):
             m = None  # ```x``` is inline code, not a fence
         if fence:
+            # A closing fence may be followed only by spaces (tabs are spaces
+            # by now). str.strip() also eats \f, \v, NBSP, U+2028 and the like,
+            # which let "```\xa0" close the fence here but not in the renderer.
             if (m and m.group(1)[0] == fence[0] and len(m.group(1)) >= len(fence)
-                    and not m.group(2).strip()):
+                    and not m.group(2).strip(" ")):
                 fence = None
         elif m:
             fence = m.group(1)
-        elif len(line) - len(line.lstrip()) < 4 and line.strip() == DRAWN_MARK:
+        elif len(line) - len(line.lstrip(" ")) < 4 and line.strip(" ") == DRAWN_MARK:
             return True
+        elif CONTAINER.match(line) and not ONE_LINE_COMMENT.match(line):
+            return False
     return False
 
 unproduced = [a for a in arts if not produced(a)]
