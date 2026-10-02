@@ -160,7 +160,10 @@ for d in DOCS:
             continue
         # Sibling repositories are part of this work and a document may name a
         # path in one of them; that is a real reference, not a dangling one.
-        SIBLINGS = ["t27", "trinity-s3ai", "claim-audit-lab", "tri-net", "trios-mesh"]
+        # One list: this used to be a hand copy of SIBLING_NAMES that had lost
+        # zig-golden-float, so a path in that repo was "rot" here and a known
+        # sibling to materialise_siblings.sh.
+        SIBLINGS = SIBLING_NAMES
         cands = [ROOT / p, ROOT / "tools" / p, ROOT / "conformance" / p,
                  ROOT.parent / p, d.parent / p] + [ROOT.parent / sib / p for sib in SIBLINGS]
         # a bare filename may live anywhere in the tree
@@ -176,8 +179,8 @@ for d in DOCS:
                 continue
         _sib = next((sib for sib in SIBLINGS if exists(ROOT.parent / sib / p)), None)
         if _sib and not exists(ROOT / p):
-            # Same rule as the bare-name case: excluded, but named. CI has no
-            # siblings, so it cannot tell this from rot -- which is why the
+            # Same rule as the bare-name case: excluded, but named. A checkout
+            # without the siblings cannot tell this from rot -- which is why the
             # exclusion belongs in a file rather than in the checker's silence.
             cross.append(f"{str(d.relative_to(ROOT))}: names `{p}` -> resolves in {_sib}")
             continue
@@ -187,6 +190,14 @@ for d in DOCS:
 # Ratchet: the tree carries historical documents naming files removed long ago.
 # Blocking on that debt would make the gate useless; fail only on NEW ones.
 import sys as _s
+# Refused before ANYTHING is written: placed beside the baseline writes, it
+# still let --update-lists rewrite the published lists first, so "exit 2,
+# nothing written" held only for the two flags alone.
+if "--prune-baseline" in _s.argv and "--update-baseline" in _s.argv:
+    # Together, the rewrite would win and silently undo the prune's promise.
+    print("refusing --prune-baseline with --update-baseline: the update can add "
+          "entries, the prune exists so that nothing is added -- pick one")
+    _s.exit(2)
 BASE = pathlib.Path(__file__).with_name("doc_refs_baseline.txt")
 print(f"documents scanned: {checked}   path references: {refs}")
 print(f"excluded as cross-repo (target exists in a sibling): {len(cross)}")
