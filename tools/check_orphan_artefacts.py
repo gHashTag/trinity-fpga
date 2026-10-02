@@ -78,8 +78,20 @@ def declared_drawn(a):
     if a.suffix not in DRAWN_KINDS: return False
     if a.parent not in _drawn_dirs:
         rd = a.parent / "README.md"
-        _drawn_dirs[a.parent] = rd.exists() and DRAWN_MARK in rd.read_text(errors="ignore")
+        _drawn_dirs[a.parent] = rd.exists() and declares(rd.read_text(errors="ignore"))
     return _drawn_dirs[a.parent]
+
+# The marker DECLARES only on a line of its own, outside a code fence. Matched
+# anywhere in the text, a README that merely quoted it -- to explain the gate,
+# or inline in a sentence -- exempted its whole directory without meaning to.
+def declares(text):
+    fenced = False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+        elif not fenced and line.strip() == DRAWN_MARK:
+            return True
+    return False
 
 unproduced = [a for a in arts if not produced(a)]
 drawn = [a for a in unproduced if declared_drawn(a)]
