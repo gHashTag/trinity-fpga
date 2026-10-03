@@ -836,7 +836,141 @@ pub fn runTaskClaimCommand(allocator: std.mem.Allocator, args: []const []const u
 /// Stress Test Command - Run stress tests
 /// Usage: tri stress-test [options]
 pub fn runStressTestCommand(args: []const []const u8) !void {
-    _ = args;
-    std.debug.print("{s}⚠️  stress-test: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
-    return error.NotImplemented;
+    // `--health` is a real, in-process measurement: four deterministic probes
+    // against the same brain components the stress harness exercises, scored
+    // by pass count. The `Score:` line is what brain-ci's health gate keys
+    // on (#768) -- the gate starts blocking the moment this prints one, so
+    // the number must be a measurement, never a constant. Every other stress
+    // mode remains an honest NotImplemented.
+    var health_mode = false;
+    for (args) |arg| {
+        if (std.mem.eql(u8, arg, "--health")) health_mode = true;
+    }
+    if (!health_mode) {
+        std.debug.print("{s}⚠️  stress-test: TODO - not implemented yet{s}\n", .{ YELLOW, RESET });
+        return error.NotImplemented;
+    }
+
+    const allocator = std.heap.page_allocator;
+    std.debug.print("=== TRI STRESS — HEALTH CHECK ===\n", .{});
+
+    var passed: usize = 0;
+    const total: usize = 4;
+
+    // Probe 1: basal ganglia claim -> complete -> reclaim by another agent.
+    // Mirrors the stress harness's cycle test at 1/10 scale.
+    {
+        var registry = basal_ganglia.Registry.init(allocator);
+        defer registry.deinit();
+        var ok = true;
+        var i: usize = 0;
+        while (i < 100) : (i += 1) {
+            const task_id = std.fmt.allocPrint(allocator, "health-cycle-{d}", .{i}) catch {
+                ok = false;
+                break;
+            };
+            defer allocator.free(task_id);
+            const claimed1 = registry.claim(allocator, task_id, "agent-alpha", 60000) catch false;
+            const completed = registry.complete(task_id, "agent-alpha");
+            const claimed2 = registry.claim(allocator, task_id, "agent-beta", 60000) catch false;
+            if (!(claimed1 and completed and claimed2)) {
+                ok = false;
+                break;
+            }
+            _ = registry.complete(task_id, "agent-beta");
+        }
+        if (ok and registry.count() == 100) {
+            passed += 1;
+            std.debug.print("probe 1/4 basal-ganglia claim/complete/reclaim .... OK\n", .{});
+        } else {
+            std.debug.print("probe 1/4 basal-ganglia claim/complete/reclaim .... FAIL (count={d})\n", .{registry.count()});
+        }
+    }
+
+    // Probe 2: basal ganglia heartbeat refresh across live claims.
+    {
+        var registry = basal_ganglia.Registry.init(allocator);
+        defer registry.deinit();
+        var claimed_n: usize = 0;
+        var i: usize = 0;
+        while (i < 100) : (i += 1) {
+            const task_id = std.fmt.allocPrint(allocator, "health-hb-{d}", .{i}) catch break;
+            defer allocator.free(task_id);
+            if (registry.claim(allocator, task_id, "agent-heartbeat", 60000) catch false) claimed_n += 1;
+        }
+        var refreshed: usize = 0;
+        i = 0;
+        while (i < 100) : (i += 1) {
+            const task_id = std.fmt.allocPrint(allocator, "health-hb-{d}", .{i}) catch break;
+            defer allocator.free(task_id);
+            if (registry.heartbeat(task_id, "agent-heartbeat")) refreshed += 1;
+        }
+        if (claimed_n == 100 and refreshed == 100) {
+            passed += 1;
+            std.debug.print("probe 2/4 basal-ganglia heartbeat refresh .......... OK\n", .{});
+        } else {
+            std.debug.print("probe 2/4 basal-ganglia heartbeat refresh .......... FAIL (claimed={d} refreshed={d})\n", .{ claimed_n, refreshed });
+        }
+    }
+
+    // Probe 3: reticular formation event flood -- the buffer must trim to its
+    // cap instead of growing without bound.
+    {
+        var bus = reticular_formation.EventBus.init(allocator);
+        defer bus.deinit();
+        var published: usize = 0;
+        var i: usize = 0;
+        while (i < 20_000) : (i += 1) {
+            const task_id = std.fmt.allocPrint(allocator, "health-flood-{d}", .{i}) catch break;
+            defer allocator.free(task_id);
+            bus.publish(.task_claimed, .{ .task_claimed = .{ .task_id = task_id, .agent_id = "agent-flood" } }) catch break;
+            published += 1;
+        }
+        const stats = bus.getStats();
+        if (published == 20_000 and stats.published == 20_000 and stats.buffered <= 10_000) {
+            passed += 1;
+            std.debug.print("probe 3/4 reticular-formation event flood ......... OK\n", .{});
+        } else {
+            std.debug.print("probe 3/4 reticular-formation event flood ......... FAIL (published={d} buffered={d})\n", .{ stats.published, stats.buffered });
+        }
+    }
+
+    // Probe 4: reticular formation publish/poll round trip. Events sharing a
+    // millisecond with a page boundary are skipped by design, so the harness
+    // itself treats >=80% recovered as a pass.
+    {
+        var bus = reticular_formation.EventBus.init(allocator);
+        defer bus.deinit();
+        var i: usize = 0;
+        while (i < 300) : (i += 1) {
+            const task_id = std.fmt.allocPrint(allocator, "health-poll-{d}", .{i}) catch break;
+            defer allocator.free(task_id);
+            bus.publish(.task_claimed, .{ .task_claimed = .{ .task_id = task_id, .agent_id = "agent-poll" } }) catch break;
+            tri_time.sleep(1 * std.time.ns_per_ms);
+        }
+        var total_polled: usize = 0;
+        var offset: i64 = 0;
+        while (true) {
+            const events = bus.poll(offset, allocator, 100) catch break;
+            defer allocator.free(events);
+            if (events.len == 0) break;
+            total_polled += events.len;
+            offset = events[events.len - 1].timestamp;
+        }
+        if (total_polled >= 240) {
+            passed += 1;
+            std.debug.print("probe 4/4 reticular-formation publish/poll ........ OK\n", .{});
+        } else {
+            std.debug.print("probe 4/4 reticular-formation publish/poll ........ FAIL (polled={d}/300)\n", .{total_polled});
+        }
+    }
+
+    const score: f64 = @as(f64, @floatFromInt(passed)) * 100.0 / @as(f64, @floatFromInt(total));
+    std.debug.print("Score: {d:.1}\n", .{score});
+    if (score >= 80.0) {
+        std.debug.print("Status: HEALTHY\n", .{});
+        return;
+    }
+    std.debug.print("Status: UNHEALTHY\n", .{});
+    return error.StressHealthFailed;
 }
