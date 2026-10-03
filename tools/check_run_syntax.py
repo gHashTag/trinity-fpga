@@ -34,6 +34,7 @@ Exit 0 clean, 1 a step that does not parse, 2 a workflow this could not read
 from __future__ import annotations
 
 import pathlib
+import re
 import shlex
 import shutil
 import subprocess
@@ -95,13 +96,25 @@ def bash_major() -> int:
     return _BASH_MAJOR
 
 
+MATRIX_LOOKUP = re.compile(r"\s*matrix\.[a-z0-9_-]+\s*")
+
+
 def may_run_on_macos(job: dict) -> bool:
-    """Written down as a macOS runner, or picked at run time from a matrix or
-    an expression that names one."""
+    """Written down as a macOS runner, or picked at run time by anything but a
+    plain `matrix.<key>` over a matrix written out in full without macos:
+    `inputs.os`, `vars.RUNNER`, a `fromJSON(...)` matrix may all be macOS
+    (review 5 of #839)."""
     runs_on = str(job.get("runs-on", "")).lower()
     if "macos" in runs_on:
         return True
-    return "${{" in runs_on and "macos" in str(job.get("strategy", "")).lower()
+    if "${{" not in runs_on:
+        return False
+    strategy = job.get("strategy")
+    matrix = strategy.get("matrix") if isinstance(strategy, dict) else None
+    if not isinstance(matrix, dict) or "${{" in str(matrix) or "macos" in str(matrix).lower():
+        return True
+    exprs = re.findall(r"\$\{\{(.*?)\}\}", runs_on, re.S)
+    return not all(MATRIX_LOOKUP.fullmatch(e) for e in exprs)
 
 
 def shell_of(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
