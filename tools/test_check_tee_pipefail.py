@@ -35,6 +35,7 @@ WF = ".github/workflows/t.yml"
 A = "    steps:\n      - name: safe\n        shell: bash\n        run: echo ok\n"
 
 # (name, expected rc, workflow text, baseline entries)
+R = "    steps:\n      - run: |\n"
 CASES: list[tuple[str, int, str, list[str]]] = [
     ("default shell", 1, H + "    steps:\n      - name: Synth\n        run: |\n"
      "          yosys -p x 2>&1 | tee y.log\n", []),
@@ -47,7 +48,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          yosys | tee y.log\n", []),
     ("pipefail turned off", 1, H + "    steps:\n      - run: |\n          set -o pipefail\n"
      "          set +o pipefail\n          yosys | tee y.log\n", []),
-    ("PIPESTATUS on the next line", 0, H + "    steps:\n      - run: |\n"
+    ("PIPESTATUS is no exemption: nothing says it is acted on (#828)", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log\n          exit ${PIPESTATUS[0]}\n", []),
     ("|| true", 0, H + "    steps:\n      - run: |\n          yosys | tee y.log || true\n", []),
     ("echo", 0, H + "    steps:\n      - run: |\n"
@@ -175,10 +176,59 @@ CASES: list[tuple[str, int, str, list[str]]] = [
     ("| nice -n 5 tee", 1, H + "    steps:\n      - run: yosys | nice -n 5 tee y.log\n", []),
     ("PIPESTATUS only in a comment", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log\n          true  # PIPESTATUS\n", []),
-    ("PIPESTATUS in double quotes counts", 0, H + "    steps:\n      - run: |\n"
+    ("PIPESTATUS in double quotes is no exemption either", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log\n          exit \"${PIPESTATUS[0]}\"\n", []),
     ("tee only in a comment", 0, H + "    steps:\n      - run: |\n"
      "          make  # then | tee it\n", []),
+    # Review 4 of #828: each of these ended green under bash -e with `false`
+    # on the left of the pipe, and the checker said safe.
+    ("comment ending in a backslash does not swallow the next line", 1, H + R +
+     "          # old flag \\\n          yosys | tee y.log\n", []),
+    ("comment ending in a pipe does not swallow the next line", 1, H + R +
+     "          make  # pipe it |\n          yosys | tee y.log\n", []),
+    ("set in a multi-line subshell does not count", 1, H + R +
+     "          (\n            set -o pipefail\n          )\n          yosys | tee y.log\n", []),
+    ("set in a multi-line $( ) does not count", 1, H + R +
+     "          x=$(\n            set -o pipefail\n          )\n          yosys | tee y.log\n", []),
+    ("set in a <<\\EOF heredoc does not count", 1, H + R +
+     "          cat > x.sh <<\\EOF\n          set -euo pipefail\n          EOF\n"
+     "          yosys | tee y.log\n", []),
+    ("PIPESTATUS after another pipeline", 1, H + R +
+     "          yosys | tee y.log; ls | wc -l; exit ${PIPESTATUS[0]}\n", []),
+    ("shell: +o pipefail turns it off", 1, H + "    steps:\n      - shell: bash -e +o pipefail {0}\n"
+     "        run: yosys | tee y.log\n", []),
+    ("shell: pipefail after {0} is an argument", 1, H + "    steps:\n"
+     "      - shell: 'bash -e {0} pipefail'\n        run: yosys | tee y.log\n", []),
+    ("shell: bash -o pipefail {0} has it", 0, H + "    steps:\n      - shell: bash -o pipefail {0}\n"
+     "        run: yosys | tee y.log\n", []),
+    ("set under && does not count", 1, H + R +
+     "          false && set -o pipefail\n          yosys | tee y.log\n", []),
+    ("set in the background does not count", 1, H + R +
+     "          set -o pipefail &\n          yosys | tee y.log\n", []),
+    ("set -- sets arguments", 1, H + R +
+     "          set -- -o pipefail\n          yosys | tee y.log\n", []),
+    ("set as an echo argument", 1, H + R +
+     "          echo do set -o pipefail\n          yosys | tee y.log\n", []),
+    ("set after a first command is not read", 1, H + R +
+     "          cd /tmp\n          set -o pipefail\n          yosys | tee y.log\n", []),
+    ("set lines first, comments between", 0, H + R +
+     "          # strict\n          set -e\n\n          set -o pipefail\n          yosys | tee y.log\n", []),
+    ("set pipefail; command on the first line", 0, H + R +
+     "          set -o pipefail; yosys | tee y.log\n          make | tee m.log\n", []),
+    ("+o pipefail anywhere voids the leading set", 1, H + R +
+     "          set -eo pipefail\n          f() { set +o pipefail; }\n          yosys | tee y.log\n", []),
+    ("+o pipefail voids the shell too", 1, H + PF + R +
+     "          set +o pipefail\n          yosys | tee y.log\n", []),
+    ("tee in bash -c runs without the outer pipefail", 1, H + "    steps:\n      - shell: bash\n"
+     "        run: bash -c \"yosys | tee y.log\"\n", []),
+    ("tee before a set on the first line is not covered by it", 1, H + R +
+     "          set -e; yosys | tee y.log\n          set -o pipefail\n", []),
+    ("a command named setx is not set", 1, H + R +
+     "          setx -o pipefail\n          yosys | tee y.log\n", []),
+    ("a string with a backslash line keeps the next pipe's continuation", 1, H + R +
+     "          echo \"a \\\n          b\"\n          yosys |\n            tee y.log\n", []),
+    ("a backslash ending a line inside a string is not a continuation", 0, H + R +
+     "          set -o pipefail\n          echo \"a \\\n          b\"; yosys | tee y.log\n", []),
 ]
 
 
