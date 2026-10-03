@@ -296,10 +296,31 @@ tri x7-audit / x7-fasm / x7-writer / x7-mutate / x7-part
 
 # Z: the t27.ai blog
 tri blog list | check | lint | preview <slug> | build | live <slug>
-tri cast record CAST -- "cmd" ...       # real commands in a pty, saved as an asciicast
-tri cast render CAST GIF                # the GIF for GitHub; long silences shortened and labelled in-frame
-tri cast publish CAST ID --title … --desc … --at S   # t27.ai/term/ID/: player, X/OG preview card, gallery
+tri blog gif record | render           # older spelling of tri cast record / render
+
+# Z: tri cast, recorded terminal sessions (~/skills/trinity-blog/scripts/termgif.py)
+tri cast record CAST [--title T] [--cwd DIR] -- "cmd 1" "cmd 2" ...
+                                        # real commands in a pty, saved as asciicast v2: real bytes, real times
+tri cast scrub CAST [OUT]               # home dir → ~, noted in the header; the only edit a cast may carry
+tri cast check CAST                     # every exit code 0, no home path, no trinet key; exit 1 otherwise
+tri cast render CAST GIF [--max-idle S] [--colors N] [--title T] [--plain]
+                                        # the GIF for GitHub; silences > S shown as S and labelled in-frame
+tri cast card CAST PNG [--title T] [--desc D] [--url U] [--at S] [--rows N]
+                                        # 1200x630 X / Open Graph card, the terminal at real second S
+tri cast html CAST [--out F]            # the final screen as a self-contained <pre> (reduced motion)
+tri cast add SLUG CAST [--repo DIR] [--title T] [--caption C]
+                                        # check, copy under public/blog/SLUG/, print the post Block
+tri cast publish CAST ID [--repo DIR] [--title T] [--desc D] [--at S] [--rows N] [--post URL]
+                                        # t27.ai/term/ID/: session.cast, card.png, meta.json, index.html;
+                                        # rebuilds the gallery, archives to ~/skills/_state/casts/ID/
+tri cast gallery [--repo DIR]           # rebuild t27.ai/term/ from every term/*/meta.json
 ```
+
+The usual order is record → scrub → check → render (GitHub) → publish (site
+and X). The web player, `apps/website/public/term/player.js`, carries its own
+share row (X, Reddit, Telegram, copy link, `.cast`) and a follow row (r/t27ai,
+Telegram, X, GitHub) on every embed and share page. Posting stays the owner's
+own click.
 
 **Every post — t27.ai blog, GitHub PR / issue / release note, X — that reports
 what a command did carries the recording of that command.** How, and the
