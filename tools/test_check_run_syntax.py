@@ -175,6 +175,20 @@ DIRECT = [
          {}, {"runs-on": "${{ matrix.os }}${{ inputs.suffix }}",
               "strategy": {"matrix": {"os": ["ubuntu-latest"]}}}, {})),
      "cannot tell"),
+    ("a label glued from two matrix keys may spell macos, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of(
+         {}, {"runs-on": "${{ matrix.family }}${{ matrix.ver }}",
+              "strategy": {"matrix": {"include": [{"family": "mac", "ver": "os-14"},
+                                                  {"family": "ubuntu", "ver": "-latest"}]}}}, {})),
+     "cannot tell"),
+    ("a matrix value glued to literal text may spell macos, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of(
+         {}, {"runs-on": "mac${{ matrix.v }}", "strategy": {"matrix": {"v": ["os-14"]}}}, {})),
+     "cannot tell"),
+    ("one whole matrix lookup with spaces around it is still bash, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of(
+         {}, {"runs-on": "  ${{matrix.os}} ", "strategy": {"matrix": {"os": ["ubuntu-24.04"]}}}, {})),
+     ("bash",)),
     ("a pwsh step on macos is skipped, not cannot tell",
      lambda: with_bash(5, lambda: crs.shell_of({"shell": "pwsh"}, {"runs-on": "macos-15"}, {})), ()),
 ]
