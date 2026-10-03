@@ -96,14 +96,15 @@ def bash_major() -> int:
     return _BASH_MAJOR
 
 
-MATRIX_LOOKUP = re.compile(r"\s*matrix\.[a-z0-9_-]+\s*")
+WHOLE_MATRIX_LOOKUP = re.compile(r"\$\{\{\s*matrix\.[a-z0-9_-]+\s*\}\}")
 
 
 def may_run_on_macos(job: dict) -> bool:
     """Written down as a macOS runner, or picked at run time by anything but a
     plain `matrix.<key>` over a matrix written out in full without macos:
     `inputs.os`, `vars.RUNNER`, a `fromJSON(...)` matrix may all be macOS
-    (review 5 of #839)."""
+    (review 5 of #839), and so may `${{ matrix.a }}${{ matrix.b }}` or
+    `mac${{ matrix.v }}` (review 6)."""
     runs_on = str(job.get("runs-on", "")).lower()
     if "macos" in runs_on:
         return True
@@ -113,8 +114,9 @@ def may_run_on_macos(job: dict) -> bool:
     matrix = strategy.get("matrix") if isinstance(strategy, dict) else None
     if not isinstance(matrix, dict) or "${{" in str(matrix) or "macos" in str(matrix).lower():
         return True
-    exprs = re.findall(r"\$\{\{(.*?)\}\}", runs_on, re.S)
-    return not all(MATRIX_LOOKUP.fullmatch(e) for e in exprs)
+    # The lookup must be the whole label: pieces glued together, or glued to
+    # literal text, can spell macos though no single value does (review 6).
+    return not WHOLE_MATRIX_LOOKUP.fullmatch(runs_on.strip())
 
 
 def shell_of(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
