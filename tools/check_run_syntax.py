@@ -88,6 +88,10 @@ def shell_of(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
     else:
         runs_on = str(job.get("runs-on", ""))
         if "windows" in runs_on.lower():
+            if "${{" in runs_on:
+                # `runs-on: ${{ inputs.win && 'windows-latest' || 'ubuntu-latest' }}`
+                # picks the runner at run time; the bash leg would still parse it.
+                raise CannotTell(f"runs-on: {runs_on!r} picks windows at run time")
             return ()
         # In a `container:` job the default is bash only if the image has it,
         # and `sh` otherwise -- so the script has to parse in both.

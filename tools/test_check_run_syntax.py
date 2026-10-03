@@ -70,6 +70,14 @@ CASES: list[tuple[str, int, str]] = [
      "    strategy:\n      matrix:\n        shell: [bash]\n"
      "    defaults:\n      run:\n        shell: ${{ matrix.shell }} {0}\n"
      "    steps:\n      - run: 'echo \"x'\n"),
+    ("a runs-on expression that may pick windows = cannot tell", 2,
+     "on: workflow_dispatch\njobs:\n  j:\n"
+     "    runs-on: ${{ inputs.win && 'windows-latest' || 'ubuntu-latest' }}\n"
+     "    steps:\n      - run: 'echo \"x'\n"),
+    ("runs-on: ${{ matrix.os }} without windows is bash", 1,
+     "on: push\njobs:\n  j:\n    strategy:\n      matrix:\n        os: [ubuntu-latest]\n"
+     "    runs-on: ${{ matrix.os }}\n"
+     "    steps:\n      - run: 'echo \"x'\n"),
     ("defaults that is not a mapping = cannot tell", 2, H +
      "    defaults: bash\n    steps:\n      - run: echo ok\n"),
     ("shell: env python {0} is skipped", 0, H +
