@@ -58,6 +58,20 @@ CASES: list[tuple[str, int, str]] = [
      "    steps:\n      - shell: env -i PATH=/bin sh {0}\n        run: cat <(echo x)\n"),
     ("shell: env -S 'sh -e {0}' is sh", 1, H +
      "    steps:\n      - shell: env -S 'sh -e {0}'\n        run: cat <(echo x)\n"),
+    ("shell: env -S'sh -e {0}' (attached) is sh", 1, H +
+     "    steps:\n      - shell: env -S'sh -e {0}'\n        run: cat <(echo x)\n"),
+    ("shell: env --split-string='sh -e {0}' is sh", 1, H +
+     "    steps:\n      - shell: env --split-string='sh -e {0}'\n        run: cat <(echo x)\n"),
+    ("shell: env -u FOO sh {0} is sh, not FOO", 1, H +
+     "    steps:\n      - shell: env -u FOO sh {0}\n        run: cat <(echo x)\n"),
+    ("shell: env -C /tmp sh {0} is sh, not /tmp", 1, H +
+     "    steps:\n      - shell: env -C /tmp sh {0}\n        run: cat <(echo x)\n"),
+    ("an expression shell = cannot tell", 2, H +
+     "    strategy:\n      matrix:\n        shell: [bash]\n"
+     "    defaults:\n      run:\n        shell: ${{ matrix.shell }} {0}\n"
+     "    steps:\n      - run: 'echo \"x'\n"),
+    ("defaults that is not a mapping = cannot tell", 2, H +
+     "    defaults: bash\n    steps:\n      - run: echo ok\n"),
     ("shell: env python {0} is skipped", 0, H +
      "    steps:\n      - shell: env python {0}\n        run: print('it doesn')\n"),
     ("a shell line with an open quote = cannot tell", 2, H +
@@ -87,6 +101,18 @@ for name, path in (("main's build-matrix.yml before the fix", ".github/workflows
     CASES.append((name, 1, git_show(f"e6eac090:{path}") or ""))
 
 
+# Direct answers where no script can tell the interpreters apart portably:
+# on macOS /bin/sh is bash, so "must parse in bash too" cannot be shown by a
+# script that only bash rejects. (name, got, want)
+DIRECT = [
+    ("a container job is checked with bash and sh",
+     lambda: crs.shell_of({}, {"container": "alpine:3"}, {}), ("bash", "sh")),
+    ("a plain job is checked with bash", lambda: crs.shell_of({}, {}, {}), ("bash",)),
+    ("WINDOWS-latest is skipped (case-blind)",
+     lambda: crs.shell_of({}, {"runs-on": "WINDOWS-latest"}, {}), ()),
+]
+
+
 def run_case(text: str) -> tuple[int, str]:
     with tempfile.TemporaryDirectory() as d:
         root = pathlib.Path(d)
@@ -109,8 +135,16 @@ def main() -> int:
             print(f"ok   {name} (rc {rc})")
         else:
             print(f"BAD  {name}: want rc {want}, got {rc}\n{out}")
-    print(f"\n{good} of {len(CASES)} cases as expected")
-    return 0 if good == len(CASES) else 1
+    for name, got, want in DIRECT:
+        g = got()
+        if g == want:
+            good += 1
+            print(f"ok   {name} ({g})")
+        else:
+            print(f"BAD  {name}: want {want}, got {g}")
+    total = len(CASES) + len(DIRECT)
+    print(f"\n{good} of {total} cases as expected")
+    return 0 if good == total else 1
 
 
 if __name__ == "__main__":

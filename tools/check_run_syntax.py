@@ -48,6 +48,10 @@ class CannotTell(Exception):
 POSIX = ("bash", "sh")
 
 
+# env options whose argument is the next word (GNU and BSD env).
+TAKES_ARG = ("-u", "--unset", "-C", "--chdir", "-P")
+
+
 def command_word(words: list[str]) -> str:
     """The program a `shell:` line runs, looking through `env [-opts] [VAR=x]`."""
     while words:
@@ -56,7 +60,9 @@ def command_word(words: list[str]) -> str:
             return word
         while words and (words[0].startswith("-") or "=" in words[0]):
             opt, words = words[0], words[1:]
-            if opt in ("-S", "--split-string") and words:
+            if opt in TAKES_ARG and words:
+                words = words[1:]  # `-u NAME`, `-C DIR`: the next word is not the program
+            elif opt in ("-S", "--split-string") and words:
                 words = shlex.split(words[0]) + words[1:]
             elif opt.startswith("-S") and len(opt) > 2:
                 words = shlex.split(opt[2:]) + words
@@ -65,9 +71,17 @@ def command_word(words: list[str]) -> str:
     return ""
 
 
+def run_defaults(node: dict, where: str) -> dict:
+    """`defaults.run` of a job or a workflow; a shape GitHub would reject is cannot-tell."""
+    d = node.get("defaults") or {}
+    if not isinstance(d, dict) or not isinstance(d.get("run") or {}, dict):
+        raise CannotTell(f"{where} defaults is not a mapping with a run mapping")
+    return d.get("run") or {}
+
+
 def shell_of(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
     """The interpreters to check the script with; empty to skip it."""
-    for node in (step, (job.get("defaults") or {}).get("run") or {}, (wf.get("defaults") or {}).get("run") or {}):
+    for node in (step, run_defaults(job, "job"), run_defaults(wf, "workflow")):
         sh = node.get("shell")
         if sh:
             break
@@ -78,6 +92,10 @@ def shell_of(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
         # In a `container:` job the default is bash only if the image has it,
         # and `sh` otherwise -- so the script has to parse in both.
         return POSIX if job.get("container") else ("bash",)
+    if "${{" in str(sh):
+        # `shell: ${{ matrix.shell }} {0}` is legal, and which shell it is is
+        # only known at run time. Skipping it would pass a broken script.
+        raise CannotTell(f"shell: {sh!r} is an expression")
     try:
         name = pathlib.PurePosixPath(command_word(shlex.split(str(sh)))).name
     except ValueError as e:
