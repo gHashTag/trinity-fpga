@@ -325,6 +325,10 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "    steps:\n      - run: |\n          bash -Ec 'false | tee x.log'\n", []),
     ("bash -euxvfc is a shell of its own", 1, H + PF +
      "    steps:\n      - run: |\n          bash -euxvfc 'false | tee x.log'\n", []),
+    ("\"$SHELL\" -Ec is a shell of its own: the cluster alone, no shell word", 1, H + PF +
+     "    steps:\n      - run: |\n          \"$SHELL\" -Ec 'false | tee x.log'\n", []),
+    ("\"$SHELL\" <(...) is a shell of its own: the substitution alone", 1, H + PF +
+     "    steps:\n      - run: |\n          \"$SHELL\" <(echo 'false | tee x.log')\n", []),
     ("ssh is a shell of its own", 1, H + PF +
      "    steps:\n      - run: |\n          ssh host 'make | tee x.log'\n", []),
     ("a .sh file name is no shell word", 0, H + PF +
