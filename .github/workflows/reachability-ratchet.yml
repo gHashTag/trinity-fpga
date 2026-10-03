@@ -61,7 +61,7 @@ jobs:
       - name: Count what nothing reaches
         id: count
         run: |
-          # tee-pipefail: the heredoc feeds python, not a shell; the tee is in this one, under the job's pipefail
+          # tee-pipefail: the heredoc feeds python, not a shell; the tee is in this one, under the workflow's pipefail
           python3 - <<'PY' | tee reach.txt
           import os, re, glob, json
 
