@@ -10,7 +10,10 @@ indented 4, a PIPESTATUS read far below the pipe, and a `|` that ends a line
 with tee on the next. The second review's three -- a quoted job key, a step
 not opened by `- key:`, an aliased steps list -- each walked an unsafe step
 past a hand-read YAML layout; the checker now reads YAML with PyYAML, and they
-stay planted here.
+stay planted here. Review 5 found the bare echo/printf exemption false
+(`echo "${X:?}"`, `printf '%d' abc` fail), a heredoc body read as code, `$'`
+quotes, shopt, `+o "pipe"fail` and tee behind `timeout` or a group: each one
+was green behind tee in real `bash -e`, and is planted here.
 
 Exit 0 when every case gives its expected code, 1 otherwise.
 """
@@ -51,7 +54,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
     ("PIPESTATUS is no exemption: nothing says it is acted on (#828)", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log\n          exit ${PIPESTATUS[0]}\n", []),
     ("|| true", 0, H + "    steps:\n      - run: |\n          yosys | tee y.log || true\n", []),
-    ("echo", 0, H + "    steps:\n      - run: |\n"
+    ("echo is no exemption: it fails too", 1, H + "    steps:\n      - run: |\n"
      "          echo \"n=$(nproc | wc -l)\" | tee -a $GITHUB_STEP_SUMMARY\n", []),
     ("continue-on-error", 0, H + "    steps:\n      - name: soft\n"
      "        continue-on-error: true\n        run: |\n          yosys | tee y.log\n", []),
@@ -120,7 +123,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          | tee y.log\"\n", []),
     ("matrix axis named run is not a step", 0, H + "    strategy:\n      matrix:\n"
      "        run: [1, 2, 3]\n    steps:\n      - run: echo ok\n", []),
-    ("echo after ; is still a bare echo", 0, H + "    steps:\n      - run: |\n"
+    ("echo after ; is no exemption", 1, H + "    steps:\n      - run: |\n"
      "          cd x; echo hi | tee -a log\n", []),
     ("make before ; and || true on another pipeline", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log; ls || true\n", []),
@@ -168,7 +171,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          (yosys; echo done) | tee y.log\n", []),
     ("echo closing a brace group", 1, H + "    steps:\n      - run: |\n"
      "          { yosys; echo done; } | tee y.log\n", []),
-    ("echo of ${VAR} is still a bare echo", 0, H + "    steps:\n      - run: |\n"
+    ("echo of ${VAR} is no exemption", 1, H + "    steps:\n      - run: |\n"
      "          echo \"${GITHUB_SHA}\" | tee -a sha.txt\n", []),
     ("| stdbuf -oL tee", 1, H + "    steps:\n      - run: yosys | stdbuf -oL tee y.log\n", []),
     ("| command tee", 1, H + "    steps:\n      - run: yosys | command tee y.log\n", []),
@@ -229,6 +232,38 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          echo \"a \\\n          b\"\n          yosys |\n            tee y.log\n", []),
     ("a backslash ending a line inside a string is not a continuation", 0, H + R +
      "          set -o pipefail\n          echo \"a \\\n          b\"; yosys | tee y.log\n", []),
+    # Review 5 of #828: each was "0 new" before, and exits 0 in `bash -e`
+    # with tee and 1 without.
+    ("an apostrophe in a heredoc body does not hide the next pipe", 1, H + R +
+     "          cat > n.txt <<EOF\n          it's data\n          EOF\n"
+     "          false |\n            tee x.log\n", []),
+    ("two heredocs on a line: both bodies skipped as code", 1, H + R +
+     "          cat <<A <<B\n          it's\n          A\n          it's\n          B\n"
+     "          false |\n            tee x.log\n", []),
+    ("echo ${X:?} fails, so it is no exemption", 1, H + R +
+     "          echo \"${X:?}\" | tee -a out\n", []),
+    ("printf of a bad number fails, so it is no exemption", 1, H + R +
+     "          printf '%d' abc | tee -a out\n", []),
+    ("a ; inside a quoted argument is not the left command's start", 1, H + R +
+     "          false \"x; echo off\" | tee y\n", []),
+    ("shopt -uo pipefail voids shell: bash", 1, H + "    steps:\n      - shell: bash\n"
+     "        run: |\n          shopt -uo pipefail\n          false | tee x\n", []),
+    ("shopt -uo pipefail voids a leading set", 1, H + R +
+     "          set -eo pipefail\n          shopt -uo pipefail\n          false | tee x\n", []),
+    ("set +o with a quoted option name voids a leading set", 1, H + R +
+     "          set -eo pipefail\n          set +o \"pipe\"fail\n          false | tee x\n", []),
+    ("$'it\\'s' does not end its string early", 1, H + "    steps:\n      - shell: bash\n"
+     "        run: |\n          echo $'it\\'s'; bash -c 'false | tee x'\n", []),
+    ('tee in quotes: | "tee"', 1, H + R + "          false | \"tee\" x\n", []),
+    ("tee under timeout", 1, H + R + "          false | timeout 60 tee x\n", []),
+    ("tee in a brace group", 1, H + R + "          false | { tee x; }\n", []),
+    ("tee under sudo -u user", 1, H + R + "          false | sudo -u ci tee x\n", []),
+    ("GitHub's own expansion of shell: bash has pipefail", 0, H + "    steps:\n"
+     "      - shell: bash --noprofile --norc -eo pipefail {0}\n"
+     "        run: yosys | tee y.log\n", []),
+    ("a word that ends in tee is not tee", 0, H + R + "          make | grep -c committee\n", []),
+    ("+o in a word is not an option", 0, H + "    steps:\n      - shell: bash\n"
+     "        run: |\n          echo c++o\n          yosys | tee y.log\n", []),
 ]
 
 

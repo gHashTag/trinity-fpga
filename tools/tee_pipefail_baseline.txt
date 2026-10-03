@@ -72,6 +72,7 @@
 .github/workflows/fpga-hslm-bitstream.yml :: bitstream :: nextpnr place and route
 .github/workflows/gf-adder-ref-tb.yml :: ref-tb :: Run parameterized ref-TB for all GF widths
 .github/workflows/jit-forensics.yml :: forensics :: Read the core
+.github/workflows/openxc7-build-timing.yml :: measure :: Record the machine
 .github/workflows/openxc7-vs-vivado-openxc7-half.yml :: measure :: Record the machine
 .github/workflows/tnf-cost-sweep.yml :: pnr :: Place and route the Q1/Q2 arms
 .github/workflows/tnf-cost-sweep.yml :: refit :: Refit the cost model and report against the published one
