@@ -77,12 +77,16 @@ jobs:
           DESIGN="${{ steps.design.outputs.design }}"
           FMT="${{ steps.design.outputs.format }}"
           TYPE="${{ steps.design.outputs.type }}"
+          # The synthesis flags below read OP inside the container; it was never
+          # passed, so every MUL design was built without -nodsp.
+          OP="${{ github.event.inputs.op }}"
           echo "Building $DESIGN..."
           docker run --rm \
             -v "$(pwd):/github" \
             -e DESIGN="$DESIGN" \
             -e FMT="$FMT" \
             -e TYPE="$TYPE" \
+            -e OP="$OP" \
             regymm/openxc7:latest bash -c '
             cd /github/fpga/openxc7-synth
             # Source files differ by type:
@@ -95,7 +99,9 @@ jobs:
             fi
             # Synthesis flags: -abc9 is REQUIRED (Wave 3: removal = 70%→19% regression)
             # -nocarry: carry chains break routing on this part
-            # -nodsp: for MUL designs (DSP48E1 partial in openXC7); ADD doesn't need it
+            # -nodsp: for MUL designs (DSP48E1 partial in openXC7); ADD does not need it.
+            # No apostrophes in this script: it is one single-quoted bash -c argument,
+            # and a contraction in a comment here closed it (tools/check_run_syntax.py).
             if [ "$OP" = "mul" ]; then
               SYNTH_FLAGS="-flatten -abc9 -nocarry -nodsp -arch xc7"
             else

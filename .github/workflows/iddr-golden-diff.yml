@@ -166,7 +166,7 @@ jobs:
           say ""
           # Compare feature NAMES with tile coordinates stripped: placement
           # differs between the tools and is not the question.
-          norm() { grep -oE '\''ILOGIC_Y[01]\.[A-Za-z0-9_.]+'\'' "$1" | sort -u; }
+          norm() { grep -oE 'ILOGIC_Y[01]\.[A-Za-z0-9_.]+' "$1" | sort -u; }
           norm ref/A_direct.fasm > oxc/viv.names
           norm oxc/a.fasm        > oxc/oxc.names
           say '```diff'

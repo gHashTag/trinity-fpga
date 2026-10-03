@@ -1,0 +1,34 @@
+name: Run syntax gate
+
+# Every `run:` script must parse. Two workflow_dispatch-only steps failed on
+# parse each time they were dispatched, and nothing said so until one was run:
+# an apostrophe in a comment inside `bash -c '...'` (build-matrix) and a `'\''`
+# used outside single quotes (iddr-golden-diff). See tools/check_run_syntax.py.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'tools/check_run_syntax.py'
+      - 'tools/test_check_run_syntax.py'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'tools/check_run_syntax.py'
+      - 'tools/test_check_run_syntax.py'
+  workflow_dispatch:
+
+jobs:
+  run-syntax:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # the self-test reads main's two broken files at e6eac090
+          submodules: false
+      - name: The gate rejects what it exists to catch
+        run: python3 tools/test_check_run_syntax.py
+      - name: Every run script parses
+        run: python3 tools/check_run_syntax.py
