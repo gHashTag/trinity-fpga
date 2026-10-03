@@ -2127,11 +2127,18 @@ pub fn build(b: *std.Build) void {
                 .{ .name = "tri_train", .module = tri_train_mod },
                 // src/trinity_workspace.zig has always been here; the module was
                 // simply never declared, so server.zig's one call to
-                // cdToRepoRootSilent() had nothing to resolve against.
+                // cdToRepoRootSilent() had nothing to resolve against. The
+                // shims are declared on it too (#767): the file's 0.16 calls
+                // (currentPath/setCurrentPath/accessAbsolute) take an Io, and
+                // tri_io.get() is the sanctioned way to obtain one here.
                 .{ .name = "trinity_workspace", .module = b.createModule(.{
                     .root_source_file = b.path("src/trinity_workspace.zig"),
                     .target = target,
                     .optimize = optimize,
+                    .imports = &.{
+                        .{ .name = "tri_io", .module = tri_io_mod },
+                        .{ .name = "tri_env", .module = tri_env_mod },
+                    },
                 }) },
             },
         }),
