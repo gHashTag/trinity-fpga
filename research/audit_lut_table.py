@@ -33,6 +33,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from concurrent.futures import ThreadPoolExecutor
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -101,18 +102,33 @@ def main():
     print()
     print("%-6s %-3s %-3s %8s %8s %7s   %8s %8s %7s"
           % ("fmt", "E", "M", "ADD pub", "ADD here", "delta", "MUL pub", "MUL here", "delta"))
-    worst = 0
-    for name, E, M, ap, mp in PUBLISHED:
-        a = synth("gf_adder_param", E, M)
-        m = synth("gf_mul_param", E, M)
-        da = "" if a is None else "%+d" % (a - ap)
-        dm = "" if m is None else "%+d" % (m - mp)
-        if a is not None:
-            worst = max(worst, abs(a - ap))
-        if m is not None:
-            worst = max(worst, abs(m - mp))
-        print("%-6s %-3d %-3d %8d %8s %7s   %8d %8s %7s"
-              % (name, E, M, ap, a, da, mp, m, dm))
+    # The twelve synth runs are independent -- one wrapper per (format, op),
+    # each in its own temp directory -- so the only reason the audit took
+    # 65.6 s alone and >120 s on the 2-core runner was that it ran them one
+    # after another (#736). The pool is sized to the machine; the ratchet's
+    # wall-clock timeout measures the script's serial part, and this keeps
+    # every individual measurement identical while dividing the waiting.
+    workers = min(os.cpu_count() or 1, 2 * len(PUBLISHED))
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        adds = {name: ex.submit(synth, "gf_adder_param", E, M)
+                for name, E, M, _ap, _mp in PUBLISHED}
+        muls = {name: ex.submit(synth, "gf_mul_param", E, M)
+                for name, E, M, _ap, _mp in PUBLISHED}
+        # ex.map preserves input order; dict futures keyed by format name keep
+        # the printed table byte-identical to the serial version whatever
+        # order the runs finish in.
+        worst = 0
+        for name, E, M, ap, mp in PUBLISHED:
+            a = adds[name].result()
+            m = muls[name].result()
+            da = "" if a is None else "%+d" % (a - ap)
+            dm = "" if m is None else "%+d" % (m - mp)
+            if a is not None:
+                worst = max(worst, abs(a - ap))
+            if m is not None:
+                worst = max(worst, abs(m - mp))
+            print("%-6s %-3d %-3d %8d %8s %7s   %8d %8s %7s"
+                  % (name, E, M, ap, a, da, mp, m, dm))
     print()
     print("largest single deviation : %d LUTs" % worst)
     print()
