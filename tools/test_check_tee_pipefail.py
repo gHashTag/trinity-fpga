@@ -53,7 +53,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          set +o pipefail\n          yosys | tee y.log\n", []),
     ("PIPESTATUS is no exemption: nothing says it is acted on (#828)", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log\n          exit ${PIPESTATUS[0]}\n", []),
-    ("|| true", 0, H + "    steps:\n      - run: |\n          yosys | tee y.log || true\n", []),
+    ("|| true is no exemption: the gate does not read intent", 1, H + "    steps:\n      - run: |\n          yosys | tee y.log || true\n", []),
     ("echo is no exemption: it fails too", 1, H + "    steps:\n      - run: |\n"
      "          echo \"n=$(nproc | wc -l)\" | tee -a $GITHUB_STEP_SUMMARY\n", []),
     ("continue-on-error", 0, H + "    steps:\n      - name: soft\n"
@@ -102,7 +102,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
     # -- the rest of the review's list --
     ("set pipefail AFTER the pipe on the same line", 1, H + "    steps:\n      - run: |\n"
      "          set -x; yosys | tee y.log; set -o pipefail\n", []),
-    ("set pipefail BEFORE the pipe on the same line", 0, H + "    steps:\n      - run: |\n"
+    ("set pipefail; and a pipe on one line: not a plain set line", 1, H + "    steps:\n      - run: |\n"
      "          set -o pipefail; yosys | tee y.log\n", []),
     ("| sudo tee", 1, H + "    steps:\n      - run: yosys | sudo -E tee /var/y.log\n", []),
     ("| /usr/bin/tee", 1, H + "    steps:\n      - run: yosys | /usr/bin/tee y.log\n", []),
@@ -153,7 +153,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
     ("set in a heredoc body is not this shell's", 1, H + "    steps:\n      - run: |\n"
      "          cat > x.sh <<'EOF'\n          set -euo pipefail\n          EOF\n"
      "          yosys | tee y.log\n", []),
-    ("heredoc script with its own pipefail passes", 0, H + "    steps:\n      - run: |\n"
+    ("a heredoc script is not read: its own pipefail does not count", 1, H + "    steps:\n      - run: |\n"
      "          bash <<'EOF'\n          set -o pipefail\n          yosys | tee y.log\n"
      "          EOF\n", []),
     ("tee in a heredoc script without pipefail", 1, H + "    steps:\n      - run: |\n"
@@ -181,7 +181,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          yosys | tee y.log\n          true  # PIPESTATUS\n", []),
     ("PIPESTATUS in double quotes is no exemption either", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log\n          exit \"${PIPESTATUS[0]}\"\n", []),
-    ("tee only in a comment", 0, H + "    steps:\n      - run: |\n"
+    ("a trailing comment is read as code: tee there flags", 1, H + "    steps:\n      - run: |\n"
      "          make  # then | tee it\n", []),
     # Review 4 of #828: each of these ended green under bash -e with `false`
     # on the left of the pipe, and the checker said safe.
@@ -216,7 +216,7 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          cd /tmp\n          set -o pipefail\n          yosys | tee y.log\n", []),
     ("set lines first, comments between", 0, H + R +
      "          # strict\n          set -e\n\n          set -o pipefail\n          yosys | tee y.log\n", []),
-    ("set pipefail; command on the first line", 0, H + R +
+    ("set pipefail; command on the first line: not a plain set line", 1, H + R +
      "          set -o pipefail; yosys | tee y.log\n          make | tee m.log\n", []),
     ("+o pipefail anywhere voids the leading set", 1, H + R +
      "          set -eo pipefail\n          f() { set +o pipefail; }\n          yosys | tee y.log\n", []),
@@ -266,6 +266,47 @@ CASES: list[tuple[str, int, str, list[str]]] = [
     ("a word that ends in tee is not tee", 0, H + R + "          make | grep -c committee\n", []),
     ("+o in a word is not an option", 0, H + "    steps:\n      - shell: bash\n"
      "        run: |\n          echo c++o\n          yosys | tee y.log\n", []),
+    # Review 6 of #828: the bash model missed each of these; the raw-text
+    # rules do not model quotes, heredocs or expansions, so none can hide.
+    ("nested quotes in \"$(...)\" do not hide the pipe", 1, H + R +
+     "          echo \"$(echo \"a\")\" ; yosys | tee y.log\n", []),
+    ("a heredoc on a line ending in |", 1, H + R +
+     "          cat <<'EOF' |\n          x\n          EOF\n          tee y.log\n", []),
+    ("# inside ${...} is no comment", 1, H + R +
+     "          echo ${X#*/} | tee y.log\n", []),
+    ("set +\"o\" pipefail voids shell: bash", 1, H + "    steps:\n      - shell: bash\n"
+     "        run: |\n          set +\"o\" pipefail\n          yosys | tee y.log\n", []),
+    ("${PFOPT:-+o} voids shell: bash", 1, H + "    steps:\n      - shell: bash\n"
+     "        run: |\n          set ${PFOPT:-+o} pipefail\n          yosys | tee y.log\n", []),
+    ("| { with tee on the next line", 1, H + R +
+     "          yosys | {\n            tee y.log\n          }\n", []),
+    ("set lines then a comment then a set: the run holds", 0, H + R +
+     "          set -e\n          # and\n          set -o pipefail\n          yosys | tee y.log\n", []),
+    ("a command between ends the set run", 1, H + R +
+     "          set -e\n          cd x\n          set -o pipefail\n          yosys | tee y.log\n", []),
+    # A shell of its own under pipefail: flagged, unless the step names why
+    # its tee is not in it.
+    ("pipefail + bash -c + tee: flagged", 1, H + PF +
+     "    steps:\n      - run: |\n          bash -c 'yosys | tee y.log'\n", []),
+    ("pipefail + heredoc + tee: flagged", 1, H + PF +
+     "    steps:\n      - run: |\n          python3 - <<'PY' | tee y.txt\n          print(1)\n          PY\n", []),
+    ("pipefail + heredoc + tee + a reasoned marker", 0, H + PF +
+     "    steps:\n      - run: |\n          # tee-pipefail: the heredoc feeds python\n"
+     "          python3 - <<'PY' | tee y.txt\n          print(1)\n          PY\n", []),
+    ("a marker with no reason is no marker", 1, H + PF +
+     "    steps:\n      - run: |\n          # tee-pipefail:\n          bash -c 'yosys | tee y.log'\n", []),
+    ("a marker does not lend pipefail to a step without it", 1, H +
+     "    steps:\n      - run: |\n          # tee-pipefail: trust me\n          yosys | tee y.log\n", []),
+    ("-Dci is no shell of its own", 0, H + PF +
+     "    steps:\n      - run: zig build -Dci=true 2>&1 | tee b.log\n", []),
+    ("grep -c in a comment is no shell of its own", 0, H + PF +
+     "    steps:\n      - run: |\n          # count with grep -c later\n          make | tee m.log\n", []),
+    ("grep -c in code is a shell as far as the gate knows", 1, H + PF +
+     "    steps:\n      - run: |\n          make | tee m.log\n          grep -c ok m.log\n", []),
+    ("g++ -o is no +o", 0, H + PF +
+     "    steps:\n      - run: |\n          g++ -o a a.cc 2>&1 | tee c.log\n", []),
+    ("|| between tee and make is no pipe", 0, H +
+     "    steps:\n      - run: make || tee fail.log\n", []),
 ]
 
 
