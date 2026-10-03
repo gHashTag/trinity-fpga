@@ -76,8 +76,8 @@ CASES: list[tuple[str, int, str, list[str]]] = [
     ("two jobs, second unsafe", 1, H + PF + "    steps:\n      - run: yosys | tee y.log\n"
      "  k:\n    runs-on: ubuntu-latest\n    steps:\n      - run: nextpnr | tee p.log\n", []),
     ("|| is not a pipe", 0, H + "    steps:\n      - run: |\n          yosys || tee y.log\n", []),
-    ("commented pipe", 0, H + "    steps:\n      - run: |\n          # yosys | tee y.log\n"
-     "          true\n", []),
+    ("commented pipe is read: a # line may be inside a quoted string (review 7)", 1,
+     H + "    steps:\n      - run: |\n          # yosys | tee y.log\n          true\n", []),
     ("no jobs = cannot tell", 2, "on: push\n", []),
     ("known entry", 0, H + "    steps:\n      - name: Synth\n        run: yosys | tee y.log\n",
      [f"{WF} :: j :: Synth"]),
@@ -299,14 +299,50 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "    steps:\n      - run: |\n          # tee-pipefail: trust me\n          yosys | tee y.log\n", []),
     ("-Dci is no shell of its own", 0, H + PF +
      "    steps:\n      - run: zig build -Dci=true 2>&1 | tee b.log\n", []),
-    ("grep -c in a comment is no shell of its own", 0, H + PF +
+    ("grep -c in a comment is read like code (review 7)", 1, H + PF +
      "    steps:\n      - run: |\n          # count with grep -c later\n          make | tee m.log\n", []),
+    ("... and the opening marker answers it", 0, H + PF +
+     "    steps:\n      - run: |\n          # tee-pipefail: grep -c is only in a comment\n"
+     "          # count with grep -c later\n          make | tee m.log\n", []),
     ("grep -c in code is a shell as far as the gate knows", 1, H + PF +
      "    steps:\n      - run: |\n          make | tee m.log\n          grep -c ok m.log\n", []),
     ("g++ -o is no +o", 0, H + PF +
      "    steps:\n      - run: |\n          g++ -o a a.cc 2>&1 | tee c.log\n", []),
     ("|| between tee and make is no pipe", 0, H +
      "    steps:\n      - run: make || tee fail.log\n", []),
+    # -- review 7 of #828 --
+    ("# line inside a group's string hides no tee", 1, H +
+     "    steps:\n      - run: |\n          { false; echo \"\n          ## Totals\"; } | tee -a x.log\n", []),
+    ("# line inside python -c hides no tee", 1, H +
+     "    steps:\n      - run: |\n          python3 -c \"\n          # end\" 2>&1 | tee report.log\n", []),
+    ("# line inside a string under pipefail hides no shell", 1, H + PF +
+     "    steps:\n      - run: |\n          make | tee m.log\n          x=\"\n          # \"; bash -c 'false | tee x.log'\n", []),
+    ("piped into bash is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          echo 'false | tee x.log' | bash\n", []),
+    ("bash <(...) is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          bash <(echo 'false | tee x.log')\n", []),
+    ("bash -Ec is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          bash -Ec 'false | tee x.log'\n", []),
+    ("bash -euxvfc is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          bash -euxvfc 'false | tee x.log'\n", []),
+    ("ssh is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          ssh host 'make | tee x.log'\n", []),
+    ("a .sh file name is no shell word", 0, H + PF +
+     "    steps:\n      - run: |\n          ./build.sh 2>&1 | tee b.log\n", []),
+    ("set +$O pipefail turns it off", 1, H + PF +
+     "    steps:\n      - run: |\n          O=o\n          set +$O pipefail\n          false | tee x.log\n", []),
+    ("set +e alone leaves pipefail on", 0, H + PF +
+     "    steps:\n      - run: |\n          set +e\n          make | tee x.log\n", []),
+    ("a marker inside a heredoc does not count", 1, H + PF +
+     "    steps:\n      - run: |\n          python3 - <<'PY' | tee r.txt\n"
+     "          # tee-pipefail: says the heredoc\n          print(1)\n          PY\n", []),
+    ("a marker after the first command does not count", 1, H + PF +
+     "    steps:\n      - run: |\n          make | tee m.log\n"
+     "          # tee-pipefail: too late\n          bash -c 'false | tee x.log'\n", []),
+    ("a marker after the leading set run counts", 0, H +
+     "    steps:\n      - run: |\n          set -euo pipefail\n"
+     "          # tee-pipefail: the heredoc feeds python\n          python3 - <<'PY' | tee r.txt\n"
+     "          print(1)\n          PY\n", []),
 ]
 
 

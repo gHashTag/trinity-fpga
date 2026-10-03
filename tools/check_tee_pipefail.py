@@ -22,24 +22,31 @@ the gate reads text and narrows what it accepts:
 
   - a step is a candidate when one of its lines has the WORD tee (`| tee`,
     `| /usr/bin/tee`, `| "tee"`, `| sudo tee`, `| {` with tee on the next
-    line) and one has a pipe, `|` or `|&` but not `||`. A line whose first
-    non-blank character is `#` is a comment wherever it stands -- in this
-    shell, in a `bash -c '...'`, in a heredoc -- and is not read for either;
+    line) and one has a pipe, `|` or `|&` but not `||`. Every line is read,
+    a `#` line too: inside a quoted string over several lines
+    (`python3 -c "`, `{ false; echo "`) it is data, not a comment, and its
+    `| tee` runs (review 7);
   - a candidate passes when it has pipefail and no shell of its own. Pipefail
     is its effective shell's (`shell: bash`, or a `shell:` / job / workflow
     `defaults` that says pipefail), or the script's leading run of plain
     `set` lines (`set -euo pipefail`; blank lines and comments between them
     allowed; each line nothing but a set of options -- no `;`, no comment,
     no quotes). Anything that may turn it off voids both, wherever it stands:
-    a `+` word with an `o` in it (`set +o pipefail`, `set +"o" pipefail`,
-    `set ${PFOPT:-+o} pipefail`) and any `shopt`;
-  - a shell of its own is a lower-case option cluster with c (`bash -c`,
-    `sh -ec`, `docker run ... bash -c`) or a heredoc or here-string (`<<`):
-    a tee there runs without the step's pipefail. A step under pipefail whose
-    tee is not in that shell says so in its script, with the reason, on a
-    comment line of its own:
+    a `+` word with an `o` or a `$` in it (`set +o pipefail`,
+    `set +"o" pipefail`, `set ${PFOPT:-+o} pipefail`, `set +$O pipefail`)
+    and any `shopt`;
+  - a shell of its own is an option cluster with c of any case and length
+    (`bash -c`, `sh -ec`, `bash -Ec`, `bash -euxvfc`, `docker run ... bash
+    -c`), a heredoc or here-string (`<<`), a process substitution (`<(`,
+    `>(`), or a shell named as a word anywhere (`| bash`, `bash x.sh`,
+    `ssh host '...'`; `x.sh` and `shell` are no such word): a tee there runs
+    without the step's pipefail. A step under pipefail whose tee is not in
+    that shell says so, with the reason, in the comment block its script
+    opens with (blank, `#` and plain `set` lines, before anything else --
+    where nothing is quoted yet, so the marker is not a line of a heredoc):
         # tee-pipefail: the heredoc feeds python, not a shell
-    A step without pipefail has no such way out;
+    The marker is a claim about every shell of its own in the step, and a
+    reviewer reads it as one. A step without pipefail has no such way out;
   - the step says `continue-on-error: true`, so its verdict does not count.
 
 No left-hand command and no `|| true` is an exemption: the gate does not read
@@ -56,13 +63,14 @@ Known limits. On the conservative side, all fixed by `shell: bash` or a
 leading `set -o pipefail` line: `echo hi | tee x` is flagged, and so is a tee
 that is only an argument (`| grep tee`) or only data, a `#` comment after
 code, `set -o pipefail; make | tee x` on one line, and any `shopt` or
-`+...o` word. Under pipefail, a `grep -c` or a `<<` that feeds python flags
-until the step's marker names why. Misses, which text cannot close: a tee
+`+...o` or `+...$` word. Under pipefail, a `grep -c`, a `<<` that feeds
+python, or a comment that names bash flags until the step's marker names why. Misses, which text cannot close: a tee
 named through a variable (`| $TEE x`) or an alias; a script given by an
 expression (`run: ${{ matrix.cmd }}`); pipefail turned off by a sourced file,
-an `eval`, a Makefile or a script file the step runs; a pipe into tee on
-another machine (`ssh host 'make | tee x'` reads as a shell of its own only
-if a `-c` or `<<` is in sight); a marker whose reason is wrong; and
+an `eval`, a Makefile or a script file the step runs; a shell started by
+another language's code (`perl -e 'system("make | tee x")'`, `node -e`)
+under a name the shell-word rule does not know; a marker whose reason is
+wrong, or true of one shell of its own and not of another; and
 `continue-on-error: true` taken as "this verdict does not count" without
 checking that no later step reads `steps.<id>.outcome`.
 
@@ -111,20 +119,32 @@ PIPE = re.compile(r"(?<!\|)\|(?!\|)")
 # The word tee anywhere: `| tee`, `| /usr/bin/tee`, `| "tee"`, `| sudo tee`,
 # `| {` and tee on the next line.
 TEE = re.compile(r"(?<![\w.-])tee(?![\w.-])")
-# Anything that may turn pipefail off: a `+` word with an `o` in it
+# Anything that may turn pipefail off: a `+` word with an `o` or a `$` in it
 # (`set +o pipefail`, `set +eo pipefail`, `set +"o" pipefail`,
-# `set ${PFOPT:-+o} pipefail`), and any shopt. A `+` glued to a word or to
+# `set ${PFOPT:-+o} pipefail`, `set +$O pipefail`), and any shopt. A `+` glued to a word or to
 # another `+` is no option (`c++o`, `g++ -o`).
-PF_OFF = re.compile(r"(?<![\w+])\+\S*o|\bshopt\b")
-# A shell of its own, which the step's pipefail does not reach: a short
-# lower-case option cluster with c (`bash -c`, `sh -ec`, `bash -xc`,
-# `docker run ... bash -c`), or a heredoc or here-string (`bash <<EOF`).
-OWN_SHELL = re.compile(r"(?<![\w-])-[a-z]{0,4}c[a-z]{0,4}(?![\w=-])|<<")
+PF_OFF = re.compile(r"(?<![\w+])\+\S*[o$]|\bshopt\b")
+# A shell of its own, which the step's pipefail does not reach: an option
+# cluster with c, any case and length (`bash -c`, `sh -ec`, `bash -Ec`,
+# `bash -euxvfc`, `docker run ... bash -c`), a heredoc or here-string
+# (`bash <<EOF`), a process substitution (`bash <(echo ...)`), or a shell
+# named as a word anywhere (`echo '...' | bash`, `ssh host '...'`,
+# `bash tools/x.sh`). Review 7 of #828 walked four of these past the old
+# lower-case, at-most-four-letters pattern.
+OWN_SHELL = re.compile(
+    r"(?<![\w-])-[A-Za-z]*c[A-Za-z]*(?![\w=-])"
+    r"|<<|[<>]\("
+    r"|(?<![\w./-])(?:ba|da|z|k|a|s)?sh(?![\w.-])"
+)
 # A step under pipefail that has a shell of its own AND a tee, where the tee
 # is not in it, says so in its script, with the reason:
 #   # tee-pipefail: the tee is in this shell, the heredoc only feeds python
-# It silences that one rule. A step without pipefail has no such way out.
-ACCEPTED = re.compile(r"^[ \t]*#[ \t]*tee-pipefail:[ \t]*\S", re.M)
+# It silences that one rule, and only in the comment block the script opens
+# with (with the leading `set` lines): there nothing is quoted yet, so the
+# marker is this shell's, not a line of a heredoc or of a `bash -c '...'`.
+# It is a claim about EVERY shell of its own in the step. A step without
+# pipefail has no such way out.
+ACCEPTED = re.compile(r"#[ \t]*tee-pipefail:[ \t]*\S")
 
 
 def set_options(words: list[str]) -> bool | None:
@@ -189,21 +209,34 @@ def unsafe_pipes(script: list[str], pipefail: bool) -> list[int]:
     hide a failure behind it; empty when it cannot. pipefail: the step's
     shell turns it on."""
     text = "\n".join(script)
-    # A line that starts with # is a comment wherever it stands: in this
-    # shell, in a `bash -c '...'` running over several lines, in a heredoc fed
-    # to bash. Its tee, `|` or `-c` runs nowhere. PF_OFF still reads it: a
-    # stray match there costs a flag, never a miss.
-    code = [ln if not ln.lstrip().startswith("#") else "" for ln in script]
-    tees = [k for k, ln in enumerate(code) if TEE.search(ln)]
-    if not tees or not any(PIPE.search(ln) for ln in code):
+    # Every line is read, `#` or not: inside a quoted string that runs over
+    # several lines (`python3 -c "`, `{ false; echo "`) a line starting with
+    # # is data, and its `| tee` runs. Review 7 of #828 hid a pipe that way.
+    tees = [k for k, ln in enumerate(script) if TEE.search(ln)]
+    if not tees or not any(PIPE.search(ln) for ln in script):
         return []
     if PF_OFF.search(text):
         pipefail = False  # turned off somewhere: neither the shell nor a set counts
     else:
         pipefail = pipefail or leading_pipefail(script)
-    if pipefail and (not any(OWN_SHELL.search(ln) for ln in code) or ACCEPTED.search(text)):
+    if pipefail and (not any(OWN_SHELL.search(ln) for ln in script) or marked(script)):
         return []
     return tees
+
+
+def marked(script: list[str]) -> bool:
+    """Is there a `# tee-pipefail: <reason>` line in the block the script
+    opens with: blank lines, comment lines and plain `set` lines, up to the
+    first other line? Nothing can be quoted there yet."""
+    for ln in script:
+        line = ln.strip()
+        if not line or re.fullmatch(r"set(?:\s+(?:[-+][A-Za-z]+|[a-z]+))+", line):
+            continue
+        if not line.startswith("#"):
+            return False
+        if ACCEPTED.match(line):
+            return True
+    return False
 
 
 class CannotTell(Exception):

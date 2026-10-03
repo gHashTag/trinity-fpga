@@ -94,6 +94,7 @@ jobs:
       - name: Every gate must reject its own defect
         run: |
           set -o pipefail
+          # tee-pipefail: no shell of its own; `bash -e` below is only named in a comment
           # The step shell is `bash -e`: with pipefail a failing harness would end
           # the step on the pipe itself, before the message below. `|| rc=$?`
           # keeps the verdict and lets the step say WHY it is red (planted: a
