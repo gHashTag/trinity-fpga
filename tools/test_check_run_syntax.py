@@ -78,6 +78,15 @@ CASES: list[tuple[str, int, str]] = [
      "on: push\njobs:\n  j:\n    strategy:\n      matrix:\n        os: [ubuntu-latest]\n"
      "    runs-on: ${{ matrix.os }}\n"
      "    steps:\n      - run: 'echo \"x'\n"),
+    ("a matrix that may pick macOS: bash 3.2 there", 1 if crs.bash_major() == 3 else 2,
+     "on: push\njobs:\n  j:\n    strategy:\n      matrix:\n"
+     "        os: [ubuntu-latest, macos-latest]\n"
+     "    runs-on: ${{ matrix.os }}\n"
+     "    steps:\n      - run: make 2>&1 |& tee build.log\n"),
+    ("a matrix value naming macos with a fixed ubuntu runner is plain bash", 0,
+     "on: push\njobs:\n  j:\n    strategy:\n      matrix:\n        target: [macos-cross]\n"
+     "    runs-on: ubuntu-latest\n"
+     "    steps:\n      - run: echo ok\n"),
     ("defaults that is not a mapping = cannot tell", 2, H +
      "    defaults: bash\n    steps:\n      - run: echo ok\n"),
     ("shell: env python {0} is skipped", 0, H +
@@ -109,6 +118,17 @@ for name, path in (("main's build-matrix.yml before the fix", ".github/workflows
     CASES.append((name, 1, git_show(f"e6eac090:{path}") or ""))
 
 
+def with_bash(major, f):
+    """f() with the gate believing its bash is `major`; CannotTell -> a word."""
+    saved, crs._BASH_MAJOR = crs._BASH_MAJOR, major
+    try:
+        return f()
+    except crs.CannotTell:
+        return "cannot tell"
+    finally:
+        crs._BASH_MAJOR = saved
+
+
 # Direct answers where no script can tell the interpreters apart portably:
 # on macOS /bin/sh is bash, so "must parse in bash too" cannot be shown by a
 # script that only bash rejects. (name, got, want)
@@ -118,6 +138,15 @@ DIRECT = [
     ("a plain job is checked with bash", lambda: crs.shell_of({}, {}, {}), ("bash",)),
     ("WINDOWS-latest is skipped (case-blind)",
      lambda: crs.shell_of({}, {"runs-on": "WINDOWS-latest"}, {}), ()),
+    ("macOS-14 under a bash 5 gate is cannot tell",
+     lambda: with_bash(5, lambda: crs.shell_of({}, {"runs-on": "macOS-14"}, {})), "cannot tell"),
+    ("macos-14 under a bash 3 gate is checked with bash",
+     lambda: with_bash(3, lambda: crs.shell_of({}, {"runs-on": "macos-14"}, {})), ("bash",)),
+    ("macos with shell: sh under a bash 5 gate is cannot tell",
+     lambda: with_bash(5, lambda: crs.shell_of({"shell": "sh {0}"}, {"runs-on": "macos-15"}, {})),
+     "cannot tell"),
+    ("a pwsh step on macos is skipped, not cannot tell",
+     lambda: with_bash(5, lambda: crs.shell_of({"shell": "pwsh"}, {"runs-on": "macos-15"}, {})), ()),
 ]
 
 

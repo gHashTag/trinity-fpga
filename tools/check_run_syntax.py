@@ -20,6 +20,8 @@ a POSIX one -- the step's `shell:`, else the job's, else the workflow's
 and in a `container:` job, bash only if the image has it and `sh` if not -- so
 there the script is checked with BOTH, and a bashism needs an explicit
 `shell: bash`. `${{ ... }}` is left as written: `bash -n` does not expand it.
+A job that may run on macOS (bash 3.2 for `bash` and `sh`) is "cannot tell"
+unless the gate's own bash is 3.x.
 A `shell:` line that does not split into words is "cannot tell".
 
 `bash -n` reads syntax only: a script inside a quoted `bash -c '...'` argument
@@ -79,8 +81,41 @@ def run_defaults(node: dict, where: str) -> dict:
     return d.get("run") or {}
 
 
+_BASH_MAJOR: int | None = None
+
+
+def bash_major() -> int:
+    """The major version of the bash this gate parses with; 0 if unreadable."""
+    global _BASH_MAJOR
+    if _BASH_MAJOR is None:
+        r = subprocess.run(["bash", "-c", "echo ${BASH_VERSINFO[0]}"],
+                           capture_output=True, text=True)
+        v = r.stdout.strip()
+        _BASH_MAJOR = int(v) if v.isdigit() else 0
+    return _BASH_MAJOR
+
+
+def may_run_on_macos(job: dict) -> bool:
+    """Written down as a macOS runner, or picked at run time from a matrix or
+    an expression that names one."""
+    runs_on = str(job.get("runs-on", "")).lower()
+    if "macos" in runs_on:
+        return True
+    return "${{" in runs_on and "macos" in str(job.get("strategy", "")).lower()
+
+
 def shell_of(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
     """The interpreters to check the script with; empty to skip it."""
+    shells = _shell_named(step, job, wf)
+    # GitHub's macOS images run Bash 3.2 for `bash` and for `sh` alike; bash 4
+    # syntax (`|&`, `;&`) parses here under bash 5 and fails there on every
+    # run (review 4 of #839). Only a bash 3 gate can answer for that leg.
+    if shells and may_run_on_macos(job) and bash_major() != 3:
+        raise CannotTell(f"a macOS runner parses with bash 3.2; this gate has bash {bash_major()}")
+    return shells
+
+
+def _shell_named(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
     for node in (step, run_defaults(job, "job"), run_defaults(wf, "workflow")):
         sh = node.get("shell")
         if sh:
