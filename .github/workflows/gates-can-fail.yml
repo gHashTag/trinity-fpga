@@ -83,6 +83,14 @@ jobs:
       - name: Materialise the sibling namespaces
         run: bash tools/materialise_siblings.sh
 
+      # check_tee_pipefail reads workflows with PyYAML; without it the gate
+      # says "cannot tell" on a clean tree, and could not be shown to fail.
+      - name: PyYAML for check_tee_pipefail
+        run: |
+          python3 -c 'import yaml' 2>/dev/null \
+            || python3 -m pip install --quiet --user --break-system-packages pyyaml
+          python3 -c 'import yaml; print("PyYAML", yaml.__version__)'
+
       - name: Every gate must reject its own defect
         run: |
           set -o pipefail

@@ -7,7 +7,10 @@ writes one workflow into an empty tree with its own baseline and runs the
 checker's main() on it. Cases 25-28 are the four misses the review of #828
 reproduced: a second same-named step behind the first one's entry, a job body
 indented 4, a PIPESTATUS read far below the pipe, and a `|` that ends a line
-with tee on the next.
+with tee on the next. The second review's three -- a quoted job key, a step
+not opened by `- key:`, an aliased steps list -- each walked an unsafe step
+past a hand-read YAML layout; the checker now reads YAML with PyYAML, and they
+stay planted here.
 
 Exit 0 when every case gives its expected code, 1 otherwise.
 """
@@ -28,6 +31,8 @@ spec.loader.exec_module(ctp)
 H = "on: push\njobs:\n  j:\n    runs-on: ubuntu-latest\n"
 PF = "    defaults:\n      run:\n        shell: bash -eo pipefail {0}\n"
 WF = ".github/workflows/t.yml"
+# A first step that passes, for a second one to be misread into.
+A = "    steps:\n      - name: safe\n        shell: bash\n        run: echo ok\n"
 
 # (name, expected rc, workflow text, baseline entries)
 CASES: list[tuple[str, int, str, list[str]]] = [
@@ -103,9 +108,10 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      [f"{WF} :: j :: Synth"]),
     ("comment after `shell: bash` keeps pipefail", 0, H + "    steps:\n"
      "      - shell: bash  # the default\n        run: yosys | tee y.log\n", []),
-    ("quoted run key = cannot tell", 2, H + "    steps:\n      - \"run\": yosys | tee y.log\n", []),
-    ("flow-style step = cannot tell", 2, H + "    steps:\n      - { run: yosys | tee y.log }\n", []),
-    ("merge key = cannot tell", 2, "on: push\njobs:\n  j:\n    <<: *base\n"
+    ("quoted run key is a run key", 1, H + "    steps:\n      - \"run\": yosys | tee y.log\n", []),
+    ("flow-style step is a step", 1, H + "    steps:\n      - { run: yosys | tee y.log }\n", []),
+    ("merge key = cannot tell", 2, "on: push\nbase: &b\n  defaults:\n    run:\n"
+     "      shell: bash\njobs:\n  j:\n    <<: *b\n    runs-on: ubuntu-latest\n"
      "    steps:\n      - run: yosys | tee y.log\n", []),
     ("multi-line plain run", 1, H + "    steps:\n      - run: yosys -p x 2>&1\n"
      "          | tee y.log\n", []),
@@ -117,6 +123,62 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "          cd x; echo hi | tee -a log\n", []),
     ("make before ; and || true on another pipeline", 1, H + "    steps:\n      - run: |\n"
      "          yosys | tee y.log; ls || true\n", []),
+    # -- the three of the second review: a hand-read layout walked them past --
+    ("quoted job key is a job, not the job above's steps", 1,
+     "on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Yosys\n"
+     "        run: yosys a | tee a.log\n  \"evil\":\n    runs-on: ubuntu-latest\n    steps:\n"
+     "      - name: Yosys\n        run: yosys b | tee b.log\n",
+     [f"{WF} :: a :: Yosys"]),
+    ("anchored step `- &s` is its own step", 1, H + A + "      - &s\n"
+     "        run: yosys | tee y.log\n", []),
+    ("bare `-` step is its own step", 1, H + A + "      -\n        run: yosys | tee y.log\n", []),
+    ("`- # comment` step is its own step", 1, H + A + "      - # slow\n"
+     "        run: yosys | tee y.log\n", []),
+    ("aliased steps list is read for the second job too", 1,
+     "on: push\njobs:\n  a:\n    runs-on: ubuntu-latest\n    defaults:\n      run:\n"
+     "        shell: bash -eo pipefail {0}\n    steps: &st\n      - run: yosys | tee y.log\n"
+     "  b:\n    runs-on: ubuntu-latest\n    steps: *st\n", []),
+    ("aliased step `- *s` is read", 1, H + "    steps:\n      - &s\n        shell: bash\n"
+     "        run: echo ok\n      - *s\n      - run: yosys | tee y.log\n", []),
+    ("key given twice = cannot tell", 2, H + "    steps:\n      - shell: bash\n"
+     "        run: yosys | tee y.log\n        shell: sh -e {0}\n", []),
+    ("steps not a list = cannot tell", 2, H + "    steps: yosys | tee y.log\n", []),
+    ("step not a mapping = cannot tell", 2, H + "    steps:\n      - yosys | tee y.log\n", []),
+    ("not YAML = cannot tell", 2, H + "    steps:\n      - run: [yosys | tee\n", []),
+    # -- its script-level list: a set this shell never runs --
+    ("set in a heredoc body is not this shell's", 1, H + "    steps:\n      - run: |\n"
+     "          cat > x.sh <<'EOF'\n          set -euo pipefail\n          EOF\n"
+     "          yosys | tee y.log\n", []),
+    ("heredoc script with its own pipefail passes", 0, H + "    steps:\n      - run: |\n"
+     "          bash <<'EOF'\n          set -o pipefail\n          yosys | tee y.log\n"
+     "          EOF\n", []),
+    ("tee in a heredoc script without pipefail", 1, H + "    steps:\n      - run: |\n"
+     "          bash <<EOF\n          yosys | tee y.log\n          EOF\n", []),
+    ("set in a multi-line bash -c string", 1, H + "    steps:\n      - run: |\n"
+     "          bash -c \"\n            set -eo pipefail\n            make\n          \"\n"
+     "          yosys | tee y.log\n", []),
+    ("set in a subshell", 1, H + "    steps:\n      - run: |\n"
+     "          ( set -o pipefail; true )\n          yosys | tee y.log\n", []),
+    ("set in a string", 1, H + "    steps:\n      - run: |\n"
+     "          echo \"x; set -o pipefail\"\n          yosys | tee y.log\n", []),
+    ("set in a trailing comment", 1, H + "    steps:\n      - run: |\n"
+     "          true  # ; set -o pipefail\n          yosys | tee y.log\n", []),
+    ("echo closing a subshell group", 1, H + "    steps:\n      - run: |\n"
+     "          (yosys; echo done) | tee y.log\n", []),
+    ("echo closing a brace group", 1, H + "    steps:\n      - run: |\n"
+     "          { yosys; echo done; } | tee y.log\n", []),
+    ("echo of ${VAR} is still a bare echo", 0, H + "    steps:\n      - run: |\n"
+     "          echo \"${GITHUB_SHA}\" | tee -a sha.txt\n", []),
+    ("| stdbuf -oL tee", 1, H + "    steps:\n      - run: yosys | stdbuf -oL tee y.log\n", []),
+    ("| command tee", 1, H + "    steps:\n      - run: yosys | command tee y.log\n", []),
+    ("| env A=1 tee", 1, H + "    steps:\n      - run: yosys | env A=1 tee y.log\n", []),
+    ("| nice -n 5 tee", 1, H + "    steps:\n      - run: yosys | nice -n 5 tee y.log\n", []),
+    ("PIPESTATUS only in a comment", 1, H + "    steps:\n      - run: |\n"
+     "          yosys | tee y.log\n          true  # PIPESTATUS\n", []),
+    ("PIPESTATUS in double quotes counts", 0, H + "    steps:\n      - run: |\n"
+     "          yosys | tee y.log\n          exit \"${PIPESTATUS[0]}\"\n", []),
+    ("tee only in a comment", 0, H + "    steps:\n      - run: |\n"
+     "          make  # then | tee it\n", []),
 ]
 
 
@@ -161,7 +223,60 @@ def main() -> int:
         bad += 1
         print(f"BAD  --prune-baseline: rc {rc}, baseline now {after!r}")
 
-    total = len(CASES) + 1
+    # --base-baseline: an entry the base branch's copy does not have is added
+    # by hand, so it fails even though the step it names is unsafe today.
+    one = H + "    steps:\n      - name: A\n        run: yosys | tee a.log\n"
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as f:
+        f.write("# base\n")
+    extra = 0
+    for label, want, argv in (
+        ("--base-baseline: an entry added by hand", 1, ["--base-baseline", f.name]),
+        ("--base-baseline: no file = cannot tell", 2, ["--base-baseline", f.name + ".gone"]),
+    ):
+        rc, out, _ = run_case(one, [f"{WF} :: j :: A"], argv)
+        extra += 1
+        if rc == want:
+            print(f"ok   {label} (rc {rc})")
+        else:
+            bad += 1
+            print(f"BAD  {label}: want rc {want}, got {rc}\n     {out.strip()}")
+    pathlib.Path(f.name).write_text(f"# base\n{WF} :: j :: A\n")
+    rc, out, _ = run_case(one, [f"{WF} :: j :: A"], ["--base-baseline", f.name])
+    extra += 1
+    if rc == 0:
+        print("ok   --base-baseline: the same list passes (rc 0)")
+    else:
+        bad += 1
+        print(f"BAD  --base-baseline same list: want rc 0, got {rc}\n     {out.strip()}")
+    pathlib.Path(f.name).unlink()
+
+    # Without PyYAML nothing is read, and nothing read is not clean.
+    saved = sys.modules.get("yaml")
+    sys.modules["yaml"] = None  # `import yaml` now raises ImportError
+    try:
+        rc, out, _ = run_case(one, [f"{WF} :: j :: A"])
+    finally:
+        if saved is None:
+            del sys.modules["yaml"]
+        else:
+            sys.modules["yaml"] = saved
+    extra += 1
+    if rc == 2:
+        print("ok   no PyYAML = cannot tell (rc 2)")
+    else:
+        bad += 1
+        print(f"BAD  no PyYAML: want rc 2, got {rc}\n     {out.strip()}")
+
+    # An unread file's entries are not stale, and prune leaves them alone.
+    rc, out, after = run_case(H + "    steps: [\n", [f"{WF} :: j :: A"], ["--prune-baseline"])
+    extra += 1
+    if rc == 2 and f"{WF} :: j :: A" in after:
+        print("ok   --prune-baseline on an unread file = cannot tell, entry kept (rc 2)")
+    else:
+        bad += 1
+        print(f"BAD  --prune-baseline on an unread file: rc {rc}, baseline now {after!r}")
+
+    total = len(CASES) + 1 + extra
     print(f"\n{total - bad} of {total} cases as expected")
     return 1 if bad else 0
 
