@@ -167,6 +167,14 @@ DIRECT = [
      lambda: with_bash(5, lambda: crs.shell_of({}, {"runs-on": "${{ matrix.os }}", "strategy": {"matrix": {"os": ["ubuntu-latest", "ubuntu-22.04"]}}}, {})), ('bash',)),
     ('matrix.os mixed with another lookup may be macOS, bash 5 gate',
      lambda: with_bash(5, lambda: crs.shell_of({}, {"runs-on": "${{ matrix.os || inputs.os }}", "strategy": {"matrix": {"os": ["ubuntu-latest"]}}}, {})), 'cannot tell'),
+    ("runs-on ${{ matrix.os }} with no strategy written may be macOS, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of({}, {"runs-on": "${{ matrix.os }}"}, {})),
+     "cannot tell"),
+    ("a matrix lookup next to an input lookup may be macOS, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of(
+         {}, {"runs-on": "${{ matrix.os }}${{ inputs.suffix }}",
+              "strategy": {"matrix": {"os": ["ubuntu-latest"]}}}, {})),
+     "cannot tell"),
     ("a pwsh step on macos is skipped, not cannot tell",
      lambda: with_bash(5, lambda: crs.shell_of({"shell": "pwsh"}, {"runs-on": "macos-15"}, {})), ()),
 ]
