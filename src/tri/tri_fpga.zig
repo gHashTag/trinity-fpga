@@ -946,6 +946,7 @@ pub fn runFpgaVerifyCommand(allocator: std.mem.Allocator, args: []const []const 
     }, false);
     if (!ok1) {
         std.debug.print(" {s}FAIL{s}\n", .{ RED, RESET });
+        printVerifySummary(0);
         return error.CaptureFailed;
     }
     std.debug.print(" {s}OK{s}\n", .{ GREEN, RESET });
@@ -959,6 +960,7 @@ pub fn runFpgaVerifyCommand(allocator: std.mem.Allocator, args: []const []const 
     }, false);
     if (!ok2) {
         std.debug.print(" {s}FAIL{s}\n", .{ RED, RESET });
+        printVerifySummary(1);
         return error.ExtractFailed;
     }
     std.debug.print(" {s}OK{s}\n", .{ GREEN, RESET });
@@ -976,6 +978,18 @@ pub fn runFpgaVerifyCommand(allocator: std.mem.Allocator, args: []const []const 
     std.Io.Dir.cwd().deleteFile(tri_io.get(), video_path) catch |err| {
         std.log.debug("tri_fpga: failed to delete video temp file: {}", .{err});
     };
+
+    // Capture and analysis succeeded; the optional analyzer decides 2/3 vs 3/3.
+    printVerifySummary(2 + @as(u8, if (ok3) 1 else 0));
+}
+
+/// The one machine-readable metric the φ-threshold gate reports on (#648): a
+/// line the harness emits deliberately, printed at every exit so a caller can
+/// rely on finding it or on its absence meaning "no metric". The optional
+/// analyzer makes 2/3 an honest full pass: at the φ⁻¹ threshold (61.8%) both
+/// 2/3 and 3/3 read IMMORTAL, 0/3 and 1/3 read MORTAL.
+fn printVerifySummary(steps_ok: u8) void {
+    std.debug.print("FPGA-VERIFY-SUMMARY: steps_ok={d}/3\n", .{steps_ok});
 }
 
 fn printVerifyUsage() !void {
