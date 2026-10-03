@@ -160,6 +160,43 @@ jobs:
           }
           grep -oE 'Build Summary:.*' test.log | tee -a $GITHUB_STEP_SUMMARY || true
 
+      # A process death is not a test failure: no assertion, no expected/found,
+      # no stack trace -- 'the following test command failed' and nothing else.
+      # The one known instance is jit.test.JitCompiler dot product correctness
+      # (#726): the JIT emits and executes x86-64 machine code, and on this
+      # runner the process dies with only an exit code. The machine this was
+      # written on is arm64, where those tests self-skip, so there is no local
+      # instrument to see the fault with. The next step is a real observation
+      # channel, not a patch: re-run every failed test binary under gdb and
+      # upload the transcript -- fault address, the instruction at $pc, and the
+      # backtrace -- before anyone edits the emitter. 0.16's test runner takes
+      # no positional filter (it panics on 'unrecognized command line
+      # argument'), so the whole binary runs; the crash lands where it landed
+      # before, in declaration order, and gdb catches whatever signal kills it.
+      - name: Test crash forensics (gdb, x86-64)
+        if: failure() && runner.arch == 'X64'
+        continue-on-error: true
+        run: |
+          set -u
+          command -v gdb >/dev/null 2>&1 || { echo 'gdb unavailable on runner' > forensics.log; exit 0; }
+          : > forensics.log
+          grep -oE 'failed command: [^ ]+' test.log | cut -d' ' -f3- | sort -u | while read -r bin; do
+            [ -x "$bin" ] || continue
+            echo "=== $bin ===" >> forensics.log
+            gdb -q --batch \
+                -ex 'set pagination off' \
+                -ex run \
+                -ex 'echo \n--- registers ---\n' \
+                -ex 'info registers' \
+                -ex 'echo \n--- at the faulting instruction ---\n' \
+                -ex 'x/8i $pc' \
+                -ex 'echo \n--- backtrace ---\n' \
+                -ex bt \
+                --args "$bin" >> forensics.log 2>&1 || true
+          done
+          echo "### Crash forensics" >> $GITHUB_STEP_SUMMARY
+          echo 'gdb transcripts for failed test binaries are in the codegen-logs artifact (forensics.log)' >> $GITHUB_STEP_SUMMARY
+
       - name: TODO stubs in generated code
         if: always()
         run: |
@@ -178,7 +215,9 @@ jobs:
             build.log
             graph.log
             test.log
+            forensics.log
           retention-days: 30
+          if-no-files-found: ignore
 
   count-patterns:
     name: Count Pattern Coverage
