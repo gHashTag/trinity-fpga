@@ -145,6 +145,14 @@ DIRECT = [
     ("macos with shell: sh under a bash 5 gate is cannot tell",
      lambda: with_bash(5, lambda: crs.shell_of({"shell": "sh {0}"}, {"runs-on": "macos-15"}, {})),
      "cannot tell"),
+    ("a matrix naming macos under a fixed ubuntu runner is bash, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of(
+         {}, {"runs-on": "ubuntu-latest", "strategy": {"matrix": {"t": ["macos-x"]}}}, {})),
+     ("bash",)),
+    ("runs-on ${{ matrix.os }} over a matrix naming macos, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of(
+         {}, {"runs-on": "${{ matrix.os }}", "strategy": {"matrix": {"os": ["macos-15"]}}}, {})),
+     "cannot tell"),
     ("a pwsh step on macos is skipped, not cannot tell",
      lambda: with_bash(5, lambda: crs.shell_of({"shell": "pwsh"}, {"runs-on": "macos-15"}, {})), ()),
 ]
