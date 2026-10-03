@@ -250,6 +250,8 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "        run: |\n          shopt -uo pipefail\n          false | tee x\n", []),
     ("shopt -uo pipefail voids a leading set", 1, H + R +
      "          set -eo pipefail\n          shopt -uo pipefail\n          false | tee x\n", []),
+    ("set +eo pipefail (a bundle) voids shell: bash", 1, H + "    steps:\n      - shell: bash\n"
+     "        run: |\n          set +eo pipefail\n          false | tee x\n", []),
     ("set +o with a quoted option name voids a leading set", 1, H + R +
      "          set -eo pipefail\n          set +o \"pipe\"fail\n          false | tee x\n", []),
     ("$'it\\'s' does not end its string early", 1, H + "    steps:\n      - shell: bash\n"
