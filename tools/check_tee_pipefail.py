@@ -14,9 +14,12 @@ workflows here already say so in prose and close it with
 reachability-ratchet). The other workflows never heard. Neither actionlint nor
 shellcheck flags it: the script is fine, the shell it runs under is not.
 
-A pipe into tee (`| tee`, `|& tee`, `| /usr/bin/tee`, through `sudo`,
-`stdbuf`, `command`, `env`, `nice`, ..., also when the `|` ends one line and
-tee starts the next) passes when it cannot hide a failure:
+A pipe into tee is a `|` or `|&` into a command with the WORD tee anywhere in
+it, up to its end: `| tee`, `| /usr/bin/tee`, `| "tee"`, `| sudo -u ci tee`,
+`| timeout 60 tee`, `| { tee x; }`, also when the `|` ends one line and the
+rest is on the next. Not a list of the commands that run the next one: review
+5 of #828 found three that such a list did not have. It passes when it cannot
+hide a failure:
 
   - its effective shell has pipefail (`shell: bash`, or a `shell:` / job
     `defaults` / workflow `defaults` line that says pipefail);
@@ -29,10 +32,9 @@ tee starts the next) passes when it cannot hide a failure:
     subshell, a loop, a function, a heredoc -- is not read: whether it runs
     in this shell before the pipe is bash's to know, and four reviews each
     found one more way a hand parser got it wrong (#828);
-  - with either of these, nothing in the script turns pipefail off: any
-    `+o pipefail` in it, wherever and however written, voids both;
-  - the command on the left is a bare echo/printf, which has no failure to
-    hide -- not when the pipe follows a group, `(make; echo done) | tee`;
+  - with either of these, nothing in the script may turn pipefail off: any
+    `+...o` option word (`set +o pipefail`, `set +o "pipe"fail`,
+    `set +eo $opt`) and any `shopt`, wherever they stand, void both;
   - the pipeline ends in `|| true` / `|| :`, which declares the failure
     unimportant with or without pipefail;
   - the step says `continue-on-error: true`, so its verdict does not count.
@@ -42,20 +44,28 @@ a script of its own that starts without pipefail: the data of `cat > x <<EOF`,
 or what `bash <<EOF` runs in a fresh shell. So is a tee inside a string
 (`bash -c "make | tee x"` runs in a shell of its own) -- also when the step's
 shell or the script has pipefail. A comment ends at the end of its line,
-whatever it ends with: `# old \` does not swallow the next line.
+whatever it ends with: `# old \` does not swallow the next line. Quotes are
+followed across lines, `$'...'` with its backslash escapes included; a heredoc
+body is never read as this shell's code, so an `it's` in one opens no quote.
 
-PIPESTATUS is not an exemption: reading it says nothing about whether the
+No left-hand command is an exemption. An earlier version let a bare
+echo/printf pass, "it has no failure to hide": `echo "${X:?}"` and
+`printf '%d' abc` both fail, and review 5 of #828 showed the step green behind
+tee. PIPESTATUS is not one either: reading it says nothing about whether the
 value is acted on, nor which pipe it belongs to, and no step here relies on it.
 
 `shell:` is read as words up to `{0}` (the script's path; what follows are its
 arguments): `bash` alone has pipefail, and so does a bash whose options turn it
 on last (`-eo pipefail`, `-o pipefail`); `+o pipefail` turns it off again.
 
-Known limits, all on the conservative side: `{ ...; } | tee` is flagged even
-when every command in the group is an echo, and so is a tee in a string or a
-heredoc that is only data; a script that turns pipefail on after a first
-command (`cd x; set -o pipefail`) is flagged -- move the `set` up, or say
-`shell: bash`.
+Known limits. On the conservative side: `echo hi | tee x` is flagged, and so
+is a word tee that is only an argument (`| grep tee`), a tee in a string or a
+heredoc that is only data, a script that turns pipefail on after a first
+command (`cd x; set -o pipefail` -- move the `set` up, or say `shell: bash`),
+and any `shopt` or `+...o` word, even one that leaves pipefail alone. Misses,
+which no hand parser can close: a tee named through a variable (`| $TEE x`)
+or an alias; and `continue-on-error: true` is taken as "this verdict does not
+count" without checking that no later step reads `steps.<id>.outcome`.
 
 The steps found on the day this gate was written sit in
 tools/tee_pipefail_baseline.txt as `<workflow> :: <job> :: <step>`. A step's
@@ -91,17 +101,17 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 BASE = pathlib.Path(__file__).with_name("tee_pipefail_baseline.txt")
 
-# A single `|` (not `||`), or `|&` (stderr too), into tee -- also through a
-# command that runs the next one (`sudo -E tee`, `stdbuf -oL tee`, `command
-# tee`, `env A=1 tee`, `nice -n 5 tee`) or by path (`/usr/bin/tee`).
-RUNS_NEXT = r"(?:(?:sudo|command|stdbuf|env|nice|nohup|time|ionice|unbuffer|exec)" \
-    r"(?:\s+(?:-\S+(?:\s+\d+)?|[A-Za-z_]\w*=\S*))*\s+)*"
-TEE = re.compile(r"(?<!\|)\|&?(?!\|)\s*" + RUNS_NEXT + r"(?:\S*/)?tee(?![\w.-])")
-# Any spelling that turns pipefail off: `set +o pipefail`, `+eo pipefail`, in
-# a `shell:` line or anywhere in a script, read as raw text.
-PF_OFF = re.compile(r"\+[A-Za-z]*o\s*['\"]?pipefail")
+# A single `|` (not `||`), or `|&` (stderr too), into a command that has the
+# word tee anywhere before its end (`;` `&` `|` or the line's end): `| tee`,
+# `| /usr/bin/tee`, `| "tee"`, `| sudo -u ci tee`, `| timeout 60 tee`,
+# `| { tee x; }`. Not a list of the commands that run the next one -- review
+# 5 of #828 found three a list did not have.
+TEE = re.compile(r"(?<!\|)\|&?(?!\|)[^|;&]*?(?<![\w.-])(?:\S*/)?['\"]?tee['\"]?(?![\w.-])")
+# Anything that may turn pipefail off, read as raw text: a `+...o` option word
+# whatever follows it (`set +o pipefail`, `set +o "pipe"fail`, `set +o $opt`),
+# and any shopt (`shopt -uo pipefail`).
+PF_OFF = re.compile(r"(?<![\w+-])\+[A-Za-z]*o(?![\w-])|\bshopt\b")
 SWALLOWED = re.compile(r"\|\|\s*(true|:)\s*$")
-BARE_ECHO = re.compile(r"^\s*(echo|printf)\b[^|;&`]*$")
 # `<<EOF`, `<<-EOF`, `<< 'EOF'`, `<<"EOF"`, `<<\EOF` -- not `<<<` (a
 # here-string).
 HEREDOC = re.compile(r"(?<!<)<<(-?)\s*\\?(['\"]?)([A-Za-z_][\w.-]*)\2")
@@ -141,33 +151,62 @@ def shell_has_pipefail(shell: str | None) -> bool | None:
         return False
     if not words or pathlib.PurePosixPath(words[0]).name != "bash" or "{0}" not in words:
         return False
-    # Up to {0}: after it come the script's own arguments, not bash's.
-    return set_options(words[1:words.index("{0}")]) is True
+    # Up to {0}: after it come the script's own arguments, not bash's. The two
+    # long options are the ones GitHub's own expansion of `shell: bash` has.
+    opts = [w for w in words[1:words.index("{0}")] if w not in ("--noprofile", "--norc")]
+    return set_options(opts) is True
 
 
-def logical_lines(script: list[str]) -> list[tuple[int, str]]:
+def heredocs(code: str, masked: str) -> list[tuple[bool, str]]:
+    """The heredocs a line opens, in order: (strip tabs, end word). The `<<`
+    must stand outside quotes; matched in code, where a quoted 'EOF' keeps its
+    word."""
+    return [(d.group(1) == "-", d.group(3)) for d in HEREDOC.finditer(code)
+            if masked[d.start()] == "<"]
+
+
+def body_end(script: list[str], first: int, strip_tabs: bool, word: str) -> int:
+    """Index of a heredoc's end line (len(script) when it never comes)."""
+    for j in range(first, len(script)):
+        if (script[j].lstrip("\t") if strip_tabs else script[j]) == word:
+            return j
+    return len(script)
+
+
+def logical_lines(script: list[str]) -> list[tuple[int, str, list[tuple[int, int]]]]:
     """Lines bash reads as one: a trailing backslash, or a trailing `|` / `|&`
     (bash goes on reading the pipeline on the next line) -- in CODE: a comment
     ends at its newline whatever it ends with, so `# old flag \\` or
     `make  # pipe it |` leaves the next line a command of its own (#828).
-    (first physical index, text)."""
-    out, buf, start, quote = [], "", 0, ""
-    for k, ln in enumerate(script):
+    The bodies of the heredocs a line opens are not code and are skipped: an
+    `it's` in one opened a quote that hid the next pipe (review 5 of #828).
+    (first physical index, text, [(body first, body end) ...])."""
+    out, buf, start, quote, k = [], "", 0, "", 0
+    while k < len(script):
+        ln = script[k]
         if not buf:
-            start = k
+            start, opened = k, quote
         code, _, after = shell_view(ln, quote)
         r = code.rstrip()
         # Only outside quotes: inside one the string simply goes on.
         if not after and r.endswith("\\") and not r.endswith("\\\\"):
             buf += r[:-1] + " "
+            k += 1
             continue
         if not after and re.search(r"(?<!\|)\|&?$", r):
             buf += r + " "
+            k += 1
             continue
-        out.append((start, buf + ln))
-        buf, quote = "", after
+        text = buf + ln
+        bodies, nxt = [], k + 1
+        for strip_tabs, word in heredocs(*shell_view(text, opened)[:2]):
+            end = body_end(script, nxt, strip_tabs, word)
+            bodies.append((nxt, end))
+            nxt = end + 1
+        out.append((start, text, bodies))
+        buf, quote, k = "", after, nxt
     if buf:
-        out.append((start, buf))
+        out.append((start, buf, []))
     return out
 
 
@@ -180,12 +219,13 @@ def shell_view(text: str, quote: str) -> tuple[str, str, str]:
     while i < len(text):
         c = text[i]
         if quote:
-            if quote == '"' and c == "\\" and i + 1 < len(text):
+            # In "..." and in $'...' a backslash escapes the next character.
+            if quote in ('"', "$'") and c == "\\" and i + 1 < len(text):
                 code.append(text[i:i + 2])
                 masked.append("__")
                 i += 2
                 continue
-            if c == quote:
+            if c == quote[-1]:
                 quote = ""
             code.append(c)
             masked.append(c if not quote else "_")
@@ -194,6 +234,12 @@ def shell_view(text: str, quote: str) -> tuple[str, str, str]:
         if c == "\\" and i + 1 < len(text):
             code.append(text[i:i + 2])
             masked.append("__")
+            i += 2
+            continue
+        if c == "$" and text[i + 1:i + 2] == "'":
+            code.append("$'")
+            masked.append("$'")
+            quote = "$'"
             i += 2
             continue
         if c in ("'", '"'):
@@ -206,22 +252,12 @@ def shell_view(text: str, quote: str) -> tuple[str, str, str]:
     return "".join(code), "".join(masked), quote
 
 
-def flatten(s: str) -> str:
-    """$(...) and `...` replaced by a word: what fails inside them is lost to
-    the command around them, pipefail or not."""
-    while True:
-        flat = re.sub(r"\$\([^()]*\)|`[^`]*`", "S", s)
-        if flat == s:
-            return s
-        s = flat
-
-
-def leading_pipefail(logical: list[tuple[int, str]]) -> bool:
+def leading_pipefail(logical: list[tuple[int, str, list[tuple[int, int]]]]) -> bool:
     """Does the script open with plain `set` lines that turn pipefail on?
     Only the leading commands count (see the docstring): the first line that
     is anything else ends the search."""
     on, quote = False, ""
-    for _, text in logical:
+    for _, text, _ in logical:
         code, _, quote = shell_view(text, quote)
         line = code.strip()
         if not line:
@@ -252,46 +288,25 @@ def unsafe_pipes(script: list[str], pipefail: bool) -> list[int]:
         pipefail = False  # turned off somewhere: neither the shell nor a set counts
     else:
         pipefail = pipefail or leading_pipefail(logical)
-    hits = []
-    n, quote = 0, ""
-    while n < len(logical):
-        k, line = logical[n]
-        code, masked, quote_after = shell_view(line, quote)
-        # A heredoc body is not this shell's script: data, or a script some
-        # other command runs from a fresh state. Read it as its own script,
-        # starting without pipefail. (Matched in code, where a quoted 'EOF'
-        # keeps its word; the `<<` must stand outside quotes.)
-        doc = next((d for d in HEREDOC.finditer(code) if masked[d.start()] == "<"), None)
+    hits, quote = [], ""
+    for k, line, bodies in logical:
+        code, masked, quote = shell_view(line, quote)
         for m in TEE.finditer(code):
             # A tee in a string runs, if at all, in a shell of its own.
             if pipefail and masked[m.start()] == "|":
                 continue
-            # This pipeline's own end: up to the next ; or && after tee.
-            rest = re.split(r";|&&", code[m.end():], maxsplit=1)[0]
+            # This pipeline's own end: up to the next ; or && after tee, read
+            # outside quotes, so a `"; x || true"` argument is not its end.
+            rest = re.split(r";|&&", masked[m.end():], maxsplit=1)[0]
             if SWALLOWED.search(rest.strip()):
-                continue
-            # The command on the left, after the last ; && || of the line --
-            # unless the pipe follows a group, `(...) | tee` or `{ ...; } | tee`,
-            # whose last command says nothing about the ones before it.
-            before = re.sub(r"\$\{[^{}]*\}", "S", flatten(code[: m.start()])).rstrip()
-            left = re.split(r";|&&|\|\|", before)[-1]
-            if BARE_ECHO.match(left) and not before.endswith((")", "}")):
                 continue
             hits.append(k)
             break
-        quote = quote_after
-        n += 1
-        if doc:
-            strip_tabs, word = doc.group(1) == "-", doc.group(3)
-            first = logical[n][0] if n < len(logical) else len(script)
-            end = len(script)
-            for j in range(first, len(script)):
-                if (script[j].lstrip("\t") if strip_tabs else script[j]) == word:
-                    end = j
-                    break
+        # A heredoc body is not this shell's script: data, or a script some
+        # other command runs from a fresh state. Read it as its own script,
+        # starting without pipefail.
+        for first, end in bodies:
             hits += [first + h for h in unsafe_pipes(script[first:end], False)]
-            while n < len(logical) and logical[n][0] <= end:
-                n += 1
     return hits
 
 
