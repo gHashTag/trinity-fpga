@@ -189,6 +189,16 @@ DIRECT = [
      lambda: with_bash(5, lambda: crs.shell_of(
          {}, {"runs-on": "  ${{matrix.os}} ", "strategy": {"matrix": {"os": ["ubuntu-24.04"]}}}, {})),
      ("bash",)),
+    ("a self-hosted runner without a linux label may be a Mac, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of({}, {"runs-on": ["self-hosted", "arm64"]}, {})),
+     "cannot tell"),
+    ("a self-hosted linux runner is bash, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of({}, {"runs-on": ["self-hosted", "Linux", "x64"]}, {})),
+     ("bash",)),
+    ("matrix.os over [self-hosted] may be a Mac, bash 5 gate",
+     lambda: with_bash(5, lambda: crs.shell_of(
+         {}, {"runs-on": "${{ matrix.os }}", "strategy": {"matrix": {"os": ["self-hosted"]}}}, {})),
+     "cannot tell"),
     ("a pwsh step on macos is skipped, not cannot tell",
      lambda: with_bash(5, lambda: crs.shell_of({"shell": "pwsh"}, {"runs-on": "macos-15"}, {})), ()),
 ]
