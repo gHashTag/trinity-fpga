@@ -108,11 +108,17 @@ def may_run_on_macos(job: dict) -> bool:
     runs_on = str(job.get("runs-on", "")).lower()
     if "macos" in runs_on:
         return True
+    # A self-hosted Mac gets the macOS label by itself, so a self-hosted
+    # runner is macOS-possible unless its labels say linux (review of #840).
+    if "self-hosted" in runs_on and "linux" not in runs_on:
+        return True
     if "${{" not in runs_on:
         return False
     strategy = job.get("strategy")
     matrix = strategy.get("matrix") if isinstance(strategy, dict) else None
     if not isinstance(matrix, dict) or "${{" in str(matrix) or "macos" in str(matrix).lower():
+        return True
+    if "self-hosted" in str(matrix).lower():
         return True
     # The lookup must be the whole label: pieces glued together, or glued to
     # literal text, can spell macos though no single value does (review 6).
