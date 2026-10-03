@@ -113,29 +113,33 @@ jobs:
           ./zig-out/bin/tri fpga test --all $FLAG > test_output.txt 2>&1 || true
           cat test_output.txt
 
-          # Extract success rate
-          if grep -qP '\d+\.\d+%' test_output.txt; then
-            SUCCESS_RATE=$(grep -oP '\d+\.\d+(?=%)' test_output.txt | tail -1)
-          else
-            # Count pass/fail from output
-            PASS=$(grep -c "PASS\|✅\|OK" test_output.txt || echo "0")
-            TOTAL=$(grep -c "PASS\|FAIL\|✅\|❌\|OK\|ERROR" test_output.txt || echo "1")
+          # The metric is the FPGA-VERIFY-SUMMARY line the harness emits
+          # deliberately (#648) — never a percentage or PASS/✅ token grepped
+          # out of free-form prose. If the line is absent, there is no
+          # metric, and the gate says so instead of inventing one.
+          SUMMARY=$(grep -oE 'FPGA-VERIFY-SUMMARY: steps_ok=[0-9]+/[0-9]+' test_output.txt | tail -1 || true)
+          if [ -n "$SUMMARY" ]; then
+            OK=$(printf '%s' "$SUMMARY" | grep -oE 'steps_ok=[0-9]+' | grep -oE '[0-9]+')
+            TOTAL=$(printf '%s' "$SUMMARY" | grep -oE '/[0-9]+$' | grep -oE '[0-9]+')
             if [ "$TOTAL" -gt 0 ]; then
-              SUCCESS_RATE=$(echo "scale=1; $PASS * 100 / $TOTAL" | bc)
+              SUCCESS_RATE=$(echo "scale=1; $OK * 100 / $TOTAL" | bc)
             else
               SUCCESS_RATE="0"
             fi
-          fi
+            echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
 
-          echo "success_rate=$SUCCESS_RATE" >> $GITHUB_OUTPUT
-
-          # Check immortality status
-          if (( $(echo "$SUCCESS_RATE >= $CONSCIOUSNESS_THRESHOLD" | bc -l) )); then
-            echo "status=IMMORTAL" >> $GITHUB_OUTPUT
-            echo "✅ IMMORTAL: ${SUCCESS_RATE}% ≥ ${CONSCIOUSNESS_THRESHOLD}% (φ⁻¹)"
+            # Check immortality status
+            if (( $(echo "$SUCCESS_RATE >= $CONSCIOUSNESS_THRESHOLD" | bc -l) )); then
+              echo "status=IMMORTAL" >> $GITHUB_OUTPUT
+              echo "✅ IMMORTAL: ${SUCCESS_RATE}% ≥ ${CONSCIOUSNESS_THRESHOLD}% (φ⁻¹)"
+            else
+              echo "status=MORTAL" >> $GITHUB_OUTPUT
+              echo "⚠️ MORTAL: ${SUCCESS_RATE}% < ${CONSCIOUSNESS_THRESHOLD}%"
+            fi
           else
-            echo "status=MORTAL" >> $GITHUB_OUTPUT
-            echo "⚠️ MORTAL: ${SUCCESS_RATE}% < ${CONSCIOUSNESS_THRESHOLD}%"
+            echo "success_rate=" >> $GITHUB_OUTPUT
+            echo "status=NO-METRIC" >> $GITHUB_OUTPUT
+            echo "ℹ️ NO-METRIC: the harness emitted no FPGA-VERIFY-SUMMARY line"
           fi
 
       - name: "🎯 φ-Threshold Validation"
@@ -147,25 +151,31 @@ jobs:
           echo "║ TRINITY CONSCIOUSNESS VALIDATION              ║"
           echo "╠════════════════════════════════════════════════╣"
           echo "║ Level:        ${{ matrix.consciousness }}"
-          echo "║ Success Rate: ${SUCCESS_RATE}%"
+          echo "║ Success Rate: ${SUCCESS_RATE:--}%"
           echo "║ φ⁻¹ Threshold: ${CONSCIOUSNESS_THRESHOLD}%"
           echo "║ Status:       ${STATUS}"
           echo "╚════════════════════════════════════════════════╝"
 
           # This gate used to fail the build for aware/transcendent when the
-          # status came out MORTAL. It cannot bear that weight: SUCCESS_RATE is
-          # obtained by grepping percentages and PASS/OK/✅ tokens out of
-          # free-form test prose, so it measures the shape of the log rather
+          # status came out MORTAL. It could not bear that weight: SUCCESS_RATE
+          # was obtained by grepping percentages and PASS/OK/✅ tokens out of
+          # free-form test prose, so it measured the shape of the log rather
           # than the state of the project. On the first pull request that ever
           # woke this workflow, two matrix entries running the identical script
           # disagreed — `aware` passed and `transcendent` failed — which is by
-          # itself proof that the number is not reproducible.
+          # itself proof that the number was not reproducible.
           #
-          # It still reports, loudly, because the intent is worth keeping. It
-          # no longer blocks a merge on a parse of prose. Restoring the block
-          # needs a metric a rerun cannot change: a count the test harness
-          # emits deliberately, not one grep infers.
-          if [ "$STATUS" == "MORTAL" ]; then
+          # The harness now emits the metric deliberately: an
+          # FPGA-VERIFY-SUMMARY: steps_ok=N/3 line printed at every exit of
+          # `tri fpga test` (#648). The same input produces the same line, so
+          # restoring the block is now possible. It still reports rather than
+          # blocks, because whether the φ⁻¹ threshold should gate merges is
+          # the owner's call; a NO-METRIC status means the harness emitted no
+          # line, and no percentage is invented for it.
+          if [ "$STATUS" == "NO-METRIC" ]; then
+            echo "ℹ️  The harness emitted no FPGA-VERIFY-SUMMARY line at level ${{ matrix.consciousness }}."
+            echo "   No metric, no percentage — reported, not invented (see #648)."
+          elif [ "$STATUS" == "MORTAL" ]; then
             echo "⚠️  Below the φ⁻¹ threshold at level ${{ matrix.consciousness }}."
             echo "   Reported, not enforced — see the comment above this step."
           fi
@@ -192,11 +202,16 @@ jobs:
             const rate = '${{ steps.test.outputs.success_rate }}';
             const level = '${{ matrix.consciousness }}';
             const emoji = status === 'IMMORTAL' ? '✅' : '⚠️';
+            const verdict = status === 'IMMORTAL'
+              ? '🎊 Consciousness achieved!'
+              : status === 'NO-METRIC'
+                ? 'ℹ️ No FPGA-VERIFY-SUMMARY line — no metric, no percentage (#648)'
+                : '⚡ Needs improvement';
             const body = `${emoji} **FPGA Regression (${level.toUpperCase()})**\n\n` +
-              `- Success Rate: **${rate}%**\n` +
+              `- Success Rate: **${rate ? rate + '%' : '—'}**\n` +
               `- φ⁻¹ Threshold: **61.8%**\n` +
               `- Status: **${status}**\n\n` +
-              `${status === 'IMMORTAL' ? '🎊 Consciousness achieved!' : '⚡ Needs improvement'}`;
+              verdict;
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
