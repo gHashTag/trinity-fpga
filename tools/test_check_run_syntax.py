@@ -36,8 +36,32 @@ CASES: list[tuple[str, int, str]] = [
     ("an unclosed if", 1, H + "    steps:\n      - run: |\n          if true; then\n            echo x\n"),
     ("${{ }} is left as written", 0, H +
      "    steps:\n      - run: echo \"${{ github.sha }}\"\n"),
+    # `cat <(echo x)` parses in bash and not in sh (dash, or bash in POSIX
+    # mode as macOS's /bin/sh), so these two tell the interpreters apart.
     ("shell: sh is checked with sh", 1, H +
-     "    steps:\n      - shell: sh\n        run: |\n          if true; then\n"),
+     "    steps:\n      - shell: sh\n        run: cat <(echo x)\n"),
+    ("shell: bash is checked with bash", 0, H +
+     "    steps:\n      - shell: bash\n        run: cat <(echo x)\n"),
+    ("no shell is bash", 0, H + "    steps:\n      - run: cat <(echo x)\n"),
+    ("a container job with no shell must parse in sh too", 1, H +
+     "    container: alpine:3\n    steps:\n      - run: cat <(echo x)\n"),
+    ("a container job with no shell must parse in bash too", 1, H +
+     "    container: alpine:3\n    steps:\n      - run: 'echo \"x'\n"),
+    ("a container job with shell: bash is bash", 0, H +
+     "    container: alpine:3\n    steps:\n      - shell: bash\n        run: cat <(echo x)\n"),
+    ("a container job with a job default shell: bash is bash", 0, H +
+     "    container: alpine:3\n    defaults:\n      run:\n        shell: bash\n"
+     "    steps:\n      - run: cat <(echo x)\n"),
+    ("shell: /usr/bin/env bash {0} is bash", 1, H +
+     "    steps:\n      - shell: /usr/bin/env bash {0}\n        run: 'echo \"x'\n"),
+    ("shell: env -i PATH=/bin sh {0} is sh", 1, H +
+     "    steps:\n      - shell: env -i PATH=/bin sh {0}\n        run: cat <(echo x)\n"),
+    ("shell: env -S 'sh -e {0}' is sh", 1, H +
+     "    steps:\n      - shell: env -S 'sh -e {0}'\n        run: cat <(echo x)\n"),
+    ("shell: env python {0} is skipped", 0, H +
+     "    steps:\n      - shell: env python {0}\n        run: print('it doesn')\n"),
+    ("a shell line with an open quote = cannot tell", 2, H +
+     "    steps:\n      - shell: bash -c 'x {0}\n        run: echo ok\n"),
     ("shell: bash -eo pipefail {0} is bash", 1, H +
      "    steps:\n      - shell: bash -eo pipefail {0}\n        run: 'echo \"x'\n"),
     ("job defaults shell: python is skipped", 0, H +

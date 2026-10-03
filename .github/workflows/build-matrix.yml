@@ -102,7 +102,8 @@ jobs:
             # -nodsp: for MUL designs (DSP48E1 partial in openXC7); ADD does not need it.
             # No apostrophes in this script: it is one single-quoted bash -c argument,
             # and a contraction in a comment here closed it (tools/check_run_syntax.py).
-            if [ "$OP" = "mul" ]; then
+            # OP is ignored for decode, as the input says.
+            if [ "$TYPE" = "compute" ] && [ "$OP" = "mul" ]; then
               SYNTH_FLAGS="-flatten -abc9 -nocarry -nodsp -arch xc7"
             else
               SYNTH_FLAGS="-flatten -abc9 -nocarry -arch xc7"
