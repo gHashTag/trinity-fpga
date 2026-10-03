@@ -347,6 +347,20 @@ CASES: list[tuple[str, int, str, list[str]]] = [
      "    steps:\n      - run: |\n          set -euo pipefail\n"
      "          # tee-pipefail: the heredoc feeds python\n          python3 - <<'PY' | tee r.txt\n"
      "          print(1)\n          PY\n", []),
+    # -- review 8 of #828 --
+    ("piped into /bin/bash is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          make | tee m.log\n          echo 'false | tee x.log' | /bin/bash\n", []),
+    ("piped into /bin/sh after a leading set is a shell of its own", 1, H +
+     "    steps:\n      - run: |\n          set -euo pipefail\n          make | tee m.log\n"
+     "          echo 'false | tee x.log' | /bin/sh\n", []),
+    ("piped into \"$BASH\" is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          echo 'false | tee x.log' | \"$BASH\"\n", []),
+    ("piped into ${SHELL} is a shell of its own", 1, H + PF +
+     "    steps:\n      - run: |\n          echo 'false | tee x.log' | ${SHELL}\n", []),
+    ("set +`printf o` pipefail turns it off", 1, H + PF +
+     "    steps:\n      - run: |\n          set +`printf o` pipefail\n          false | tee x.log\n", []),
+    ("a path that only ends in sh is no shell", 0, H + PF +
+     "    steps:\n      - run: |\n          tools/run.sh | tee x.log\n", []),
 ]
 
 

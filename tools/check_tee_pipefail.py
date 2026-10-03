@@ -63,9 +63,10 @@ Known limits. On the conservative side, all fixed by `shell: bash` or a
 leading `set -o pipefail` line: `echo hi | tee x` is flagged, and so is a tee
 that is only an argument (`| grep tee`) or only data, a `#` comment after
 code, `set -o pipefail; make | tee x` on one line, and any `shopt` or
-`+...o` or `+...$` word. Under pipefail, a `grep -c`, a `<<` that feeds
+`+...o`, `+...$` or `` +...` `` word. Under pipefail, a `grep -c`, a `<<` that feeds
 python, or a comment that names bash flags until the step's marker names why. Misses, which text cannot close: a tee
-named through a variable (`| $TEE x`) or an alias; a script given by an
+named through a variable (`| $TEE x`) or an alias; a shell named through any
+variable but `$SHELL` and `$BASH`; a script given by an
 expression (`run: ${{ matrix.cmd }}`); pipefail turned off by a sourced file,
 an `eval`, a Makefile or a script file the step runs; a shell started by
 another language's code (`perl -e 'system("make | tee x")'`, `node -e`)
@@ -119,22 +120,26 @@ PIPE = re.compile(r"(?<!\|)\|(?!\|)")
 # The word tee anywhere: `| tee`, `| /usr/bin/tee`, `| "tee"`, `| sudo tee`,
 # `| {` and tee on the next line.
 TEE = re.compile(r"(?<![\w.-])tee(?![\w.-])")
-# Anything that may turn pipefail off: a `+` word with an `o` or a `$` in it
-# (`set +o pipefail`, `set +eo pipefail`, `set +"o" pipefail`,
-# `set ${PFOPT:-+o} pipefail`, `set +$O pipefail`), and any shopt. A `+` glued to a word or to
-# another `+` is no option (`c++o`, `g++ -o`).
-PF_OFF = re.compile(r"(?<![\w+])\+\S*[o$]|\bshopt\b")
+# Anything that may turn pipefail off: a `+` word with an `o`, a `$` or a
+# backtick in it (`set +o pipefail`, `set +eo pipefail`, `set +"o" pipefail`,
+# `set ${PFOPT:-+o} pipefail`, `set +$O pipefail`, `` set +`printf o` pipefail ``,
+# review 8 of #828), and any shopt. A `+` glued to a word or to another `+`
+# is no option (`c++o`, `g++ -o`).
+PF_OFF = re.compile(r"(?<![\w+])\+\S*[o$`]|\bshopt\b")
 # A shell of its own, which the step's pipefail does not reach: an option
 # cluster with c, any case and length (`bash -c`, `sh -ec`, `bash -Ec`,
 # `bash -euxvfc`, `docker run ... bash -c`), a heredoc or here-string
 # (`bash <<EOF`), a process substitution (`bash <(echo ...)`), or a shell
-# named as a word anywhere (`echo '...' | bash`, `ssh host '...'`,
-# `bash tools/x.sh`). Review 7 of #828 walked four of these past the old
-# lower-case, at-most-four-letters pattern.
+# named as a word anywhere, by its path too (`echo '...' | bash`,
+# `| /bin/sh`, `ssh host '...'`, `bash tools/x.sh`), or through the variables
+# that hold one (`| "$BASH"`, `${SHELL}`). Review 7 of #828 walked four of
+# these past the old lower-case, at-most-four-letters pattern; review 8 the
+# path and the variable.
 OWN_SHELL = re.compile(
     r"(?<![\w-])-[A-Za-z]*c[A-Za-z]*(?![\w=-])"
     r"|<<|[<>]\("
-    r"|(?<![\w./-])(?:ba|da|z|k|a|s)?sh(?![\w.-])"
+    r"|(?<![\w.-])(?:ba|da|z|k|a|s)?sh(?![\w.-])"
+    r"|\$\{?(?:SHELL|BASH)\b"
 )
 # A step under pipefail that has a shell of its own AND a tee, where the tee
 # is not in it, says so in its script, with the reason:
