@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+r"""Does every workflow step's shell script parse?
+
+A `run:` script with a syntax error does not fail at review time, it fails
+when it runs -- and two steps here only run on `workflow_dispatch`, so their
+errors sat unseen:
+
+  - build-matrix.yml "Full bitstream build": a `doesn't` in a comment inside
+    `bash -c '...'` closed the single-quoted script, and the rest of it was
+    read as the outer shell's;
+  - iddr-golden-diff.yml "Build the same design with openXC7 and diff the
+    ILOGIC config": the `'\''` idiom, which only means "a quote" INSIDE single
+    quotes, was used on a line outside them and left one quote open.
+
+Both steps failed on parse every time they were dispatched. This gate runs
+`bash -n` (or `sh -n` for `shell: sh`) on every step whose effective shell is
+a POSIX one -- the step's `shell:`, else the job's, else the workflow's
+`defaults.run.shell`, read through `/usr/bin/env [-opts] [VAR=x]`. With no
+`shell:` anywhere it is bash; pwsh on a `windows` runner, which is skipped;
+and in a `container:` job, bash only if the image has it and `sh` if not -- so
+there the script is checked with BOTH, and a bashism needs an explicit
+`shell: bash`. `${{ ... }}` is left as written: `bash -n` does not expand it.
+A job that may run on macOS (bash 3.2 for `bash` and `sh`) is "cannot tell"
+unless the gate's own bash is 3.x.
+A `shell:` line that does not split into words is "cannot tell".
+
+`bash -n` reads syntax only: a script inside a quoted `bash -c '...'` argument
+is one string to it, so an error INSIDE that string is not seen -- unless, as
+in both cases above, it breaks the quoting of the outer script.
+
+Exit 0 clean, 1 a step that does not parse, 2 a workflow this could not read
+(cannot tell is not clean). tools/test_check_run_syntax.py plants every case.
+"""
+from __future__ import annotations
+
+import pathlib
+import re
+import shlex
+import shutil
+import subprocess
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+WORKFLOWS = ROOT / ".github" / "workflows"
+
+
+class CannotTell(Exception):
+    pass
+
+
+POSIX = ("bash", "sh")
+
+
+# env options whose argument is the next word (GNU and BSD env).
+TAKES_ARG = ("-u", "--unset", "-C", "--chdir", "-P")
+
+
+def command_word(words: list[str]) -> str:
+    """The program a `shell:` line runs, looking through `env [-opts] [VAR=x]`."""
+    while words:
+        word, words = words[0], words[1:]
+        if pathlib.PurePosixPath(word).name != "env":
+            return word
+        while words and (words[0].startswith("-") or "=" in words[0]):
+            opt, words = words[0], words[1:]
+            if opt in TAKES_ARG and words:
+                words = words[1:]  # `-u NAME`, `-C DIR`: the next word is not the program
+            elif opt in ("-S", "--split-string") and words:
+                words = shlex.split(words[0]) + words[1:]
+            elif opt.startswith("-S") and len(opt) > 2:
+                words = shlex.split(opt[2:]) + words
+            elif opt.startswith("--split-string="):
+                words = shlex.split(opt.split("=", 1)[1]) + words
+    return ""
+
+
+def run_defaults(node: dict, where: str) -> dict:
+    """`defaults.run` of a job or a workflow; a shape GitHub would reject is cannot-tell."""
+    d = node.get("defaults") or {}
+    if not isinstance(d, dict) or not isinstance(d.get("run") or {}, dict):
+        raise CannotTell(f"{where} defaults is not a mapping with a run mapping")
+    return d.get("run") or {}
+
+
+_BASH_MAJOR: int | None = None
+
+
+def bash_major() -> int:
+    """The major version of the bash this gate parses with; 0 if unreadable."""
+    global _BASH_MAJOR
+    if _BASH_MAJOR is None:
+        r = subprocess.run(["bash", "-c", "echo ${BASH_VERSINFO[0]}"],
+                           capture_output=True, text=True)
+        v = r.stdout.strip()
+        _BASH_MAJOR = int(v) if v.isdigit() else 0
+    return _BASH_MAJOR
+
+
+MATRIX_LOOKUP = re.compile(r"\s*matrix\.[a-z0-9_-]+\s*")
+
+
+def may_run_on_macos(job: dict) -> bool:
+    """Written down as a macOS runner, or picked at run time by anything but a
+    plain `matrix.<key>` over a matrix written out in full without macos:
+    `inputs.os`, `vars.RUNNER`, a `fromJSON(...)` matrix may all be macOS
+    (review 5 of #839)."""
+    runs_on = str(job.get("runs-on", "")).lower()
+    if "macos" in runs_on:
+        return True
+    if "${{" not in runs_on:
+        return False
+    strategy = job.get("strategy")
+    matrix = strategy.get("matrix") if isinstance(strategy, dict) else None
+    if not isinstance(matrix, dict) or "${{" in str(matrix) or "macos" in str(matrix).lower():
+        return True
+    exprs = re.findall(r"\$\{\{(.*?)\}\}", runs_on, re.S)
+    return not all(MATRIX_LOOKUP.fullmatch(e) for e in exprs)
+
+
+def shell_of(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
+    """The interpreters to check the script with; empty to skip it."""
+    shells = _shell_named(step, job, wf)
+    # GitHub's macOS images run Bash 3.2 for `bash` and for `sh` alike; bash 4
+    # syntax (`|&`, `;&`) parses here under bash 5 and fails there on every
+    # run (review 4 of #839). Only a bash 3 gate can answer for that leg.
+    if shells and may_run_on_macos(job) and bash_major() != 3:
+        raise CannotTell(f"a macOS runner parses with bash 3.2; this gate has bash {bash_major()}")
+    return shells
+
+
+def _shell_named(step: dict, job: dict, wf: dict) -> tuple[str, ...]:
+    for node in (step, run_defaults(job, "job"), run_defaults(wf, "workflow")):
+        sh = node.get("shell")
+        if sh:
+            break
+    else:
+        runs_on = str(job.get("runs-on", ""))
+        if "windows" in runs_on.lower():
+            if "${{" in runs_on:
+                # `runs-on: ${{ inputs.win && 'windows-latest' || 'ubuntu-latest' }}`
+                # picks the runner at run time; the bash leg would still parse it.
+                raise CannotTell(f"runs-on: {runs_on!r} picks windows at run time")
+            return ()
+        # In a `container:` job the default is bash only if the image has it,
+        # and `sh` otherwise -- so the script has to parse in both.
+        return POSIX if job.get("container") else ("bash",)
+    if "${{" in str(sh):
+        # `shell: ${{ matrix.shell }} {0}` is legal, and which shell it is is
+        # only known at run time. Skipping it would pass a broken script.
+        raise CannotTell(f"shell: {sh!r} is an expression")
+    try:
+        name = pathlib.PurePosixPath(command_word(shlex.split(str(sh)))).name
+    except ValueError as e:
+        raise CannotTell(f"shell: {sh!r} does not split ({e})")
+    if name in POSIX:
+        return (name,)
+    return ()  # pwsh, python, cmd, a custom shell: not ours to parse
+
+
+def check(path: pathlib.Path) -> tuple[list[str], str | None]:
+    import yaml  # inside: a missing PyYAML is "cannot tell", not a crash
+    try:
+        wf = yaml.safe_load(path.read_text())
+    except yaml.YAMLError as e:
+        return [], f"{path.name}: not YAML ({e.__class__.__name__})"
+    if not isinstance(wf, dict) or not isinstance(wf.get("jobs"), dict):
+        return [], f"{path.name}: no jobs mapping"
+    bad = []
+    for jn, job in wf["jobs"].items():
+        if not isinstance(job, dict):
+            return [], f"{path.name} :: {jn}: job is not a mapping"
+        for k, step in enumerate(job.get("steps") or [], 1):
+            if not isinstance(step, dict):
+                return [], f"{path.name} :: {jn}: step {k} is not a mapping"
+            if "run" not in step:
+                continue
+            try:
+                shells = shell_of(step, job, wf)
+            except CannotTell as e:
+                return [], f"{path.name} :: {jn} :: step {k}: {e}"
+            for sh in shells:
+                r = subprocess.run([sh, "-n"], input=str(step["run"]), capture_output=True, text=True)
+                if r.returncode:
+                    err = " ".join(r.stderr.split())[:240]
+                    bad.append(f"{path.relative_to(ROOT)} :: {jn} :: {step.get('name') or f'step {k}'}"
+                               f" [{sh} -n]\n    {err}")
+                    break
+    return bad, None
+
+
+def main() -> int:
+    try:
+        import yaml  # noqa: F401
+    except ImportError:
+        print("cannot tell: PyYAML is not installed")
+        return 2
+    for sh in POSIX:
+        if not shutil.which(sh):
+            print(f"cannot tell: no {sh} on PATH")
+            return 2
+    files = sorted(list(WORKFLOWS.glob("*.yml")) + list(WORKFLOWS.glob("*.yaml")))
+    bad, unread = [], []
+    for f in files:
+        b, err = check(f)
+        bad += b
+        if err:
+            unread.append(err)
+    print(f"workflows read: {len(files) - len(unread)} of {len(files)}; steps that do not parse: {len(bad)}")
+    for b in bad:
+        print("  " + b)
+    for u in unread:
+        print("  cannot read: " + u)
+    if bad:
+        print("\nFAIL: these steps fail on parse every time they run. A quote inside a")
+        print("single-quoted `bash -c '...'` (an apostrophe in a comment counts) ends it.")
+        return 1
+    return 2 if unread else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
