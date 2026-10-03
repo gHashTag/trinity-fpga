@@ -61,6 +61,7 @@ jobs:
       - name: Count what nothing reaches
         id: count
         run: |
+          # tee-pipefail: the heredoc feeds python, not a shell; the tee is in this one, under the workflow's pipefail
           python3 - <<'PY' | tee reach.txt
           import os, re, glob, json
 
@@ -91,7 +92,7 @@ jobs:
           n=$(tail -1 reach.txt | python3 -c 'import json,sys; print(json.load(sys.stdin)["unreachable"])')
           # An empty n is what a crashed counter looks like. Without this the
           # next step compares "" against the baseline, bash prints
-          # `[: : integer expression expected`, `set +e` swallows it, and the
+          # `[: : integer expression expected`, errexit being off swallows it, and the
           # verdict falls through to "No change." and exit 0 -- a ratchet that
           # reports no regression precisely because it failed to measure.
           case "$n" in

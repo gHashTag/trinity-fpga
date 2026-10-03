@@ -82,6 +82,7 @@ jobs:
       - name: Run Brain Health Check
         id: health
         run: |
+          # tee-pipefail: no shell of its own; `grep -c` below is only quoted in a comment
           # Run health check and capture output
           # tri_or_stub.sh passes a declared stub and fails anything else; the
           # `|| true` that stood here also hid a binary that was never built.
