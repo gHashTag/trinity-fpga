@@ -14,23 +14,45 @@ workflows here already say so in prose and close it with
 reachability-ratchet). The other workflows never heard. Neither actionlint nor
 shellcheck flags it: the script is fine, the shell it runs under is not.
 
-A step passes when the pipe cannot hide a failure:
+A pipe into tee (`| tee`, `|& tee`, `| sudo tee`, `| /usr/bin/tee`, also when
+the `|` ends one line and tee starts the next) passes when it cannot hide a
+failure:
 
   - its effective shell has pipefail (`shell: bash`, or a `shell:` / job
     `defaults` / workflow `defaults` line that says pipefail);
-  - the script turns pipefail on (`set -o pipefail`, `set -eo pipefail`, ...)
-    before the pipe, and has not turned it off again;
-  - the script reads PIPESTATUS after the pipe (it checks the left side itself);
-  - the left side is a bare echo/printf, which has no failure to hide;
+  - the script turned pipefail on (`set -o pipefail`, `set -eo pipefail`, ...)
+    BEFORE the pipe -- earlier on the same line counts, later does not -- and
+    has not turned it off again;
+  - the pipe's own line, or the line right after it, reads PIPESTATUS (it
+    checks the left side itself). A PIPESTATUS further down reads some other
+    pipe, so it does not count;
+  - the command on the left is a bare echo/printf, which has no failure to
+    hide;
   - the pipeline ends in `|| true` / `|| :`, which declares the failure
-    unimportant with or without pipefail.
+    unimportant with or without pipefail;
+  - the step says `continue-on-error: true`, so its verdict does not count.
+
+Known limits, on the conservative or the documented side: `{ ...; } | tee` is
+flagged even when every command in the group is an echo; a `set -o pipefail`
+inside a function body counts from where it is written, not from where the
+function is called.
 
 The steps found on the day this gate was written sit in
-tools/tee_pipefail_baseline.txt. It is a ratchet in both directions, as in
-check_doc_refs (#819): a step not in it fails, and an entry that no longer
-reproduces fails too, because a stale entry is a pre-approved defect waiting to
-come back. `--prune-baseline` writes baseline & current, so it can only remove;
-there is no flag that adds.
+tools/tee_pipefail_baseline.txt as `<workflow> :: <job> :: <step>`. A step's
+name is not unique in a job, so the second step of a name is `<name> #2`, the
+third `<name> #3`, counted over all steps of the job; otherwise a second unsafe
+`Yosys` would hide behind the first one's entry. The baseline is a ratchet in
+both directions, as in check_doc_refs (#819): a step not in it fails, and an
+entry that no longer reproduces fails too, because a stale entry is a
+pre-approved defect waiting to come back. `--prune-baseline` writes
+baseline & current, so it can only remove; there is no flag that adds.
+
+This reads YAML by hand. So that a file it misreads cannot pass as clean, it
+also counts the `run:` keys in each workflow as text and compares that count
+with the run keys the walk reached; a difference -- a quoted key, a flow-style
+step, a job laid out in a way the walk did not follow -- is "cannot tell", and
+so is a merge key (`<<:`). tools/test_check_tee_pipefail.py plants every case
+above.
 
 Exit 0 clean, 1 a new or stale entry, 2 a workflow this parser could not read
 (cannot tell is not clean).
@@ -45,29 +67,39 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 WORKFLOWS = ROOT / ".github" / "workflows"
 BASE = pathlib.Path(__file__).with_name("tee_pipefail_baseline.txt")
 
-# A single `|` (not `||`) followed by tee, or `|&` (stderr too) into tee.
-TEE = re.compile(r"(?<!\|)\|&?(?!\|)\s*tee\b")
-SET_ON = re.compile(r"^\s*set\b[^#]*?(-[A-Za-z]*o\s*pipefail\b|-o\s+pipefail\b)")
-SET_OFF = re.compile(r"^\s*set\b[^#]*\+o\s+pipefail\b")
-SWALLOWED = re.compile(r"\|\|\s*(true|:)\s*(;\s*)?$")
+# A single `|` (not `||`), or `|&` (stderr too), into tee -- also through sudo
+# (`sudo -E tee`) or by path (`/usr/bin/tee`).
+TEE = re.compile(r"(?<!\|)\|&?(?!\|)\s*(?:sudo\s+(?:-\S+\s+)*)?(?:\S*/)?tee(?![\w.-])")
+# A `set` command at the start of a command: line start, or after ; & ( { or a
+# shell keyword. Its arguments run to the next separator.
+SET_CMD = re.compile(r"(?:^|[;&({]|\b(?:then|do|else)\b)\s*set\s+([^;&|#)}]*)")
+PF_ON = re.compile(r"(?:^|\s)-[A-Za-z]*o\s*pipefail\b")
+PF_OFF = re.compile(r"(?:^|\s)\+[A-Za-z]*o\s*pipefail\b")
+SWALLOWED = re.compile(r"\|\|\s*(true|:)\s*$")
 BARE_ECHO = re.compile(r"^\s*(echo|printf)\b[^|;&`]*$")
 KEY = re.compile(r"^(\s*)(-\s+)?([A-Za-z0-9_.-]+)\s*:(\s*(.*))?$")
+# What the walk is checked against: every `run:` key as text, block or flow.
+RUN_TEXT = re.compile(r"""^\s*(?:-\s+)?["']?run["']?\s*:(?:\s|$)""")
+FLOW_RUN = re.compile(r"""[{,]\s*["']?run["']?\s*:""")
+MERGE = re.compile(r"""^\s*(?:-\s+)?["']?<<["']?\s*:""")
 
 
 def shell_has_pipefail(shell: str | None) -> bool | None:
     """True/False for a declared shell, None when none is declared."""
     if shell is None:
         return None
-    s = shell.strip().strip("'\"")
+    s = unquote(shell)
     # `shell: bash` is the one spelling GitHub expands WITH pipefail.
     return s == "bash" or "pipefail" in s
 
 
 def unquote(v: str) -> str:
+    """A one-line YAML scalar's value: quotes off, a trailing comment off."""
     v = v.strip()
-    if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"":
-        return v[1:-1]
-    return v
+    m = re.match(r"""^(["'])(.*)\1\s*(#.*)?$""", v)
+    if m:
+        return m.group(2)
+    return re.sub(r"(^|\s+)#.*$", "", v).strip()
 
 
 def block(lines: list[str], i: int, key_indent: int) -> tuple[list[str], int]:
@@ -89,13 +121,19 @@ def block(lines: list[str], i: int, key_indent: int) -> tuple[list[str], int]:
 
 
 def logical_lines(script: list[str]) -> list[tuple[int, str]]:
-    """Backslash-continued lines joined; (first physical index, text)."""
+    """Lines bash reads as one: a trailing backslash, or a trailing `|` / `|&`
+    (bash goes on reading the pipeline on the next line). (first physical
+    index, text)."""
     out, buf, start = [], "", 0
     for k, ln in enumerate(script):
         if not buf:
             start = k
-        if ln.rstrip().endswith("\\"):
-            buf += ln.rstrip()[:-1] + " "
+        r = ln.rstrip()
+        if r.endswith("\\"):
+            buf += r[:-1] + " "
+            continue
+        if not r.lstrip().startswith("#") and re.search(r"(?<!\|)\|&?$", r):
+            buf += r + " "
             continue
         out.append((start, buf + ln))
         buf = ""
@@ -104,47 +142,109 @@ def logical_lines(script: list[str]) -> list[tuple[int, str]]:
     return out
 
 
+def flatten(s: str) -> str:
+    """$(...) and `...` replaced by a word: what fails inside them is lost to
+    the command around them, pipefail or not."""
+    while True:
+        flat = re.sub(r"\$\([^()]*\)|`[^`]*`", "S", s)
+        if flat == s:
+            return s
+        s = flat
+
+
 def unsafe_pipes(script: list[str], pipefail: bool) -> list[int]:
     """Indexes (into script) of tee pipes that can hide a failure."""
     hits = []
     logical = logical_lines(script)
     for n, (k, text) in enumerate(logical):
-        stripped = text.strip()
-        if stripped.startswith("#"):
+        if text.strip().startswith("#"):
             continue
-        if SET_OFF.search(text):
-            pipefail = False
-            continue
-        if SET_ON.search(text):
-            pipefail = True
-            continue
-        m = TEE.search(text)
-        if not m or pipefail:
-            continue
-        if SWALLOWED.search(stripped):
-            continue
-        # A failure inside echo's $(...) is lost to echo itself, pipefail or
-        # not, so only the echo's own pipes count.
-        left = text[: m.start()]
-        while True:
-            flat = re.sub(r"\$\([^()]*\)|`[^`]*`", "S", left)
-            if flat == left:
-                break
-            left = flat
-        if BARE_ECHO.match(left):
-            continue
-        if any("PIPESTATUS" in t for _, t in logical[n:]):
-            continue
-        hits.append(k)
+        events = []
+        for m in SET_CMD.finditer(text):
+            if PF_OFF.search(" " + m.group(1)):
+                events.append((m.start(), "off", m))
+            elif PF_ON.search(" " + m.group(1)):
+                events.append((m.start(), "on", m))
+        for m in TEE.finditer(text):
+            events.append((m.start(), "tee", m))
+        for _, kind, m in sorted(events, key=lambda e: e[0]):
+            if kind == "on":
+                pipefail = True
+                continue
+            if kind == "off":
+                pipefail = False
+                continue
+            if pipefail:
+                continue
+            # This pipeline's own end: up to the next ; or && after tee.
+            rest = re.split(r";|&&", text[m.end():], maxsplit=1)[0]
+            if SWALLOWED.search(rest.strip()):
+                continue
+            # The command on the left, after the last ; && || of the line.
+            left = re.split(r";|&&|\|\|", flatten(text[: m.start()]))[-1]
+            if BARE_ECHO.match(left):
+                continue
+            # PIPESTATUS is overwritten by the next pipeline, so it must be
+            # read on the pipe's own line or the very next one.
+            after = text[m.end():]
+            nxt = logical[n + 1][1] if n + 1 < len(logical) else ""
+            if "PIPESTATUS" in after or "PIPESTATUS" in nxt:
+                continue
+            hits.append(k)
+            break
     return hits
+
+
+def indent(ln: str) -> int:
+    return len(ln) - len(ln.lstrip())
+
+
+def text_runs(lines: list[str]) -> int:
+    """`run:` keys whose value is a script, counted as text outside block
+    scalars and comments. Not a script: a list or a mapping -- a matrix axis
+    called `run` (`run: [1, 2]`), or the `run:` of a `defaults:`, whose next
+    line is a key."""
+    n, i = 0, 0
+    while i < len(lines):
+        ln = lines[i]
+        s = ln.strip()
+        if not s or s.startswith("#"):
+            i += 1
+            continue
+        if RUN_TEXT.match(ln):
+            val = unquote(ln.split(":", 1)[1])
+            if val[:1] not in ("[", "{"):
+                if val:
+                    n += 1
+                else:
+                    nx = next((x for x in lines[i + 1:] if x.strip()
+                               and not x.lstrip().startswith("#")), "")
+                    if indent(nx) > indent(ln) and not nx.lstrip().startswith("-") \
+                            and not KEY.match(nx):
+                        n += 1
+        else:
+            n += len(FLOW_RUN.findall(ln))
+        m = KEY.match(ln)
+        if m and (m.group(5) or "").strip()[:1] in ("|", ">"):
+            _, i = block(lines, i, len(m.group(1)) + len(m.group(2) or ""))
+            continue
+        i += 1
+    return n
 
 
 def scan(path: pathlib.Path) -> tuple[list[tuple[str, int]], str | None]:
     """[(key, line number)] of unsafe steps, or an error message."""
-    rel = path.relative_to(ROOT).as_posix()
+    try:
+        rel = path.relative_to(ROOT).as_posix()
+    except ValueError:
+        rel = path.name
     lines = path.read_text().splitlines()
     wf_shell: str | None = None
     found: list[tuple[str, int]] = []
+    seen = {"runs": 0}
+
+    if any(MERGE.match(ln) for ln in lines):
+        return [], f"{rel}: a YAML merge key (`<<:`) -- cannot tell what it brings in"
 
     # Workflow-level defaults.run.shell: `defaults:` at column 0.
     for i, ln in enumerate(lines):
@@ -157,11 +257,11 @@ def scan(path: pathlib.Path) -> tuple[list[tuple[str, int]], str | None]:
                     wf_shell = m.group(1)
 
     try:
-        jobs_at = next(i for i, ln in enumerate(lines) if re.match(r"^jobs:\s*$", ln))
+        jobs_at = next(i for i, ln in enumerate(lines) if re.match(r"^jobs:\s*(#.*)?$", ln))
     except StopIteration:
         return [], f"{rel}: no top-level `jobs:` -- cannot read it"
 
-    i, job, job_indent = jobs_at + 1, None, None
+    i, job, job_indent, child = jobs_at + 1, None, None, None
     job_shell: str | None = None
     while i < len(lines):
         ln = lines[i]
@@ -175,49 +275,43 @@ def scan(path: pathlib.Path) -> tuple[list[tuple[str, int]], str | None]:
         if job_indent is None:
             job_indent = ind
         if ind == job_indent and not m.group(2):
-            job, job_shell = m.group(3), None
+            job, job_shell, child = m.group(3), None, None
             i += 1
             continue
-        if m.group(3) == "defaults" and ind == job_indent + 2:
+        # The job's own keys sit at the indent of its first key, whatever it is.
+        if child is None and ind > job_indent:
+            child = ind
+        if m.group(3) == "defaults" and ind == child and not m.group(2):
             for ln2 in lines[i + 1:]:
-                if ln2.strip() and len(ln2) - len(ln2.lstrip()) <= ind:
+                if ln2.strip() and indent(ln2) <= ind:
                     break
                 s = re.match(r"^\s+shell:\s*(.+?)\s*$", ln2)
                 if s:
                     job_shell = s.group(1)
             i += 1
             continue
-        if m.group(3) == "steps" and ind == job_indent + 2:
-            i = steps(lines, i, ind, rel, job, wf_shell, job_shell, found)
+        if m.group(3) == "steps" and ind == child and not m.group(2):
+            i = steps(lines, i, ind, rel, job, wf_shell, job_shell, found, seen)
             continue
         i += 1
+
+    counted = text_runs(lines)
+    if counted != seen["runs"]:
+        return found, (f"{rel}: {counted} `run:` key(s) as text, {seen['runs']} reached "
+                       f"by the walk -- cannot tell (quoted key, flow style or layout)")
     return found, None
 
 
-def steps(lines, i, steps_indent, rel, job, wf_shell, job_shell, found) -> int:
+def steps(lines, i, steps_indent, rel, job, wf_shell, job_shell, found, seen) -> int:
     """Walk one `steps:` list; append unsafe steps to found; return next index."""
     j, n, step, item_indent = i + 1, 0, None, None
-
-    def finish(st):
-        if st is None or st.get("run") is None:
-            return
-        if (st.get("coe") or "").lower() == "true":
-            return  # declared non-blocking: a hidden failure changes no verdict
-        declared = shell_has_pipefail(st.get("shell"))
-        if declared is None:
-            declared = shell_has_pipefail(job_shell)
-        if declared is None:
-            declared = shell_has_pipefail(wf_shell)
-        hits = unsafe_pipes(st["run"], bool(declared))
-        if hits:
-            label = st.get("name") or f"step {st['n']}"
-            found.append((f"{rel} :: {job} :: {label}", st["run_line"] + 1 + hits[0] + 1))
+    every: list[dict] = []
 
     while j < len(lines):
         ln = lines[j]
-        if ln.strip() and len(ln) - len(ln.lstrip()) <= steps_indent and not ln.lstrip().startswith("- "):
+        if ln.strip() and indent(ln) <= steps_indent and not ln.lstrip().startswith("- "):
             break
-        if ln.strip() and len(ln) - len(ln.lstrip()) < steps_indent:
+        if ln.strip() and indent(ln) < steps_indent:
             break
         m = KEY.match(ln)
         if not m or ln.lstrip().startswith("#"):
@@ -226,10 +320,10 @@ def steps(lines, i, steps_indent, rel, job, wf_shell, job_shell, found) -> int:
         if item_indent is None and m.group(2):
             item_indent = len(m.group(1))
         if m.group(2) and len(m.group(1)) == item_indent:  # `- key:` starts a step
-            finish(step)
             n += 1
             key_indent = len(m.group(1)) + len(m.group(2))
             step = {"n": n, "run": None, "ki": key_indent}
+            every.append(step)
         elif step is None:
             j += 1
             continue
@@ -243,22 +337,62 @@ def steps(lines, i, steps_indent, rel, job, wf_shell, job_shell, found) -> int:
                     continue
         key, val = m.group(3), (m.group(5) or "")
         if key == "run":
-            if val.strip()[:1] in ("|", ">"):
+            seen["runs"] += 1
+            v = val.strip()
+            if v[:1] in ("|", ">"):
                 body, nxt = block(lines, j, key_indent)
-                if val.strip()[:1] == ">":
+                if v[:1] == ">":
                     body = [" ".join(b.strip() for b in body)]
                 step["run"], step["run_line"] = body, j
                 j = nxt
                 continue
-            step["run"], step["run_line"] = [unquote(val)], j - 1
+            # A flow scalar may go on over the next, deeper lines; YAML folds
+            # them into one line.
+            parts, k = [v], j + 1
+            quoted = v[:1] in ("'", '"')
+            closed = quoted and re.match(r"""^(["']).*\1\s*(#.*)?$""", v)
+            while k < len(lines) and not closed:
+                nx = lines[k]
+                if not nx.strip():
+                    k += 1
+                    continue
+                if indent(nx) <= key_indent or (not quoted and nx.lstrip().startswith("#")):
+                    break
+                parts.append(nx.strip())
+                if quoted and nx.rstrip().endswith(v[0]):
+                    break
+                k += 1
+            joined = " ".join(parts)
+            step["run"], step["run_line"] = [unquote(joined) if (quoted or "#" in joined)
+                                             else joined], j - 1
         elif key == "name":
             step["name"] = unquote(val)
         elif key == "shell":
             step["shell"] = val
         elif key == "continue-on-error":
-            step["coe"] = val.strip()
+            step["coe"] = unquote(val)
         j += 1
-    finish(step)
+
+    count: dict[str, int] = {}
+    for st in every:
+        name = st.get("name")
+        if name:
+            count[name] = count.get(name, 0) + 1
+            label = name if count[name] == 1 else f"{name} #{count[name]}"
+        else:
+            label = f"step {st['n']}"
+        if st.get("run") is None:
+            continue
+        if (st.get("coe") or "").lower() == "true":
+            continue  # declared non-blocking: a hidden failure changes no verdict
+        declared = shell_has_pipefail(st.get("shell"))
+        if declared is None:
+            declared = shell_has_pipefail(job_shell)
+        if declared is None:
+            declared = shell_has_pipefail(wf_shell)
+        hits = unsafe_pipes(st["run"], bool(declared))
+        if hits:
+            found.append((f"{rel} :: {job} :: {label}", st["run_line"] + 1 + hits[0] + 1))
     return j
 
 

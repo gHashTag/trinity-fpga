@@ -5,7 +5,8 @@ name: Tee pipefail gate
 # a synthesis that failed. tnf-boundary-gate and reachability-ratchet closed it
 # with `defaults: run: shell: bash -eo pipefail {0}`; 77 other steps had not.
 # They are listed in tools/tee_pipefail_baseline.txt, which may only shrink.
-# See tools/check_tee_pipefail.py.
+# See tools/check_tee_pipefail.py; tools/test_check_tee_pipefail.py plants
+# every case it claims to decide, and runs first.
 
 on:
   push:
@@ -13,11 +14,13 @@ on:
     paths:
       - '.github/workflows/**'
       - 'tools/check_tee_pipefail.py'
+      - 'tools/test_check_tee_pipefail.py'
       - 'tools/tee_pipefail_baseline.txt'
   pull_request:
     paths:
       - '.github/workflows/**'
       - 'tools/check_tee_pipefail.py'
+      - 'tools/test_check_tee_pipefail.py'
       - 'tools/tee_pipefail_baseline.txt'
   workflow_dispatch:
 
@@ -27,5 +30,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+      - name: The checker decides every planted case
+        run: python3 tools/test_check_tee_pipefail.py
       - name: No new step may hide a failure behind tee
         run: python3 tools/check_tee_pipefail.py
