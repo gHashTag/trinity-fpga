@@ -1,0 +1,60 @@
+name: Tee pipefail gate
+
+# A step with no `shell:` runs as `bash -e {0}` -- no pipefail -- so
+# `yosys ... 2>&1 | tee synth.log` takes tee's exit status and ends green over
+# a synthesis that failed. tnf-boundary-gate and reachability-ratchet closed it
+# with `defaults: run: shell: bash -eo pipefail {0}`; 77 other steps had not.
+# They are listed in tools/tee_pipefail_baseline.txt, which may only shrink.
+# See tools/check_tee_pipefail.py; tools/test_check_tee_pipefail.py plants
+# every case it claims to decide, and runs first.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/**'
+      - 'tools/check_tee_pipefail.py'
+      - 'tools/test_check_tee_pipefail.py'
+      - 'tools/tee_pipefail_baseline.txt'
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - 'tools/check_tee_pipefail.py'
+      - 'tools/test_check_tee_pipefail.py'
+      - 'tools/tee_pipefail_baseline.txt'
+  workflow_dispatch:
+
+jobs:
+  tee-pipefail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      # The checker reads workflows with PyYAML, as the runner reads them; a
+      # hand-read YAML layout let unsafe steps past it twice. Without PyYAML it
+      # answers "cannot tell" (rc 2), never clean.
+      - name: PyYAML for the checker
+        run: |
+          python3 -c 'import yaml' 2>/dev/null \
+            || python3 -m pip install --quiet --user --break-system-packages pyyaml
+          python3 -c 'import yaml; print("PyYAML", yaml.__version__)'
+      - name: The checker decides every planted case
+        run: python3 tools/test_check_tee_pipefail.py
+      - name: No new step may hide a failure behind tee
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          # On a pull request the baseline is also held to the base branch's
+          # copy: it only shrinks, by hand too. A base without a copy yet (the
+          # pull request that adds this gate) has nothing to hold it to.
+          args=()
+          if [ -n "$BASE_REF" ]; then
+            git fetch --quiet --depth=1 origin "$BASE_REF"
+            if git cat-file -e FETCH_HEAD:tools/tee_pipefail_baseline.txt 2>/dev/null; then
+              git show FETCH_HEAD:tools/tee_pipefail_baseline.txt > "$RUNNER_TEMP/base-baseline.txt"
+              args=(--base-baseline "$RUNNER_TEMP/base-baseline.txt")
+            else
+              echo "base $BASE_REF has no baseline yet -- growth not checked"
+            fi
+          fi
+          python3 tools/check_tee_pipefail.py "${args[@]}"

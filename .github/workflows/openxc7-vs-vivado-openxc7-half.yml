@@ -382,6 +382,7 @@ jobs:
         id: t
         run: |
           set -o pipefail
+          # tee-pipefail: each tee is in this shell; bash -c runs inside run(), whose status the pipe carries
           chmod +x npnr/bin/nextpnr-xilinx
           mkdir -p logs
 
