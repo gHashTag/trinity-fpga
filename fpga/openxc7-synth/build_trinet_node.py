@@ -2,7 +2,13 @@
 """Build a TRI-NET node bitstream for the ALINX AX7203 (xc7a200tfbg484-2) with the
 local openXC7 toolchain.  Mirrors .github/workflows/ax7203-trinet-fleet.yml.
 
-    yosys (synth_xilinx) -> nextpnr-xilinx -> fasm2frames -> xc7frames2bit
+    yosys (synth_xilinx) -> nextpnr-xilinx -> bitwalk --fasm -> bitwalk --write
+                                           (or fasm2frames -> xc7frames2bit)
+
+bitwalk is t27's xilinx7 specs (packets, frames, far) generated to Rust by t27c. It is used
+when its binary and its prjxray-db digest exist, otherwise the script falls back to prjxray's
+two tools and says why. --check-frames runs both and stops unless the .frames and the .bit
+are byte-identical.
 
 It NEVER touches the board: no openocd, no openFPGALoader, no /dev/cu.*.
 The flash command is printed as text only (needs the owner's explicit yes).
@@ -39,6 +45,11 @@ DB_PIN = "ab1fc60c38a0dc1bc1d3d495f3189b25ae971e04"
 # Outside the repository: the export is 187 MB.
 DB_CACHE = os.path.join(HOME, ".cache", "openxc7", "prjxray-db-ab1fc60")
 PRJXRAY = os.path.join(OXC7, "prjxray")
+# bitwalk replaces fasm2frames (a Python import of prjxray's db) and xc7frames2bit. Built by
+# the xilinx7-bitstream-loop skill, whose x7.py fasm_sweep / writer_sweep found it
+# byte-identical to them on 22/22 FASM files and 16/16 frames files (2026-10-04).
+BITWALK = os.environ.get("BITWALK", os.path.join(HOME, ".cache", "x7", "bin", "bitwalk"))
+X7_FASM_CACHE = os.path.join(HOME, ".cache", "x7", "fasm")
 
 DEFAULT_TOP = "trinet_node_v2_ax7203"
 DEFAULT_SRC = ["fpga/openxc7-synth/trinet_siphash24.v",
@@ -69,6 +80,34 @@ def payload_sha256(bit):
     return hashlib.sha256(b[i:]).hexdigest() if i >= 0 else None
 
 
+def bit_header(path):
+    """The .bit header's text fields: a = "<source>;Generator=<tool>", b = part, c = date,
+    d = time.  They come before the sync word, so payload_sha256 ignores them."""
+    with open(path, "rb") as f:
+        b = f.read(4096)
+    i = 2 + int.from_bytes(b[0:2], "big") + 2  # the length-prefixed magic, then 0x0001
+    fields = {}
+    while i + 3 <= len(b) and chr(b[i]) in "abcd":
+        n = int.from_bytes(b[i + 1:i + 3], "big")
+        fields[chr(b[i])] = b[i + 3:i + 3 + n].rstrip(b"\0").decode(errors="replace")
+        i += 3 + n
+    return fields
+
+
+def same_bytes(a, b):
+    with open(a, "rb") as fa, open(b, "rb") as fb:
+        return fa.read() == fb.read()
+
+
+def bitwalk_digest(db_root, part):
+    """The db digest bitwalk --fasm reads.  x7.py fasm_digest (skill xilinx7-bitstream-loop)
+    writes it and owns the name; a db exported outside git, as DB_CACHE is, is named after
+    its directory, which carries the revision."""
+    root = os.path.abspath(db_root)
+    return os.path.join(X7_FASM_CACHE, "db-%s-%s-%s-v2.txt"
+                        % (os.path.basename(root), part, os.path.basename(os.path.dirname(root))))
+
+
 def parse_time_l(text):
     """Parse macOS `/usr/bin/time -l` output."""
     out = {}
@@ -86,7 +125,9 @@ def parse_time_l(text):
 
 def run_step(name, cmd, outdir, outputs, env=None, stdin=None):
     """Run one step under /usr/bin/time -l; delete its outputs first so a failed
-    step can never leave a stale artefact that looks like a success."""
+    step can never leave a stale artefact that looks like a success.  A failed
+    step's own outputs are renamed to *.failed: bitwalk --write, for one, still
+    writes its .bit when it rejects a frame."""
     if any(os.path.basename(str(c)) in FORBIDDEN for c in cmd):
         sys.exit("refusing to run a board-touching tool: %s" % cmd[0])
     for o in outputs:
@@ -108,6 +149,9 @@ def run_step(name, cmd, outdir, outputs, env=None, stdin=None):
     print("[%-12s] rc=%d  %6.1f s  rss %s MB" % (name, p.returncode, rec["wall_s"],
                                                  rec.get("max_rss_mb", "?")))
     if p.returncode != 0 or bad:
+        for o in outputs:
+            if os.path.exists(o):
+                os.replace(o, o + ".failed")
         tail = "\n".join(err.strip().splitlines()[-15:])
         sys.exit("step %s FAILED (rc=%d, missing/empty: %s)\n%s\nsee %s"
                  % (name, p.returncode, bad, tail, log))
@@ -191,12 +235,45 @@ def main():
                     help="synth_xilinx -nosrl: plain flip-flops, no SRL16E/SRLC32E")
     ap.add_argument("--allow-srl", action="store_true",
                     help="go on to nextpnr even if yosys inferred shift-register LUTs")
+    ap.add_argument("--frames-tool", choices=["auto", "bitwalk", "prjxray"], default="auto",
+                    help="FASM -> .frames -> .bit with bitwalk or with fasm2frames + xc7frames2bit; "
+                         "auto = bitwalk when its binary and db digest exist")
+    ap.add_argument("--bitwalk", default=BITWALK, help="bitwalk binary (env BITWALK)")
+    ap.add_argument("--bitwalk-digest", help="prjxray-db digest for bitwalk --fasm "
+                                             "(default: x7.py fasm_digest's name for --db-root and --part)")
+    ap.add_argument("--check-frames", action="store_true",
+                    help="run bitwalk AND fasm2frames + xc7frames2bit; stop unless the .frames "
+                         "and the .bit are byte-identical")
     args = ap.parse_args()
 
     out = os.path.abspath(args.out)
     os.makedirs(out, exist_ok=True)
     name = args.name or ("trinet_node%d" % args.node if args.top == DEFAULT_TOP else args.top)
     ensure_db(args.db_root)
+
+    # Decide the frames tool before the long steps, so a missing bitwalk stops a forced or
+    # checked build at once instead of after nextpnr.
+    digest = args.bitwalk_digest or bitwalk_digest(args.db_root, args.part)
+    bitwalk_missing = [p for p in (args.bitwalk, digest) if not os.path.exists(p)]
+    bitwalk_ready = not bitwalk_missing
+    if bitwalk_ready:
+        with open(digest) as f:
+            digest_part = f.readline().split()[-1:]
+        digest_is_for_part = digest_part == [args.part]
+        if not digest_is_for_part:
+            sys.exit("bitwalk digest %s is for %s, not %s" % (digest, digest_part, args.part))
+    check_against_itself = args.check_frames and args.frames_tool == "prjxray"
+    if check_against_itself:
+        sys.exit("--check-frames compares bitwalk with prjxray; it cannot run with --frames-tool prjxray")
+    bitwalk_needed = args.frames_tool == "bitwalk" or args.check_frames
+    if bitwalk_needed and not bitwalk_ready:
+        sys.exit("bitwalk unavailable, missing: %s (the digest comes from x7.py fasm_digest)"
+                 % ", ".join(bitwalk_missing))
+    use_bitwalk = args.frames_tool != "prjxray" and bitwalk_ready
+    fell_back = args.frames_tool == "auto" and not bitwalk_ready
+    if fell_back:
+        print("frames: fasm2frames + xc7frames2bit, because bitwalk is missing %s"
+              % ", ".join(bitwalk_missing))
     srcs, xdc = snapshot_sources(args, os.path.join(out, "src"))
     steps = []
 
@@ -258,21 +335,56 @@ def main():
     if not chosen:
         sys.exit("no placer/seed routed")
 
-    # 3. fasm2frames (prjxray python).  Warn about the silent-drop trap.
+    # 3-4. FASM -> .frames -> .bit
     part_dir = os.path.join(args.db_root, args.part)
+    part_yaml = os.path.join(part_dir, "part.yaml")
     req = os.path.join(part_dir, "required_features.fasm")
     frames = os.path.join(out, "node.frames")
+    bit = os.path.join(out, name + ".bit")
     env = dict(os.environ, PYTHONPATH=PRJXRAY + os.pathsep + os.environ.get("PYTHONPATH", ""),
                PYTHONWARNINGS="ignore")
-    steps.append(run_step("fasm2frames", [sys.executable, os.path.join(PRJXRAY, "utils", "fasm2frames.py"),
-                                          "--db-root", args.db_root, "--part", args.part, fasm, frames],
-                          out, [frames], env=env))
 
-    # 4. xc7frames2bit
-    bit = os.path.join(out, name + ".bit")
-    steps.append(run_step("frames2bit", ["xc7frames2bit", "--part_file", os.path.join(part_dir, "part.yaml"),
-                                         "--part_name", args.part, "--frm_file", frames,
-                                         "--output_file", bit], out, [bit]))
+    def prjxray_frames(frames_out, bit_out):
+        steps.append(run_step("fasm2frames", [sys.executable, os.path.join(PRJXRAY, "utils", "fasm2frames.py"),
+                                              "--db-root", args.db_root, "--part", args.part, fasm, frames_out],
+                              out, [frames_out], env=env))
+        steps.append(run_step("frames2bit", ["xc7frames2bit", "--part_file", part_yaml, "--part_name", args.part,
+                                             "--frm_file", frames_out, "--output_file", bit_out], out, [bit_out]))
+
+    def bitwalk_write(frames_in, bit_out, step, source, generator, date, clock):
+        steps.append(run_step(step, [args.bitwalk, "--write", frames_in, bit_out, "--part_file", part_yaml,
+                                     "--part_name", args.part, "--source", source, "--generator", generator,
+                                     "--date", date, "--time", clock], out, [bit_out]))
+
+    check = None
+    if use_bitwalk:
+        # bitwalk --fasm reads required_features.fasm from the digest, as fasm2frames reads it from the db.
+        steps.append(run_step("bitwalk-fasm", [args.bitwalk, "--fasm", digest, fasm, frames], out, [frames]))
+        bitwalk_write(frames, bit, "bitwalk-write", frames, "bitwalk",
+                      time.strftime("%Y/%m/%d"), time.strftime("%H:%M:%S"))
+    else:
+        prjxray_frames(frames, bit)
+
+    if args.check_frames:
+        # The reference pair, then bitwalk's .bit again with the reference's header fields, so
+        # the whole file -- header, packets, ECC, CRC -- must match, not only the payload.
+        ref_frames = os.path.join(out, "node.prjxray.frames")
+        ref_bit = os.path.join(out, name + ".prjxray.bit")
+        prjxray_frames(ref_frames, ref_bit)
+        h = bit_header(ref_bit)
+        source, _, generator = h.get("a", "").partition(";Generator=")
+        twin = os.path.join(out, name + ".bitwalk-as-prjxray.bit")
+        bitwalk_write(frames, twin, "bitwalk-write-twin", source, generator, h.get("c", ""), h.get("d", ""))
+        check = {"frames_identical": same_bytes(frames, ref_frames),
+                 "bit_identical": same_bytes(twin, ref_bit),
+                 "payload_identical": payload_sha256(bit) == payload_sha256(ref_bit)}
+        print("check   frames %s, .bit %s, payload %s (bitwalk vs fasm2frames + xc7frames2bit)"
+              % tuple("identical" if check[k] else "DIFFER"
+                      for k in ("frames_identical", "bit_identical", "payload_identical")))
+        all_identical = all(check.values())
+        if not all_identical:
+            os.replace(bit, bit + ".mismatch")
+            sys.exit("--check-frames: bitwalk and prjxray disagree; %s renamed to *.mismatch" % bit)
 
     manifest = {
         "top": args.top, "part": args.part, "node": args.node, "params": params,
@@ -281,9 +393,15 @@ def main():
         "required_features_fasm": os.path.exists(req),
         "inputs": {os.path.basename(p): sha256(p) for p in srcs + [xdc]},
         "tools": tool_versions(), "steps": steps,
+        "frames_tool": "bitwalk" if use_bitwalk else "prjxray",
         "outputs": {os.path.basename(p): {"bytes": os.path.getsize(p), "sha256": sha256(p)}
                     for p in (json_out, fasm, frames, bit)},
     }
+    if use_bitwalk:
+        manifest["bitwalk"] = {"bin": args.bitwalk, "bin_sha256": sha256(args.bitwalk),
+                               "digest": digest, "digest_sha256": sha256(digest)}
+    if check is not None:
+        manifest["check_frames"] = check
     manifest["outputs"][os.path.basename(bit)]["payload_sha256"] = payload_sha256(bit)
     with open(os.path.join(out, "manifest.json"), "w") as f:
         json.dump(manifest, f, indent=2)
