@@ -344,12 +344,14 @@ fn generate(gpa: std.mem.Allocator, io: std.Io, gen: []const u8, spec: []const u
     };
 }
 
-/// "exit 1, error: Foo" or "exit 0, no file, Error: the generator produced
-/// 0 bytes for ...". The line is the last one that starts with `error`/`Error`
-/// once trimmed -- Zig's own report of an error returned from main, and the
-/// generator's write and empty-output messages, all have that shape; the
-/// parser's "  spec error: ..." lines do not. Failing that, the last
-/// non-empty line.
+/// "signal 6, no file, thread 9 panic: ..." or "exit 1, no file, error: Foo".
+/// The line is the last one holding "panic: " -- 19 specs abort the generator
+/// with SIGABRT (run 37243448031), and a panic's last line is a stack frame
+/// with no symbols, "???:?:?: 0x1571044 in ??? (???)", the same for all 19.
+/// Failing that, the last line that starts with `error`/`Error` once trimmed:
+/// Zig's report of an error returned from main and the generator's write and
+/// empty-output messages have that shape, the parser's "  spec error: ..."
+/// lines do not. Failing that, the last non-empty line.
 fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, nonempty_file: bool, stderr: []const u8) ![]u8 {
     var status_buf: [32]u8 = undefined;
     const status = switch (term) {
@@ -360,6 +362,7 @@ fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, nonempty_file: b
     };
     const file_note: []const u8 = if (nonempty_file) "" else ", no file";
 
+    var last_panic: ?[]const u8 = null;
     var last_error: ?[]const u8 = null;
     var last_line: ?[]const u8 = null;
     var it = std.mem.splitScalar(u8, stderr, '\n');
@@ -368,10 +371,12 @@ fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, nonempty_file: b
         const blank = line.len == 0;
         if (blank) continue;
         last_line = line;
+        const is_panic_line = std.mem.startsWith(u8, line, "panic: ") or std.mem.indexOf(u8, line, " panic: ") != null;
+        if (is_panic_line) last_panic = line;
         const is_error_line = std.mem.startsWith(u8, line, "error") or std.mem.startsWith(u8, line, "Error");
         if (is_error_line) last_error = line;
     }
-    const picked = last_error orelse last_line orelse "(no stderr)";
+    const picked = last_panic orelse last_error orelse last_line orelse "(no stderr)";
     const shown = picked[0..@min(picked.len, 200)];
     return std.fmt.allocPrint(gpa, "{s}{s}, {s}", .{ status, file_note, shown });
 }
@@ -395,6 +400,22 @@ test "describeFailure names the exit status and the last error line" {
     const c = try describeFailure(gpa, .{ .exited = 0 }, false, "");
     defer gpa.free(c);
     try std.testing.expectEqualStrings("exit 0, no file, (no stderr)", c);
+
+    // The last frame is the one run 37243448031 printed for all 19 aborts;
+    // the two lines above it are illustrative, since that run printed only
+    // the frame. A panic wins over an earlier error line.
+    const aborted =
+        \\Generating Verilog...
+        \\error(gpa): Allocation size 512 bytes does not match free size 300.
+        \\thread 4242 panic: Invalid free
+        \\???:?:?: 0x1570f10 in ??? (???)
+        \\???:?:?: 0x1571044 in ??? (???)
+    ;
+    const d = try describeFailure(gpa, .{ .signal = .ABRT }, false, aborted);
+    defer gpa.free(d);
+    const want = try std.fmt.allocPrint(gpa, "signal {d}, no file, thread 4242 panic: Invalid free", .{@intFromEnum(std.posix.SIG.ABRT)});
+    defer gpa.free(want);
+    try std.testing.expectEqualStrings(want, d);
 }
 
 fn parseBehaviours(stdout: []const u8, stderr: []const u8) usize {
