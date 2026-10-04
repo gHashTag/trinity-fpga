@@ -37,6 +37,11 @@ jobs:
           docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/build/gf24_sub/chipdb/xc7a200tfbg484-2.bba && bbasm -l /work/build/gf24_sub/chipdb/xc7a200tfbg484-2.bba /work/build/gf24_sub/chipdb/xc7a200tfbg484-2.bin"
       - name: nextpnr (seed search)
         run: |
+          # --placer heap, not sa (#862). SA leaves invalid tiles on this design ("post-placement validity
+          # check failed for Bel 'SLICE_.../A5FF'", openXC7/nextpnr-xilinx#162) and placed 3 of seeds 1-16
+          # (6, 8, 13; 56-68 s each, Fmax 15.6-16.2 MHz), so this loop took 215 s to reach seed 6. HeAP placed
+          # 16 of 16, 6-9 s each, Fmax 26.3-28.1 MHz; both are under the 50 MHz target, which --timing-allow-fail
+          # already accepts (regymm/openxc7 sha256:35c91073, run 37215621928).
           CLEAN=0; for s in 1 2 3 4 5 6 7 8; do
             rm -f build/gf24_sub/gf24_sub_ax7203.fasm
             docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 timeout --signal=KILL 1800 nextpnr-xilinx \
@@ -45,7 +50,7 @@ jobs:
               --json /work/build/gf24_sub/gf24_sub_ax7203.json \
               --write /work/build/gf24_sub/gf24_sub_ax7203_routed.json \
               --fasm /work/build/gf24_sub/gf24_sub_ax7203.fasm \
-              --freq 50.0 --seed $s --placer sa --router router1 --timing-allow-fail > /tmp/np_$s.log 2>&1 || true
+              --freq 50.0 --seed $s --placer heap --router router1 --timing-allow-fail > /tmp/np_$s.log 2>&1 || true
             if grep -q "Failed to find a route" /tmp/np_$s.log || [ ! -f build/gf24_sub/gf24_sub_ax7203.fasm ]; then continue; fi
             cp /tmp/np_$s.log /tmp/np.log; CLEAN=$s; break
           done; [ "$CLEAN" = "0" ] && { echo "::error::no clean seed"; exit 1; }; echo "seed=$CLEAN"
