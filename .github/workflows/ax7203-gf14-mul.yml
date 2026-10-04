@@ -50,7 +50,7 @@ jobs:
               --seed $s --placer $PLACER --router router1 --timing-allow-fail > /tmp/np_$trial.log 2>&1 || true
             if grep -q "Failed to find a route" /tmp/np_$trial.log || [ ! -f build/gf14_mul/gf14_mul_ax7203.fasm ]; then continue; fi
             cp /tmp/np_$trial.log /tmp/np.log; CLEAN="$trial($PLACER,s$s)"; break
-          done; [ "$CLEAN" = "0" ] && { echo "::error::no clean seed (16 heap+sa)"; exit 1; }; echo "clean=$CLEAN"
+          done; [ "$CLEAN" = "0" ] && { echo "::error::no clean seed (16 heap+sa)"; tail -n 15 /tmp/np_*.log; exit 1; }; echo "clean=$CLEAN"
       - name: fasm2bit
         run: |
           docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "
