@@ -1,0 +1,523 @@
+# Experiment for #865 (S30), not a gate. Once the chipdb is cached, #865 found two fixed costs in
+# every FPGA job on hosted runners (31 jobs): pulling regymm/openxc7 (median 56 s, 1.73 GB
+# compressed) and checking out the whole tree (median 20 s). This measures one fix for each.
+#
+# 1. Slim image. The full image carries build trees, compilers and all of prjxray-db. A job that
+#    restores a cached chipdb runs only yosys, nextpnr-xilinx, fasm2frames and xc7frames2bit. The
+#    slim image is the full image's own base layer (ubuntu noble-20260911: same diff_id, checked
+#    below) plus one layer holding every file those tools need that the base does not already hold
+#    byte for byte. Files are chosen by ldd, by the Python modules and files fasm2frames actually
+#    imports and opens (recorded with an audit hook), and by the per-tile-type database files. The
+#    Dockerfile has no RUN. Nothing is pushed to a public registry: both images are pushed to a
+#    registry container on the runner and pulled back cold, so that pull time is decompression and
+#    extraction without the internet. The chipdb builder still needs the full image.
+#
+#    Positive control: gf12_clean, heap, seed 1, through yosys, nextpnr, fasm2frames and
+#    xc7frames2bit in both images, must give byte-identical json, fasm, frames and bit.
+#    Negative controls: seed 2 must change the fasm, so the comparison can fail; and the slim image
+#    must not contain bbaexport.py, so it really is a different image.
+#
+# 2. Sparse checkout. Five full and five sparse checkouts, interleaved, each into its own path,
+#    after one unmeasured warm-up checkout. Sparse covers what gf12_clean reads. Step times come
+#    from the jobs API.
+name: slim image and sparse checkout (experiment, #865)
+on:
+  push:
+    branches: [exp/slim-image]
+    paths: ['.github/workflows/exp-slim-image.yml']
+env:
+  IMG: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+  # ubuntu:noble-20260911 (amd64 manifest 49675449). Its one layer is the full image's base layer.
+  BASE: ubuntu@sha256:008173c23f95b170204355c12626cb5a965d779a7e1283b09e9cffbb1bf33ca3
+  REGISTRY_IMG: registry@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+  SLIM: openxc7-slim:exp
+  PART: xc7a200tfbg484-2
+  DB: /nextpnr-xilinx/xilinx/external/prjxray-db/artix7
+  CHIPDB_KEY: chipdb-exp865-35c91073-xc7a200tfbg484-2-v1
+  TOP: gf12_clean_ax7203
+  SRCS: fpga/openxc7-synth/gf_adder_param.v fpga/vivado/gf12_clean_ax7203.v
+  XDC: gf16_clean_ax7203.xdc
+jobs:
+  slim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Disk and docker
+        shell: bash
+        run: |
+          avail_gb=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
+          need_space=false; [ "$avail_gb" -lt 40 ] && need_space=true
+          echo "nproc=$(nproc) avail_gb=$avail_gb need_space=$need_space"
+          if [ "$need_space" = true ]; then
+            sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc
+            df -h /
+          fi
+          docker info --format 'docker {{.ServerVersion}} driver {{.Driver}}'
+          docker info 2>/dev/null | grep -i -E "storage driver|driver-type|containerd" || true
+
+      - name: warm-up checkout (not measured)
+        uses: actions/checkout@v4
+
+      - name: checkout full 1
+        uses: actions/checkout@v4
+        with: {path: co/full1}
+      - name: checkout sparse 1
+        uses: actions/checkout@v4
+        with:
+          path: co/sparse1
+          sparse-checkout: |
+            fpga/openxc7-synth
+            fpga/vivado
+            specs/fpga/constraints
+      - name: checkout full 2
+        uses: actions/checkout@v4
+        with: {path: co/full2}
+      - name: checkout sparse 2
+        uses: actions/checkout@v4
+        with:
+          path: co/sparse2
+          sparse-checkout: |
+            fpga/openxc7-synth
+            fpga/vivado
+            specs/fpga/constraints
+      - name: checkout full 3
+        uses: actions/checkout@v4
+        with: {path: co/full3}
+      - name: checkout sparse 3
+        uses: actions/checkout@v4
+        with:
+          path: co/sparse3
+          sparse-checkout: |
+            fpga/openxc7-synth
+            fpga/vivado
+            specs/fpga/constraints
+      - name: checkout full 4
+        uses: actions/checkout@v4
+        with: {path: co/full4}
+      - name: checkout sparse 4
+        uses: actions/checkout@v4
+        with:
+          path: co/sparse4
+          sparse-checkout: |
+            fpga/openxc7-synth
+            fpga/vivado
+            specs/fpga/constraints
+      - name: checkout full 5
+        uses: actions/checkout@v4
+        with: {path: co/full5}
+      - name: checkout sparse 5
+        uses: actions/checkout@v4
+        with:
+          path: co/sparse5
+          sparse-checkout: |
+            fpga/openxc7-synth
+            fpga/vivado
+            specs/fpga/constraints
+
+      - name: Checkout sizes
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          for d in co/full1 co/sparse1; do
+            files=$(git -C "$d" ls-files | wc -l)
+            on_disk=$(find "$d" -path "$d/.git" -prune -o -type f -print | wc -l)
+            echo "CHECKOUT dir=$d index_files=$files files_on_disk=$on_disk git_mb=$(du -sm "$d/.git" | cut -f1) tree_mb=$(du -sm --exclude=.git "$d" | cut -f1)"
+          done
+          sparse_has_design=true
+          for f in $SRCS "specs/fpga/constraints/$XDC"; do
+            [ -f "co/sparse1/$f" ] || sparse_has_design=false
+          done
+          echo "CHECKOUT sparse_has_design=$sparse_has_design"
+          rm -rf co
+          if [ "$sparse_has_design" = false ]; then echo "::error::the sparse checkout lacks a gf12_clean input"; exit 1; fi
+
+      - name: Pull the full image from Docker Hub (timed)
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          for i in 1 2 3 4 5 6; do
+            t0=$(date +%s.%N)
+            pulled=false; docker pull -q "$IMG" >/dev/null && pulled=true
+            echo "TIMING hub_pull image=full attempt=$i ok=$pulled s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            if [ "$pulled" = true ]; then break; fi
+            sleep $((i*20))
+          done
+          have_image=false; docker image inspect "$IMG" >/dev/null 2>&1 && have_image=true
+          if [ "$have_image" = false ]; then echo "::error::cannot pull $IMG"; exit 1; fi
+          docker pull -q "$BASE"
+          base_of_full=$(docker image inspect -f '{{index .RootFS.Layers 0}}' "$IMG")
+          base_layer=$(docker image inspect -f '{{index .RootFS.Layers 0}}' "$BASE")
+          same_base=false; [ "$base_of_full" = "$base_layer" ] && same_base=true
+          echo "SIZE image=full local_size_bytes=$(docker image inspect -f '{{.Size}}' "$IMG") layers=$(docker image inspect -f '{{len .RootFS.Layers}}' "$IMG") same_base=$same_base"
+          if [ "$same_base" = false ]; then echo "::error::BASE is not the full image's base layer: $base_of_full vs $base_layer"; exit 1; fi
+          echo "--- /docker-entrypoint.sh in the full image:"
+          docker run --rm --entrypoint cat "$IMG" /docker-entrypoint.sh
+
+      - id: chipdb
+        uses: actions/cache@v4
+        with:
+          path: build/chipdb/xc7a200tfbg484-2.bin
+          key: ${{ env.CHIPDB_KEY }}
+      - name: Build the chipdb with the full image
+        if: steps.chipdb.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p build/chipdb
+          docker run --rm -v "$PWD:/work" -w /work "$IMG" bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device $PART --bba /work/build/chipdb/$PART.bba && bbasm -l /work/build/chipdb/$PART.bba /work/build/chipdb/$PART.bin"
+          rm -f "build/chipdb/$PART.bba"
+          ls -l build/chipdb
+
+      - name: Flow in the full image, seeds 1 and 2
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          flow() {  # image tag seed
+            local img=$1 o=out/$2 seed=$3 t0 rc
+            mkdir -p "$o"
+            t0=$(date +%s.%N)
+            docker run --rm -v "$PWD:/work" -w /work "$img" yosys -p "read_verilog $SRCS; synth_xilinx -flatten -abc9 -nocarry -arch xc7 -top $TOP; setundef -zero -params; write_json $o/$TOP.json" > "$o/yosys.log" 2>&1 && rc=0 || rc=$?
+            echo "TIMING $2 step=yosys rc=$rc s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            t0=$(date +%s.%N)
+            docker run --rm -v "$PWD:/work" -w /work "$img" nextpnr-xilinx --chipdb "/work/build/chipdb/$PART.bin" \
+              --xdc "/work/specs/fpga/constraints/$XDC" --json "/work/$o/$TOP.json" --fasm "/work/$o/$TOP.fasm" \
+              --freq 50.0 --seed "$seed" --placer heap --router router1 --timing-allow-fail > "$o/nextpnr.log" 2>&1 && rc=0 || rc=$?
+            echo "TIMING $2 step=nextpnr rc=$rc s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            t0=$(date +%s.%N)
+            docker run --rm -v "$PWD:/work" -w /work "$img" bash -c "source /prjxray/env/bin/activate && fasm2frames --db-root $DB --part $PART $o/$TOP.fasm $o/$TOP.frames" > "$o/fasm2frames.log" 2>&1 && rc=0 || rc=$?
+            echo "TIMING $2 step=fasm2frames rc=$rc s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            t0=$(date +%s.%N)
+            docker run --rm -v "$PWD:/work" -w /work "$img" /prjxray/build/tools/xc7frames2bit --part_file "$DB/$PART/part.yaml" \
+              --part_name "$PART" --frm_file "$o/$TOP.frames" --output_file "$o/$TOP.bit" > "$o/frames2bit.log" 2>&1 && rc=0 || rc=$?
+            echo "TIMING $2 step=xc7frames2bit rc=$rc s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            ls -l "$o"
+          }
+          declare -f flow > flow.bash
+          flow "$IMG" full-s1 1
+          flow "$IMG" full-s2 2
+          bit_written=false; [ -s "out/full-s1/$TOP.bit" ] && bit_written=true
+          if [ "$bit_written" = false ]; then tail -n 30 out/full-s1/*.log; echo "::error::the full image produced no bitstream"; exit 1; fi
+
+      - name: Record what fasm2frames imports and opens
+        shell: bash
+        env:
+          AUDIT_PY: |
+            import atexit, os, runpy, sys
+            seen = set()
+            def hook(event, args):
+                is_path_open = event == "open" and len(args) > 0 and isinstance(args[0], str)
+                if is_path_open:
+                    seen.add(os.path.abspath(args[0]))
+            sys.addaudithook(hook)
+            def dump():
+                files = sorted(seen)
+                with open(os.environ["AUDIT_OUT"], "w") as f:
+                    for m in list(sys.modules.values()):
+                        p = getattr(m, "__file__", None)
+                        has_file = isinstance(p, str)
+                        if has_file:
+                            f.write("module\t" + os.path.abspath(p) + "\n")
+                    for p in files:
+                        f.write("open\t" + p + "\n")
+            atexit.register(dump)
+            sys.argv = sys.argv[1:]
+            runpy.run_path(sys.argv[0], run_name="__main__")
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          mkdir -p slim
+          printf '%s\n' "$AUDIT_PY" > slim/audit.py
+          docker run --rm -v "$PWD:/work" -w /work -e AUDIT_OUT=/work/slim/py-audit.txt "$IMG" bash -c \
+            "source /prjxray/env/bin/activate && echo fasm2frames=\$(command -v fasm2frames) python=\$(command -v python3) && cat /prjxray/env/pyvenv.cfg && head -3 \$(command -v fasm2frames) && python3 /work/slim/audit.py \$(command -v fasm2frames) --db-root $DB --part $PART out/full-s1/$TOP.fasm slim/audit.frames"
+          audit_same=false; cmp -s slim/audit.frames "out/full-s1/$TOP.frames" && audit_same=true
+          echo "AUDIT frames_identical=$audit_same modules=$(grep -c '^module' slim/py-audit.txt) opened=$(grep -c '^open' slim/py-audit.txt)"
+          grep '^open' slim/py-audit.txt | cut -f2 | grep -v -E '\.pyc?$' | sed -E 's#/[^/]+$##' | sort | uniq -c | sort -rn | head -20
+          if [ "$audit_same" = false ]; then echo "::error::fasm2frames under the audit hook wrote different frames"; exit 1; fi
+
+      - name: Inventory the base and build the slim image
+        shell: bash
+        env:
+          BUILD_PY: |
+            import hashlib, os, re, subprocess, sys, sysconfig, tarfile
+            OUT, DB, PART = "/work/slim", os.environ["DB"], os.environ["PART"]
+            STDLIB_SKIP = ("test", "idlelib", "tkinter", "turtledemo", "ensurepip", "lib2to3", "pydoc_data")
+            base_files, base_links = {}, {}
+            for line in open(f"{OUT}/base-files.txt", encoding="utf-8", errors="surrogateescape"):
+                escaped = line.startswith("\\")
+                if escaped:
+                    continue
+                h, p = line.rstrip("\n").split("  ", 1)
+                base_files[p] = h
+            for line in open(f"{OUT}/base-links.txt", encoding="utf-8", errors="surrogateescape"):
+                p, t = line.rstrip("\n").split("\t", 1)
+                base_links[p] = t
+            links, files, notes = {}, set(), []
+
+            def resolve(path):
+                # Canonical path, recording every symlink met on the way at its canonical location.
+                parts, cur, hops = [p for p in path.split("/") if p], "/", 0
+                while parts:
+                    c = parts.pop(0)
+                    is_dot = c == "."
+                    if is_dot:
+                        continue
+                    is_up = c == ".."
+                    if is_up:
+                        cur = os.path.dirname(cur)
+                        continue
+                    cand = os.path.join(cur, c)
+                    is_link = os.path.islink(cand)
+                    if not is_link:
+                        cur = cand
+                        continue
+                    target = os.readlink(cand)
+                    links[cand] = target
+                    hops += 1
+                    is_loop = hops > 40
+                    if is_loop:
+                        raise RuntimeError("symlink loop at " + path)
+                    is_abs = target.startswith("/")
+                    if is_abs:
+                        cur = "/"
+                    parts = [p for p in target.split("/") if p] + parts
+                return cur
+
+            def add(path):
+                real = resolve(path)
+                is_file = os.path.isfile(real)
+                if is_file:
+                    files.add(real)
+                else:
+                    notes.append("not a file: " + path)
+                return real
+
+            def add_tree(top, skip=()):
+                for root, dirs, names in os.walk(resolve(top)):
+                    keep = []
+                    for d in dirs:
+                        full = os.path.join(root, d)
+                        skipped = full in skip
+                        is_link = os.path.islink(full)
+                        if skipped:
+                            continue
+                        if is_link:
+                            add_tree(full, skip)
+                        else:
+                            keep.append(d)
+                    dirs[:] = keep
+                    for n in names:
+                        add(os.path.join(root, n))
+
+            def top_package(path):
+                d = os.path.dirname(path)
+                in_package = os.path.exists(os.path.join(d, "__init__.py"))
+                if not in_package:
+                    return None
+                while True:
+                    parent = os.path.dirname(d)
+                    parent_is_package = os.path.exists(os.path.join(parent, "__init__.py"))
+                    if not parent_is_package:
+                        return d
+                    d = parent
+
+            # The tools and what they read.
+            for p in ("/usr/local/bin/yosys", "/usr/local/bin/yosys-abc", "/usr/local/bin/nextpnr-xilinx",
+                      "/prjxray/build/tools/xc7frames2bit", "/usr/share/zoneinfo/Asia/Seoul"):
+                add(p)
+            add_tree("/usr/local/share/yosys")
+            # Python: the interpreter, the venv, the stdlib, package metadata, and every package
+            # fasm2frames imported.
+            add(sys.executable)
+            add_tree("/prjxray/env/bin")
+            add("/prjxray/env/pyvenv.cfg")
+            stdlib = resolve(sysconfig.get_paths()["stdlib"])
+            stdlib_skip = {os.path.join(stdlib, d) for d in os.listdir(stdlib) if d in STDLIB_SKIP or d.startswith("config-")}
+            add_tree(stdlib, skip=stdlib_skip)
+            for sp in {sysconfig.get_paths()["purelib"], sysconfig.get_paths()["platlib"]}:
+                sp_exists = os.path.isdir(sp)
+                if not sp_exists:
+                    continue
+                for n in os.listdir(sp):
+                    full = os.path.join(sp, n)
+                    is_top_file = os.path.isfile(full)
+                    is_metadata = n.endswith(".dist-info") or n.endswith(".egg-info")
+                    if is_top_file:
+                        add(full)
+                    if is_metadata:
+                        add_tree(full)
+            db_real = resolve(DB)
+            db_opened = []
+            for line in open(f"{OUT}/py-audit.txt"):
+                kind, p = line.rstrip("\n").split("\t", 1)
+                scratch = p.startswith("/work/") or p.startswith("/tmp/") or p.startswith("/proc/")
+                in_db = p.startswith(DB + "/") or p.startswith(db_real + "/")
+                skip_path = scratch or not os.path.isfile(p)
+                if skip_path:
+                    continue
+                if in_db:
+                    db_opened.append(p)
+                    continue
+                add(p)
+                is_module = kind == "module"
+                pkg = top_package(p) if is_module else None
+                in_pkg = pkg is not None and not pkg.startswith(stdlib + "/")
+                too_broad = in_pkg and pkg.count("/") < 2
+                if too_broad:
+                    notes.append("package dir too broad to copy whole, kept the module only: " + pkg)
+                    continue
+                if in_pkg:
+                    add_tree(pkg)
+            # The database: every per-tile-type file at the top level (another design touches other
+            # tile types), mapping/, the part and fabric files fasm2frames opened, and part.yaml.
+            db_before = set(files)
+            for n in os.listdir(db_real):
+                is_top_file = os.path.isfile(os.path.join(db_real, n))
+                if is_top_file:
+                    add(os.path.join(db_real, n))
+            add_tree(os.path.join(DB, "mapping"))
+            for p in db_opened:
+                add(p)
+            add(f"{DB}/{PART}/part.yaml")
+            db_kept = sum(os.path.getsize(p) for p in files - db_before)
+            db_total = sum(os.path.getsize(os.path.join(r, n)) for r, _, ns in os.walk(db_real) for n in ns)
+            no_db_opens = len(db_opened) == 0
+            if no_db_opens:
+                notes.append("ANOMALY: the audit saw fasm2frames open no database file")
+            # Shared libraries of every ELF file, as ldd reports them (transitively).
+            dep = re.compile(r"=>\s+(/\S+)|^\s*(/\S+)\s+\(")
+            elves = []
+            for p in sorted(files):
+                with open(p, "rb") as f:
+                    is_elf = f.read(4) == b"\x7fELF"
+                if is_elf:
+                    elves.append(p)
+            for p in elves:
+                r = subprocess.run(["ldd", p], capture_output=True, text=True)
+                for line in r.stdout.splitlines():
+                    missing = "not found" in line
+                    if missing:
+                        notes.append(f"ANOMALY ldd {p}: {line.strip()}")
+                        continue
+                    m = dep.search(line)
+                    matched = m is not None
+                    if matched:
+                        add(m.group(1) or m.group(2))
+
+            def sha(p):
+                h = hashlib.sha256()
+                with open(p, "rb") as f:
+                    for b in iter(lambda: f.read(1 << 20), b""):
+                        h.update(b)
+                return h.hexdigest()
+
+            kept_files = sorted(p for p in files if base_files.get(p) != sha(p))
+            kept_links = sorted(p for p, t in links.items() if base_links.get(p) != t)
+            overwrite = [p for p in kept_files + kept_links if p in base_files or p in base_links]
+            size = sum(os.path.getsize(p) for p in kept_files)
+            with tarfile.open(f"{OUT}/ctx/slim.tar", "w", format=tarfile.PAX_FORMAT) as tar:
+                for p in kept_links + kept_files:
+                    tar.add(p, arcname=p.lstrip("/"), recursive=False)
+            with open(f"{OUT}/kept.txt", "w") as f:
+                for p in kept_links:
+                    f.write(f"link\t{p}\t{links[p]}\n")
+                for p in kept_files:
+                    f.write(f"file\t{os.path.getsize(p)}\t{p}\n")
+            print(f"SLIM needed_files={len(files)} same_as_base={len(files) - len(kept_files)} kept_files={len(kept_files)} "
+                  f"kept_links={len(kept_links)} kept_bytes={size} overwrites_base={len(overwrite)} elf={len(elves)} "
+                  f"db_files_opened={len(db_opened)} db_kept_bytes={db_kept} db_total_bytes={db_total}")
+            by_dir = {}
+            for p in kept_files:
+                key = "/".join(p.split("/")[:4])
+                by_dir[key] = by_dir.get(key, 0) + os.path.getsize(p)
+            for k, v in sorted(by_dir.items(), key=lambda kv: -kv[1])[:20]:
+                print(f"  {v / 1e6:9.1f} MB  {k}")
+            for p in overwrite:
+                print("  overwrites base: " + p)
+            for n in notes:
+                print("  note: " + n)
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          mkdir -p slim/ctx
+          docker run --rm -v "$PWD/slim:/out" "$BASE" bash -c 'find / -xdev -type f -print0 | xargs -0 sha256sum > /out/base-files.txt; find / -xdev -type l -printf "%p\t%l\n" > /out/base-links.txt'
+          wc -l slim/base-files.txt slim/base-links.txt
+          printf '%s\n' "$BUILD_PY" > slim/build.py
+          t0=$(date +%s.%N)
+          docker run --rm -v "$PWD:/work" -w /work -e DB -e PART "$IMG" bash -c "source /prjxray/env/bin/activate && python3 /work/slim/build.py"
+          echo "TIMING slim_tar s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+          ls -l slim/ctx/slim.tar
+          printf 'FROM %s\nADD slim.tar /\nENV ALLOW_ROOT=1 TZ=Asia/Seoul PYTHONPATH=/prjxray\n' "$BASE" > slim/ctx/Dockerfile
+          cat slim/ctx/Dockerfile
+          t0=$(date +%s.%N)
+          docker build -q -t "$SLIM" slim/ctx
+          echo "TIMING slim_build s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+          echo "SIZE image=slim local_size_bytes=$(docker image inspect -f '{{.Size}}' "$SLIM") layers=$(docker image inspect -f '{{len .RootFS.Layers}}' "$SLIM")"
+          rm -f slim/ctx/slim.tar
+
+      - name: Flow in the slim image, and the controls
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          source flow.bash
+          flow "$SLIM" slim-s1 1
+          mismatch=0
+          for f in "$TOP.json" "$TOP.fasm" "$TOP.frames" "$TOP.bit"; do
+            a=$(sha256sum "out/full-s1/$f" | cut -d' ' -f1)
+            b=$(sha256sum "out/slim-s1/$f" 2>/dev/null | cut -d' ' -f1) || b=missing
+            same=false; [ "$a" = "$b" ] && same=true
+            echo "POSITIVE file=$f identical=$same full=$a slim=$b"
+            if [ "$same" = false ]; then mismatch=$((mismatch+1)); fi
+          done
+          s1=$(sha256sum "out/full-s1/$TOP.fasm" | cut -d' ' -f1)
+          s2=$(sha256sum "out/full-s2/$TOP.fasm" | cut -d' ' -f1)
+          seed_changes_fasm=false; [ "$s1" != "$s2" ] && seed_changes_fasm=true
+          slim_lacks_bbaexport=false; docker run --rm "$SLIM" test -e /nextpnr-xilinx/xilinx/python/bbaexport.py || slim_lacks_bbaexport=true
+          echo "NEGATIVE seed_changes_fasm=$seed_changes_fasm slim_lacks_bbaexport=$slim_lacks_bbaexport"
+          controls_ok=false; [ "$seed_changes_fasm" = true ] && [ "$slim_lacks_bbaexport" = true ] && controls_ok=true
+          identical=false; [ "$mismatch" -eq 0 ] && identical=true
+          echo "RESULT mismatches=$mismatch identical=$identical controls_ok=$controls_ok"
+          if [ "$identical" = false ]; then tail -n 30 out/slim-s1/*.log; echo "::error::$mismatch outputs differ between the full and slim images"; fi
+          if [ "$controls_ok" = false ]; then echo "::error::a negative control did not hold"; fi
+          all_ok=false; [ "$identical" = true ] && [ "$controls_ok" = true ] && all_ok=true
+          if [ "$all_ok" = false ]; then exit 1; fi
+
+      - name: Cold pulls from a registry on the runner
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          docker run -d -p 5000:5000 --name reg "$REGISTRY_IMG" >/dev/null
+          sleep 3
+          for n in full slim; do
+            src="$IMG"; [ "$n" = slim ] && src="$SLIM"
+            docker tag "$src" "localhost:5000/openxc7-$n:exp"
+            t0=$(date +%s.%N)
+            docker push -q "localhost:5000/openxc7-$n:exp" >/dev/null
+            echo "TIMING local_push image=$n s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            curl -s -H "Accept: application/vnd.docker.distribution.manifest.v2+json" -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+              "http://localhost:5000/v2/openxc7-$n/manifests/exp" > "slim/manifest-$n.json"
+            echo "SIZE image=$n registry_compressed_bytes=$(jq '[.layers[].size] | add' "slim/manifest-$n.json") layers=$(jq '.layers | length' "slim/manifest-$n.json")"
+          done
+          for i in 1 2 3; do
+            for n in full slim; do
+              docker rmi -f "$IMG" "$BASE" "$SLIM" localhost:5000/openxc7-full:exp localhost:5000/openxc7-slim:exp >/dev/null 2>&1 || true
+              docker image prune -af >/dev/null 2>&1 || true
+              left=$(docker images -q | wc -l)
+              t0=$(date +%s.%N)
+              docker pull -q "localhost:5000/openxc7-$n:exp" >/dev/null
+              echo "TIMING local_pull image=$n rep=$i images_left_before=$left s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            done
+          done
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          grep -h -E '^(TIMING|SIZE|CHECKOUT|AUDIT|SLIM|POSITIVE|NEGATIVE|RESULT)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exp-slim-image
+          path: |
+            log.txt
+            slim/py-audit.txt
+            slim/kept.txt
+            slim/manifest-*.json
+            out/*/*.log
+          retention-days: 14
