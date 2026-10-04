@@ -519,14 +519,24 @@ jobs:
               "http://localhost:5000/v2/openxc7-$n/manifests/exp" > "slim/manifest-$n.json"
             echo "SIZE image=$n registry_compressed_bytes=$(jq '[.layers[].size] | add' "slim/manifest-$n.json") layers=$(jq '.layers | length' "slim/manifest-$n.json")"
           done
+          # The first run reported slim pulls of 0.0 s: image prune leaves the layers that BuildKit's
+          # cache still references, and the slim image was built on this runner. So the build cache
+          # is pruned too, and every pull counts the layers it found already present: a cold pull
+          # has none, and a pull that had some is reported as not cold rather than as a time.
           for i in 1 2 3; do
             for n in full slim; do
               docker rmi -f "$IMG" "$BASE" "$SLIM" localhost:5000/openxc7-full:exp localhost:5000/openxc7-slim:exp >/dev/null 2>&1 || true
               docker image prune -af >/dev/null 2>&1 || true
+              docker builder prune -af >/dev/null 2>&1 || true
               left=$(docker images -q | wc -l)
               t0=$(date +%s.%N)
-              docker pull -q "localhost:5000/openxc7-$n:exp" >/dev/null
-              echo "TIMING local_pull image=$n rep=$i images_left_before=$left s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+              docker pull "localhost:5000/openxc7-$n:exp" > "slim/pull-$n-$i.txt"
+              s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')
+              present=$(grep -c "Already exists" "slim/pull-$n-$i.txt" || true)
+              fetched=$(grep -c "Pull complete" "slim/pull-$n-$i.txt" || true)
+              cold=false; [ "$present" -eq 0 ] && [ "$fetched" -gt 0 ] && cold=true
+              echo "TIMING local_pull image=$n rep=$i images_left_before=$left layers_present=$present layers_pulled=$fetched cold=$cold s=$s"
+              if [ "$cold" = false ]; then echo "ANOMALY local_pull image=$n rep=$i was not cold: $present layers already present, $fetched pulled"; fi
             done
           done
 
@@ -534,7 +544,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          grep -h -E '^(TIMING|SIZE|CHECKOUT|AUDIT|SLIM|POSITIVE|BITHEADER|NEGATIVE|RESULT)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+          grep -h -E '^(TIMING|SIZE|CHECKOUT|AUDIT|SLIM|POSITIVE|BITHEADER|NEGATIVE|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -543,6 +553,7 @@ jobs:
             log.txt
             slim/py-audit.txt
             slim/kept.txt
+            slim/pull-*.txt
             slim/manifest-*.json
             out/*/*.log
           retention-days: 14
