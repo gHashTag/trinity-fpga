@@ -35,6 +35,15 @@ const out_dir = ".zig-cache/codegen-corpus";
 /// `ternary_mathematics` failed the four-spec gate through five iterations of
 /// a change while a contiguous 24-spec prefix said everything was clean --
 /// a prefix samples one directory, not the corpus.
+///
+/// The sample is drawn from the committed BASELINE, not from this run's clean
+/// list. It used to be every 32nd entry of the live list, so one spec counted
+/// clean that the baseline did not hold shifted every later pick by one.
+/// `specs/tri/phi_utils_multi.tri` sits at baseline index 447, one before the
+/// slot at 448, and its output does not compile; all nine codegen-corpus reds
+/// on main between 09-24 and 10-04 name it, and commit e6eac0900 was red on
+/// push and green on schedule. A sample that moves with the run is a gate
+/// whose verdict is not a function of the commit.
 const default_compile_sample = 24;
 
 pub fn main(init: std.process.Init.Minimal) !void {
@@ -97,6 +106,8 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     var clean: std.ArrayList([]const u8) = .empty;
     defer clean.deinit(gpa);
+    var no_output: std.ArrayList([]const u8) = .empty;
+    defer no_output.deinit(gpa);
     var with_behaviours: usize = 0;
     var dirty: usize = 0;
 
@@ -104,15 +115,32 @@ pub fn main(init: std.process.Init.Minimal) !void {
         const dest = try outPathFor(gpa, spec);
         defer gpa.free(dest);
 
-        const behaviours = try generate(gpa, io, gen, spec, dest);
-        if (behaviours == 0) continue;
+        const g = try generate(gpa, io, gen, spec, dest);
+        const no_behaviours = g.behaviours == 0;
+        if (no_behaviours) continue;
         with_behaviours += 1;
 
-        if (try astCheckOk(gpa, io, dest)) {
+        // The generator prints `Behaviors: N` BEFORE it generates, and on a
+        // generate or write error it leaves no file. `zig ast-check` on a
+        // missing file says "error: unable to open file", which has no
+        // ": error: " in it, so such a spec used to count as clean.
+        const left_no_file = !g.wrote;
+        if (left_no_file) {
+            try no_output.append(gpa, spec);
+            dirty += 1;
+            continue;
+        }
+
+        const ast_clean = try astCheckOk(gpa, io, dest);
+        if (ast_clean) {
             try clean.append(gpa, spec);
         } else {
             dirty += 1;
         }
+    }
+
+    for (no_output.items) |s| {
+        std.debug.print("  NO OUTPUT: {s} reported behaviours, then exited non-zero or left no file\n", .{s});
     }
 
     if (update) {
@@ -140,34 +168,71 @@ pub fn main(init: std.process.Init.Minimal) !void {
     defer now.deinit();
     for (clean.items) |s| try now.put(s, {});
 
-    // A spec whose output USED to be clean and now is not. Regressions only --
-    // a spec that was already failing is not this gate's business.
-    var regressed: usize = 0;
+    // The baseline in file order: the compile sample is drawn from it.
+    var base: std.ArrayList([]const u8) = .empty;
+    defer base.deinit(gpa);
+    var in_base = std.StringHashMap(void).init(gpa);
+    defer in_base.deinit();
     var lines = std.mem.splitScalar(u8, baseline.?, '\n');
     while (lines.next()) |line| {
         const t = std.mem.trim(u8, line, " \t\r");
-        if (t.len == 0) continue;
-        if (!now.contains(t)) {
+        const blank = t.len == 0;
+        if (blank) continue;
+        try base.append(gpa, t);
+        try in_base.put(t, {});
+    }
+
+    // A spec whose output USED to be clean and now is not. Regressions only --
+    // a spec that was already failing is not this gate's business.
+    var regressed: usize = 0;
+    for (base.items) |t| {
+        const lost = !now.contains(t);
+        if (lost) {
             std.debug.print("  REGRESSED: {s} no longer generates ast-check-clean output\n", .{t});
             regressed += 1;
+        }
+    }
+
+    // Clean now, absent from the baseline. Not a failure -- the ratchet
+    // defends only what it recorded -- but named, because an unexplained one
+    // is the first thing to look at when two runs of one commit disagree.
+    var new_clean: usize = 0;
+    for (clean.items) |s| {
+        const unrecorded = !in_base.contains(s);
+        if (unrecorded) {
+            std.debug.print("  NEW CLEAN: {s} is not in the baseline\n", .{s});
+            new_clean += 1;
         }
     }
 
     // The compile sample: what ast-check cannot see. Arity, types, members.
     var compiled: usize = 0;
     var compile_failed: usize = 0;
-    const sample = @min(compile_sample, clean.items.len);
-    // Even stride, not a prefix: the clean list is sorted by path, so the
-    // first N are all from one directory.
-    const stride = if (sample == 0) 1 else clean.items.len / sample;
+    const sample = @min(compile_sample, base.items.len);
+    // Even stride, not a prefix: the baseline is sorted by path, so the first
+    // N are all from one directory. Slot k is baseline entry k * stride, so
+    // the picks depend on the commit's baseline and nothing else.
+    const stride = if (sample == 0) 1 else base.items.len / sample;
     var picked: std.ArrayList([]const u8) = .empty;
     defer picked.deinit(gpa);
     {
-        var i: usize = 0;
-        while (i < clean.items.len and picked.items.len < sample) : (i += @max(1, stride)) {
-            try picked.append(gpa, clean.items[i]);
+        var k: usize = 0;
+        while (k < sample) : (k += 1) {
+            const entry = base.items[k * stride];
+            // A regressed entry is already a failure above; compiling its
+            // output would only report it twice.
+            const still_clean = now.contains(entry);
+            if (still_clean) try picked.append(gpa, entry);
         }
     }
+
+    std.debug.print(
+        \\codegen corpus: {d} of {d} specs with behaviours clean, baseline {d}
+        \\  {d} regressed, {d} new clean, {d} reported behaviours and left no file
+        \\  compile sample: {d} slots, stride {d} over the baseline
+        \\
+    , .{ clean.items.len, with_behaviours, base.items.len, regressed, new_clean, no_output.items.len, sample, stride });
+
     for (picked.items) |spec| {
         const dest = try outPathFor(gpa, spec);
         defer gpa.free(dest);
@@ -179,7 +244,8 @@ pub fn main(init: std.process.Init.Minimal) !void {
         }
     }
 
-    if (regressed > 0 or compile_failed > 0) {
+    const failed = regressed > 0 or compile_failed > 0;
+    if (failed) {
         std.debug.print(
             \\
             \\{d} spec(s) regressed, {d} of {d} sampled outputs do not compile.
@@ -187,7 +253,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
             \\Re-record only if the change is intended:
             \\  zig build codegen-corpus-update
             \\
-        , .{ regressed, compile_failed, sample });
+        , .{ regressed, compile_failed, picked.items.len });
         return error.CodegenCorpusRegressed;
     }
 
@@ -219,27 +285,55 @@ fn findGenerator(gpa: std.mem.Allocator, io: std.Io) ![]u8 {
     return owned;
 }
 
+/// The output mirrors the spec's path under `out_dir`. It used to flatten
+/// '/' to '_', which is not one-to-one: `specs/storm/main.tri` and
+/// `specs/storm_main.tri` both became `specs_storm_main.tri.zig`, so the
+/// compile sample could test the later spec's output under the earlier
+/// spec's name. The generator creates the parent directory itself.
 fn outPathFor(gpa: std.mem.Allocator, spec: []const u8) ![]u8 {
-    const flat = try gpa.dupe(u8, spec);
-    defer gpa.free(flat);
-    for (flat) |*c| {
-        if (c.* == '/') c.* = '_';
-    }
-    return std.fmt.allocPrint(gpa, "{s}/{s}.zig", .{ out_dir, flat });
+    return std.fmt.allocPrint(gpa, "{s}/{s}.zig", .{ out_dir, spec });
 }
 
-/// Returns the behaviour count the generator reports, or 0.
-fn generate(gpa: std.mem.Allocator, io: std.Io, gen: []const u8, spec: []const u8, dest: []const u8) !usize {
+const Generated = struct {
+    /// The count the generator reports, or 0.
+    behaviours: usize,
+    /// The generator exited 0 and left a non-empty file at `dest`.
+    wrote: bool,
+};
+
+fn generate(gpa: std.mem.Allocator, io: std.Io, gen: []const u8, spec: []const u8, dest: []const u8) !Generated {
+    // A file left by an earlier run must not stand in for this one.
+    std.Io.Dir.cwd().deleteFile(io, dest) catch {};
+
     const r = tri_proc.runIo(io, .{
         .allocator = gpa,
         .argv = &.{ gen, "gen", spec, dest },
         .max_output_bytes = 256 * 1024,
-    }) catch return 0;
+    }) catch return .{ .behaviours = 0, .wrote = false };
     defer gpa.free(r.stdout);
     defer gpa.free(r.stderr);
 
+    const exited_zero = switch (r.term) {
+        .exited => |c| c == 0,
+        else => false,
+    };
+    // The generator exits 0 when it cannot create or write the file, and when
+    // it produced 0 bytes (`writeGenerated(...) catch return`), so the exit
+    // status alone is not enough.
+    const nonempty_file = blk: {
+        const st = std.Io.Dir.cwd().statFile(io, dest, .{}) catch break :blk false;
+        break :blk st.kind == .file and st.size > 0;
+    };
+    return .{
+        .behaviours = parseBehaviours(r.stdout, r.stderr),
+        .wrote = exited_zero and nonempty_file,
+    };
+}
+
+fn parseBehaviours(stdout: []const u8, stderr: []const u8) usize {
     const needle = "Behaviors: ";
-    const hay = if (std.mem.indexOf(u8, r.stderr, needle) != null) r.stderr else r.stdout;
+    const in_stderr = std.mem.indexOf(u8, stderr, needle) != null;
+    const hay = if (in_stderr) stderr else stdout;
     const at = std.mem.indexOf(u8, hay, needle) orelse return 0;
     var i = at + needle.len;
     var n: usize = 0;
@@ -257,7 +351,30 @@ fn astCheckOk(gpa: std.mem.Allocator, io: std.Io, path: []const u8) !bool {
     }) catch return false;
     defer gpa.free(r.stdout);
     defer gpa.free(r.stderr);
-    return std.mem.indexOf(u8, r.stderr, ": error: ") == null;
+    // Exit status AND the error text. The text alone passed a missing file:
+    // "error: unable to open file '...': FileNotFound" exits 1 and has no
+    // ": error: " in it.
+    const exited_zero = switch (r.term) {
+        .exited => |c| c == 0,
+        else => false,
+    };
+    const no_error_line = std.mem.indexOf(u8, r.stderr, ": error: ") == null;
+    return exited_zero and no_error_line;
+}
+
+test "parseBehaviours reads the count from stderr first, then stdout" {
+    try std.testing.expectEqual(@as(usize, 7), parseBehaviours("", "  Types: 2\n  Behaviors: 7\n"));
+    try std.testing.expectEqual(@as(usize, 12), parseBehaviours("Behaviors: 12\n", "nothing here"));
+    try std.testing.expectEqual(@as(usize, 0), parseBehaviours("", ""));
+}
+
+test "outPathFor is one-to-one where flattening was not" {
+    const gpa = std.testing.allocator;
+    const a = try outPathFor(gpa, "specs/storm/main.tri");
+    defer gpa.free(a);
+    const b = try outPathFor(gpa, "specs/storm_main.tri");
+    defer gpa.free(b);
+    try std.testing.expect(!std.mem.eql(u8, a, b));
 }
 
 fn zigTestOk(gpa: std.mem.Allocator, io: std.Io, path: []const u8) !bool {
