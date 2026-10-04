@@ -195,18 +195,34 @@ jobs:
           fi
           cat work/top.v work/top.xdc
 
+      # The chipdb is a pure function of the part and the pinned image, and this
+      # job ran bbaexport for every part every day (gHashTag/trinity-fpga#846).
+      # continue-on-error keeps a chipdb failure an INCONCLUSIVE verdict below,
+      # as it was when the chipdb was built inside the next step, rather than a
+      # job that stops before the verdict is written.
+      - name: Chipdb (cached per part and image)
+        id: chipdb
+        continue-on-error: true
+        uses: ./.github/actions/openxc7-chipdb
+        with:
+          part: ${{ matrix.part }}
+          image: ${{ env.OPENXC7_IMAGE }}
+          out: work/chip.bin
+
       - name: Build it, all the way to frames
         id: build
+        env:
+          CHIPDB_OUTCOME: ${{ steps.chipdb.outcome }}
+          CHIPDB_HIT: ${{ steps.chipdb.outputs.cache-hit }}
+          CHIPDB_KEY: ${{ steps.chipdb.outputs.key }}
         run: |
           set +e
-          docker run --rm -v "$PWD:/w" -w /w "$OPENXC7_IMAGE" bash -c '
-            set -e
-            cd /nextpnr-xilinx
-            BB=$(find / -name bbasm -type f -perm -u+x 2>/dev/null | head -1)
-            python3 xilinx/python/bbaexport.py --device ${{ matrix.part }} --bba /w/work/c.bba
-            $BB -l /w/work/c.bba /w/work/chip.bin
-          ' > out/chipdb.log 2>&1
-          echo "chipdb_rc=$?" >> $GITHUB_OUTPUT
+          echo "chipdb outcome=$CHIPDB_OUTCOME cache-hit=${CHIPDB_HIT:-false} key=$CHIPDB_KEY" > out/chipdb.log
+          chipdb_ok=false
+          [ "$CHIPDB_OUTCOME" = success ] && chipdb_ok=true
+          chipdb_rc=1
+          if [ "$chipdb_ok" = true ]; then chipdb_rc=0; fi
+          echo "chipdb_rc=$chipdb_rc" >> $GITHUB_OUTPUT
 
           docker run --rm -v "$PWD:/w" -w /w/work "$OPENXC7_IMAGE" bash -c '
             yosys -p "synth_xilinx -flatten -abc9 -arch xc7 -top top; write_json /w/out/d.json" top.v

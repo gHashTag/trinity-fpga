@@ -261,6 +261,7 @@ jobs:
       # Uses the frozen toolchain, nextpnr built in the image, chipdb generated
       # from the same tree -- the same construction as the benchmark harness,
       # for the same reason.
+      # chipdb-uncached: nextpnr and the chipdb are both built here from NEXTPNR_REV and PRJXRAY_DB_REV, not taken from the image the cache keys on; dispatch-only, 9 runs, last 2026-08-15 (#846)
       - name: Build the same design with openXC7
         continue-on-error: true
         env:

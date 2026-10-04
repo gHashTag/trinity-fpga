@@ -73,18 +73,14 @@ jobs:
             " 2>&1 | tee /tmp/yosys.log
           grep "Estimated number of LCs" /tmp/yosys.log
 
+      # Keyed on the ID of the image pulled above, so it misses exactly when
+      # regymm/openxc7:latest moves (gHashTag/trinity-fpga#846).
       - name: Generate chipdb
-        run: |
-          mkdir -p fpga/openxc7-synth/chipdb
-          docker run --rm \
-            -v "$PWD/fpga/openxc7-synth:/work" -w /work \
-            regymm/openxc7 \
-            bash -c "
-              cd /nextpnr-xilinx && \
-              python3 xilinx/python/bbaexport.py --device xc7a100tfgg676-1 --bba /work/chipdb/xc7a100tfgg676-1.bba && \
-              bbasm -l /work/chipdb/xc7a100tfgg676-1.bba /work/chipdb/xc7a100tfgg676-1.bin
-            "
-          ls -lh fpga/openxc7-synth/chipdb/xc7a100tfgg676-1.bin
+        uses: ./.github/actions/openxc7-chipdb
+        with:
+          part: xc7a100tfgg676-1
+          image: regymm/openxc7:latest
+          out: fpga/openxc7-synth/chipdb/xc7a100tfgg676-1.bin
 
       - name: nextpnr place and route
         run: |

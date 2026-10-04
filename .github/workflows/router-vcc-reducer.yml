@@ -44,6 +44,7 @@ jobs:
         run: |
           for i in 1 2 3 4 5 6; do docker pull "$OPENXC7_IMAGE" && break; sleep $((i*20)); done
 
+      # chipdb-uncached: the composite action would fit, but this reducer has run 3 times, the last on 2026-08-18, and it is the reducer promised on openXC7/nextpnr-xilinx#114; changing the instrument saves nothing measurable (#846)
       - name: Generate the chipdb
         run: |
           mkdir -p chipdb out
