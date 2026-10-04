@@ -43,6 +43,8 @@ jobs:
     steps:
       - name: Checkout Trinity
         uses: actions/checkout@v4
+      - name: Forced failure (exp branch only, #883 control)
+        run: exit 1
       - name: Check for root build.zig
         id: check
         run: |
@@ -633,7 +635,7 @@ jobs:
     # Without a status function GitHub adds success(), so this job ran only
     # after a passing report and its "report did not pass" test could never
     # be true: a damaged PR showed the gate as grey `skipped` (#883).
-    if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+    if: ${{ !cancelled() }}
     timeout-minutes: 2
     steps:
       - name: Check Merge Eligibility
