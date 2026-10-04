@@ -125,12 +125,13 @@ pub fn main(init: std.process.Init.Minimal) !void {
         if (no_behaviours) continue;
         with_behaviours += 1;
 
-        // The generator prints `Behaviors: N` BEFORE it generates, and on a
-        // generate or write error it leaves no file. `zig ast-check` on a
+        // The generator prints `Behaviors: N` BEFORE it generates, and when
+        // it fails it leaves no file or an empty one. `zig ast-check` on a
         // missing file says "error: unable to open file", which has no
-        // ": error: " in it, so such a spec used to count as clean.
-        const left_no_file = !g.wrote;
-        if (left_no_file) {
+        // ": error: " in it, and it passes an empty file outright, so both
+        // used to count as clean.
+        const no_usable_file = !g.wrote;
+        if (no_usable_file) {
             const why = try gpa.dupe(u8, g.why orelse "(no reason recorded)");
             errdefer gpa.free(why);
             try no_output.append(gpa, .{ .spec = spec, .why = why });
@@ -235,7 +236,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     std.debug.print(
         \\codegen corpus: {d} of {d} specs with behaviours clean, baseline {d}
-        \\  {d} regressed, {d} new clean, {d} reported behaviours and left no file
+        \\  {d} regressed, {d} new clean, {d} reported behaviours and wrote no usable file
         \\  compile sample: {d} slots, stride {d} over the baseline
         \\
     , .{ clean.items.len, with_behaviours, base.items.len, regressed, new_clean, no_output.items.len, sample, stride });
@@ -331,12 +332,15 @@ fn generate(gpa: std.mem.Allocator, io: std.Io, gen: []const u8, spec: []const u
     // The generator exits 0 when it cannot create or write the file, and when
     // it produced 0 bytes (`writeGenerated(...) catch return`), so the exit
     // status alone is not enough.
-    const nonempty_file = blk: {
-        const st = std.Io.Dir.cwd().statFile(io, dest, .{}) catch break :blk false;
-        break :blk st.kind == .file and st.size > 0;
+    const file: FileLeft = blk: {
+        const st = std.Io.Dir.cwd().statFile(io, dest, .{}) catch break :blk .none;
+        const not_a_file = st.kind != .file;
+        if (not_a_file) break :blk .none;
+        const is_empty = st.size == 0;
+        break :blk if (is_empty) .empty else .nonempty;
     };
-    const wrote = exited_zero and nonempty_file;
-    const why: ?[]u8 = if (wrote) null else try describeFailure(gpa, r.term, nonempty_file, r.stderr);
+    const wrote = exited_zero and file == .nonempty;
+    const why: ?[]u8 = if (wrote) null else try describeFailure(gpa, r.term, file, r.stderr);
     return .{
         .behaviours = parseBehaviours(r.stdout, r.stderr),
         .wrote = wrote,
@@ -344,15 +348,36 @@ fn generate(gpa: std.mem.Allocator, io: std.Io, gen: []const u8, spec: []const u
     };
 }
 
-/// "signal 6, no file, thread 9 panic: ..." or "exit 1, no file, error: Foo".
-/// The line is the last one holding "panic: " -- 19 specs abort the generator
-/// with SIGABRT (run 37243448031), and a panic's last line is a stack frame
-/// with no symbols, "???:?:?: 0x1571044 in ??? (???)", the same for all 19.
+/// What the generator left at the destination. 18 of the 19 aborting specs
+/// leave an EMPTY file (probe 37242067946), which is not the same failure as
+/// leaving none: the file was created and the write then died.
+const FileLeft = enum { none, empty, nonempty };
+
+/// The first words of the line Zig 0.16's crash handlers print before a stack
+/// trace (std/debug.zig, the POSIX and Windows segfault handlers, printed by
+/// `defaultHandleSegfault`):
+/// "Segmentation fault at address 0x...", and so on. Like a panic, these end
+/// in SIGABRT, and like a panic they are followed by symbol-less frames.
+const crash_handler_lines = [_][]const u8{
+    "Segmentation fault",
+    "Illegal instruction",
+    "Bus error",
+    "Arithmetic exception",
+    "General protection exception",
+    "Stack overflow",
+    "Unaligned memory access",
+};
+
+/// "signal 6, empty file, thread 9 panic: ..." or "exit 1, no file, error: Foo".
+/// The line is the last crash line: one holding "panic: ", or one a crash
+/// handler printed. 19 specs abort the generator with SIGABRT (run
+/// 37243448031), and an abort's last line is a stack frame with no symbols,
+/// "???:?:?: 0x1571044 in ??? (???)", the same for all 19.
 /// Failing that, the last line that starts with `error`/`Error` once trimmed:
 /// Zig's report of an error returned from main and the generator's write and
 /// empty-output messages have that shape, the parser's "  spec error: ..."
 /// lines do not. Failing that, the last non-empty line.
-fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, nonempty_file: bool, stderr: []const u8) ![]u8 {
+fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, file: FileLeft, stderr: []const u8) ![]u8 {
     var status_buf: [32]u8 = undefined;
     const status = switch (term) {
         .exited => |c| try std.fmt.bufPrint(&status_buf, "exit {d}", .{c}),
@@ -360,9 +385,13 @@ fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, nonempty_file: b
         .stopped => |s| try std.fmt.bufPrint(&status_buf, "stopped {d}", .{@intFromEnum(s)}),
         .unknown => |u| try std.fmt.bufPrint(&status_buf, "unknown {d}", .{u}),
     };
-    const file_note: []const u8 = if (nonempty_file) "" else ", no file";
+    const file_note: []const u8 = switch (file) {
+        .none => ", no file",
+        .empty => ", empty file",
+        .nonempty => "",
+    };
 
-    var last_panic: ?[]const u8 = null;
+    var last_crash: ?[]const u8 = null;
     var last_error: ?[]const u8 = null;
     var last_line: ?[]const u8 = null;
     var it = std.mem.splitScalar(u8, stderr, '\n');
@@ -372,11 +401,16 @@ fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, nonempty_file: b
         if (blank) continue;
         last_line = line;
         const is_panic_line = std.mem.startsWith(u8, line, "panic: ") or std.mem.indexOf(u8, line, " panic: ") != null;
-        if (is_panic_line) last_panic = line;
+        const is_handler_line = for (crash_handler_lines) |p| {
+            const starts = std.mem.startsWith(u8, line, p);
+            if (starts) break true;
+        } else false;
+        const is_crash_line = is_panic_line or is_handler_line;
+        if (is_crash_line) last_crash = line;
         const is_error_line = std.mem.startsWith(u8, line, "error") or std.mem.startsWith(u8, line, "Error");
         if (is_error_line) last_error = line;
     }
-    const picked = last_panic orelse last_error orelse last_line orelse "(no stderr)";
+    const picked = last_crash orelse last_error orelse last_line orelse "(no stderr)";
     const shown = picked[0..@min(picked.len, 200)];
     return std.fmt.allocPrint(gpa, "{s}{s}, {s}", .{ status, file_note, shown });
 }
@@ -389,33 +423,47 @@ test "describeFailure names the exit status and the last error line" {
         \\error: UnsupportedType
         \\/src/vibeec/verilog_codegen.zig:10:5: 0x1 in generate
     ;
-    const a = try describeFailure(gpa, .{ .exited = 1 }, false, stderr);
+    const a = try describeFailure(gpa, .{ .exited = 1 }, .none, stderr);
     defer gpa.free(a);
     try std.testing.expectEqualStrings("exit 1, no file, error: UnsupportedType", a);
 
-    const b = try describeFailure(gpa, .{ .exited = 0 }, false, "Error: the generator produced 0 bytes for x.zig\n");
+    const b = try describeFailure(gpa, .{ .exited = 0 }, .none, "Error: the generator produced 0 bytes for x.zig\n");
     defer gpa.free(b);
     try std.testing.expectEqualStrings("exit 0, no file, Error: the generator produced 0 bytes for x.zig", b);
 
-    const c = try describeFailure(gpa, .{ .exited = 0 }, false, "");
+    const c = try describeFailure(gpa, .{ .exited = 0 }, .none, "");
     defer gpa.free(c);
     try std.testing.expectEqualStrings("exit 0, no file, (no stderr)", c);
 
-    // The last frame is the one run 37243448031 printed for all 19 aborts;
-    // the two lines above it are illustrative, since that run printed only
-    // the frame. A panic wins over an earlier error line.
+    // The panic line and the last frame are the ones runs 37243963781 and
+    // 37243448031 printed for the 18 Verilog specs; the error line above them
+    // is illustrative. A panic wins over an earlier error line, and an empty
+    // file is named as such.
     const aborted =
         \\Generating Verilog...
-        \\error(gpa): Allocation size 512 bytes does not match free size 300.
-        \\thread 4242 panic: Invalid free
+        \\error: illustrative earlier error
+        \\thread 2978 panic: programmer bug caused syscall error: FAULT
         \\???:?:?: 0x1570f10 in ??? (???)
         \\???:?:?: 0x1571044 in ??? (???)
     ;
-    const d = try describeFailure(gpa, .{ .signal = .ABRT }, false, aborted);
+    const d = try describeFailure(gpa, .{ .signal = .ABRT }, .empty, aborted);
     defer gpa.free(d);
-    const want = try std.fmt.allocPrint(gpa, "signal {d}, no file, thread 4242 panic: Invalid free", .{@intFromEnum(std.posix.SIG.ABRT)});
-    defer gpa.free(want);
-    try std.testing.expectEqualStrings(want, d);
+    const want_d = try std.fmt.allocPrint(gpa, "signal {d}, empty file, thread 2978 panic: programmer bug caused syscall error: FAULT", .{@intFromEnum(std.posix.SIG.ABRT)});
+    defer gpa.free(want_d);
+    try std.testing.expectEqualStrings(want_d, d);
+
+    // A crash handler's line counts as a crash line too. Its wording is
+    // std/debug.zig's; the address is illustrative.
+    const segv =
+        \\error: illustrative earlier error
+        \\Segmentation fault at address 0x7f0000001000
+        \\???:?:?: 0x1571064 in ??? (???)
+    ;
+    const e = try describeFailure(gpa, .{ .signal = .ABRT }, .none, segv);
+    defer gpa.free(e);
+    const want_e = try std.fmt.allocPrint(gpa, "signal {d}, no file, Segmentation fault at address 0x7f0000001000", .{@intFromEnum(std.posix.SIG.ABRT)});
+    defer gpa.free(want_e);
+    try std.testing.expectEqualStrings(want_e, e);
 }
 
 fn parseBehaviours(stdout: []const u8, stderr: []const u8) usize {
