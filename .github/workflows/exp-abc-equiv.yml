@@ -38,12 +38,19 @@
 # they give the same JSON; whether the split run gives the one-shot JSON, so that the netlist
 # proven is the netlist CI builds; and whether the split run hits the assertion too.
 #
-# Last step, for an upstream report and for what the crash costs. Locally (Yosys 0.67, abc does
-# not assert on this design) the same map_luts gives 380 LCs with &mfs and 435 without, so &mfs
-# removes 12.6% of gf14_sub's LCs, and CI's 488 is a netlist without it. The step reruns map_luts
-# from the pre netlist keeping abc's temp files, runs yosys-abc alone on them (a reproducer needs
-# no Yosys if it asserts there too), and reruns with &mfs taken out of abc's script, which should
-# give the split netlist byte for byte if the crash leaves exactly the &if mapping.
+# Last step, for an upstream report and for what the crash costs. Run 37230334955 (v3 + this
+# step) proved the subject and both positives, caught all four mutants, and then found that the
+# reproducer does not reproduce: map_luts rerun from the written pre netlist with abc9.nocleanup
+# does NOT assert (382 LCs, &mfs ran), yosys-abc alone on its kept files does not assert either,
+# and the no-&mfs rerun gives 447 LCs, not the split's 488. So "488 is the &if mapping with &mfs
+# skipped" was wrong, and the reproducer changed two things at once: it re-reads the netlist, and
+# nocleanup moves abc's temp directory from /tmp into the working directory.
+#
+# v4 separates the two, one variable per run: (A) the one-process CI flow with only nocleanup
+# added, and (B) the re-read flow with only nocleanup removed. If A asserts, its kept files are
+# the crashing abc call's own input, and yosys-abc alone on them is the minimal reproducer. Each
+# nocleanup run's temp directories are moved under out/ before the next run, so no run can pick
+# up another's files.
 name: abc crash equivalence (experiment, #862)
 on:
   push:
@@ -382,16 +389,72 @@ jobs:
             sha256sum out/abc-repro/input.xaig out/abc-repro/input.lut out/abc-repro/input.box | sed 's/^/REPRO sha256 /'
           fi
           if [ "$found" = false ]; then echo "ANOMALY abc9.nocleanup left no _tmp_yosys-abc-* directory"; fi
-          # 3. The same map_luts with &mfs removed from abc's script. If the crash leaves the &if
-          #    mapping, this gives the split netlist byte for byte; 'nomfs' vs a working &mfs is
-          #    what the crash costs, and that needs a build where &mfs does not assert.
+          # 3. The same map_luts with &mfs removed from abc's script. Run 37230334955: 447 LCs, not
+          #    the split's 488, so the crash does not leave exactly the &if mapping.
+          if [ "$found" = true ]; then
+            docker run --rm -v "$PWD:/work" -w /work "$IMG" sh -c "mkdir -p out/tmp-keep && mv '$d' out/tmp-keep/ && chmod -R a+rwX out/tmp-keep"
+          fi
           mapper nomfs '+&scorr;&sweep;&dc2;&dch,-f,-r;&ps;&if,-W,300,-v;&ps,-l'
+
+      - name: "v4: one variable at a time -- nocleanup in one process (A), re-read without it (B)"
+        if: always()
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          # Moves every _tmp_yosys-abc-* in the working directory under out/tmp-<tag>/, counts them.
+          stash_tmp() {  # tag
+            n=$(find . -maxdepth 1 -type d -name '_tmp_yosys-abc-*' | wc -l)
+            has_tmp=false; [ "$n" -gt 0 ] && has_tmp=true
+            if [ "$has_tmp" = true ]; then
+              docker run --rm -v "$PWD:/work" -w /work "$IMG" sh -c "mkdir -p out/tmp-$1 && mv _tmp_yosys-abc-* out/tmp-$1/ && chmod -R a+rwX out/tmp-$1"
+            fi
+            echo "$n"
+          }
+          leftover=$(stash_tmp before)
+          echo "ISOLATE leftover_tmp_dirs_before=$leftover"
+          run_ys() {  # tag compare_json
+            rc=0; docker run --rm -v "$PWD:/work" -w /work "$IMG" timeout --signal=KILL 1200 yosys -s "out/iso-$1.ys" > "out/iso-$1.txt" 2>&1 || rc=$?
+            asserts=$(grep -c "Assertion" "out/iso-$1.txt" || true)
+            lcs=$(awk '/Estimated number of LCs/{v=$NF} END{print v}' "out/iso-$1.txt")
+            a=$(sha256sum "$2" 2>/dev/null | cut -d' ' -f1) || a=missing
+            b=$(sha256sum "out/iso-$1.json" 2>/dev/null | cut -d' ' -f1) || b=missing
+            same=false; [ "$a" = "$b" ] && same=true
+            ndirs=$(stash_tmp "$1")
+            echo "ISOLATE run=$1 rc=$rc abc_asserts=$asserts lcs=$lcs same_json_as=$2:$same kept_tmp_dirs=$ndirs"
+            echo "$asserts" > "out/iso-$1.asserts"
+          }
+          # A: the one-shot CI flow (sub1 asserted) with only abc9.nocleanup added.
+          printf '%s\n' "read_verilog $ADDER fpga/vivado/gf14_sub_ax7203.v" "scratchpad -set abc9.nocleanup 1" \
+            "$SYNTH -top $SUB" "setundef -zero -params" "write_json out/iso-A.json" > out/iso-A.ys
+          run_ys A out/sub1.json
+          # B: the re-read flow ('keep' did not assert) with only abc9.nocleanup removed.
+          printf '%s\n' "read_verilog -lib -specify +/xilinx/cells_sim.v" "read_verilog -lib +/xilinx/cells_xtra.v" \
+            "read_rtlil out/$SUB-pre.il" "hierarchy -top $SUB" "$SYNTH -top $SUB -run map_luts:" \
+            "setundef -zero -params" "write_json out/iso-B.json" > out/iso-B.ys
+          run_ys B "out/$SUB-keep.json"
+          # If A asserted, its kept directory holds the crashing call's input: try abc alone on it.
+          a_asserted=false; [ "$(cat out/iso-A.asserts)" -gt 0 ] && a_asserted=true
+          if [ "$a_asserted" = true ]; then
+            for dir in out/tmp-A/_tmp_yosys-abc-*; do
+              is_dir=false; [ -f "$dir/abc.script" ] && is_dir=true
+              if [ "$is_dir" = false ]; then echo "ISOLATE ANOMALY no abc.script in $dir"; continue; fi
+              base=$(basename "$dir")
+              mkdir -p "out/repro-A/$base"
+              cp "$dir/input.xaig" "$dir/input.lut" "$dir/input.box" "out/repro-A/$base/" 2>/dev/null || true
+              sed -e "s#/work/$base/##g" -e "s#$base/##g" "$dir/abc.script" > "out/repro-A/$base/repro.abc"
+              rc=0; docker run --rm -v "$PWD:/work" -w "/work/out/repro-A/$base" "$IMG" sh -c 'exec timeout --signal=KILL 300 "$(dirname "$(command -v yosys)")/yosys-abc" -s -f repro.abc' > "out/repro-A/$base/standalone.txt" 2>&1 || rc=$?
+              asserts=$(grep -c "Assertion" "out/repro-A/$base/standalone.txt" || true)
+              echo "ISOLATE standalone dir=$base rc=$rc abc_asserts=$asserts"
+              sha256sum "out/repro-A/$base/input.xaig" "out/repro-A/$base/input.lut" "out/repro-A/$base/input.box" 2>/dev/null | sed 's/^/ISOLATE sha256 /' || true
+            done
+          fi
+          if [ "$a_asserted" = false ]; then echo "ISOLATE A did not assert: abc9.nocleanup alone hides the crash"; fi
 
       - name: Summary
         if: always()
         shell: bash
         run: |
-          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|FFCUT|EQUIV|CEX|EVERT|NOTE|RESULT|REPRO|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|FFCUT|EQUIV|CEX|EVERT|NOTE|RESULT|REPRO|ISOLATE|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -404,4 +467,5 @@ jobs:
             out/*.ffs
             out/*.cex
             out/abc-repro/
+            out/repro-A/
           retention-days: 14
