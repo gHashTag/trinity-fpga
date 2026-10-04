@@ -1,0 +1,112 @@
+# Experiment for #856, not a gate. ax7203-gf10-sub last passed on 2026-07-14 with
+# regymm/openxc7@sha256:eced1cdd…; since the image moved to sha256:35c91073… (pushed 2026-10-01)
+# every seed fails, 7 of 8 at "post-placement validity check failed for Bel 'SLICE_…/A5FF'".
+# Same commit, four jobs: {old, new} image for Yosys x {old, new} image for nextpnr. Every job
+# runs all 8 seeds and reports how many are clean, and never fails on a bad seed, so the
+# post-job cache save runs and the four results can be compared side by side.
+name: gf10-sub image A/B (experiment, #856)
+on:
+  push:
+    branches: [exp/gf10-image-ab]
+    paths: ['.github/workflows/exp-gf10-image-ab.yml']
+jobs:
+  ab:
+    name: synth ${{ matrix.synth }} / pnr ${{ matrix.pnr }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - synth: old
+            pnr: old
+            synth_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+            pnr_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+          - synth: old
+            pnr: new
+            synth_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+            pnr_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+          - synth: new
+            pnr: old
+            synth_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+            pnr_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+          - synth: new
+            pnr: new
+            synth_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+            pnr_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+    env:
+      SYNTH_IMG: ${{ matrix.synth_img }}
+      PNR_IMG: ${{ matrix.pnr_img }}
+      PART: xc7a200tfbg484-2
+      OUT: build/gf10_sub
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull images
+        shell: bash
+        run: |
+          for img in "$SYNTH_IMG" "$PNR_IMG"; do
+            for i in 1 2 3 4 5 6; do
+              docker pull -q "$img" && break
+              sleep $((i*20))
+            done
+            have_image=false; docker image inspect "$img" >/dev/null 2>&1 && have_image=true
+            if [ "$have_image" = false ]; then echo "::error::cannot pull $img"; exit 1; fi
+          done
+
+      - name: Tool versions
+        shell: bash
+        run: |
+          docker run --rm "$SYNTH_IMG" yosys -V
+          docker run --rm "$PNR_IMG" bash -c 'nextpnr-xilinx --version 2>&1 | head -n 2; for d in /nextpnr-xilinx /nextpnr-xilinx/xilinx/external/prjxray-db /prjxray; do echo "$d: $(git -C "$d" log -1 --format="%h %cI %s" 2>/dev/null || echo no-git)"; done'
+
+      - name: Yosys
+        shell: bash
+        run: |
+          mkdir -p "$OUT"
+          docker run --rm -v "$PWD:/work" -w /work "$SYNTH_IMG" yosys -p "
+            read_verilog fpga/openxc7-synth/gf_adder_param.v fpga/vivado/gf10_sub_ax7203.v;
+            synth_xilinx -flatten -abc9 -nocarry -arch xc7 -top gf10_sub_ax7203;
+            setundef -zero -params; write_json $OUT/gf10_sub_ax7203.json" > /tmp/yosys.log 2>&1
+          sed -n '/Printing statistics/,$p' /tmp/yosys.log | grep -E '^ +[0-9]+ +[A-Z$]' | tail -n 30 || true
+
+      - id: chipdb
+        uses: actions/cache@v4
+        with:
+          path: build/chipdb/xc7a200tfbg484-2.bin
+          key: chipdb-exp856-${{ matrix.pnr }}-xc7a200tfbg484-2-v1
+
+      - name: chipdb
+        if: steps.chipdb.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          mkdir -p build/chipdb
+          docker run --rm -v "$PWD:/work" -w /work "$PNR_IMG" bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device $PART --bba /work/build/chipdb/$PART.bba && bbasm -l /work/build/chipdb/$PART.bba /work/build/chipdb/$PART.bin"
+          rm -f "build/chipdb/$PART.bba"
+
+      - name: nextpnr, all 8 seeds
+        shell: bash
+        run: |
+          CLEAN=0
+          echo "### synth ${{ matrix.synth }} / pnr ${{ matrix.pnr }}" >> "$GITHUB_STEP_SUMMARY"
+          for s in 1 2 3 4 5 6 7 8; do
+            rm -f "$OUT/gf10_sub_ax7203.fasm"
+            docker run --rm -v "$PWD:/work" -w /work "$PNR_IMG" timeout --signal=KILL 900 nextpnr-xilinx \
+              --chipdb "/work/build/chipdb/$PART.bin" \
+              --xdc /work/specs/fpga/constraints/gf16_clean_ax7203.xdc \
+              --json "/work/$OUT/gf10_sub_ax7203.json" \
+              --fasm "/work/$OUT/gf10_sub_ax7203.fasm" \
+              --freq 50.0 --seed "$s" --placer sa --router router1 --timing-allow-fail > "/tmp/np_$s.log" 2>&1 || true
+            fasm_written=false; [ -f "$OUT/gf10_sub_ax7203.fasm" ] && fasm_written=true
+            route_failed=false; grep -q "Failed to find a route" "/tmp/np_$s.log" && route_failed=true
+            clean=false; [ "$fasm_written" = true ] && [ "$route_failed" = false ] && clean=true
+            if [ "$clean" = true ]; then
+              CLEAN=$((CLEAN+1)); why=clean
+            else
+              why=$(grep -m1 -E "^ERROR:|Failed to find a route" "/tmp/np_$s.log" || echo "no fasm, no error line")
+            fi
+            echo "seed=$s $why"
+            echo "- seed $s: \`$why\`" >> "$GITHUB_STEP_SUMMARY"
+          done
+          echo "RESULT synth=${{ matrix.synth }} pnr=${{ matrix.pnr }} clean=$CLEAN/8"
+          echo "**clean seeds: $CLEAN/8**" >> "$GITHUB_STEP_SUMMARY"
