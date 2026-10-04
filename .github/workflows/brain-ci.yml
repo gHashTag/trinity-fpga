@@ -43,6 +43,8 @@ jobs:
     steps:
       - name: Checkout Trinity
         uses: actions/checkout@v4
+      - name: Forced failure (exp branch only, #883 control)
+        run: exit 1
       - name: Check for root build.zig
         id: check
         run: |
@@ -622,7 +624,6 @@ jobs:
     name: 🔒 Merge Gate
     runs-on: ubuntu-latest
     needs: [brain-health-report]
-    if: github.event_name == 'pull_request'
     timeout-minutes: 2
     steps:
       - name: Check Merge Eligibility
