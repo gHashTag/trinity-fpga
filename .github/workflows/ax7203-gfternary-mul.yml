@@ -67,7 +67,7 @@ jobs:
             done
             [ -n "$CLEAN" ] && break
           done
-          [ -z "$CLEAN" ] && { echo "::error::no clean seed across heap+sa x8"; exit 1; }
+          [ -z "$CLEAN" ] && { echo "::error::no clean seed across heap+sa x8"; tail -n 15 /tmp/np_*.log; exit 1; }
           echo "routed with placer/seed = $CLEAN"
       - name: fasm2bit
         run: |

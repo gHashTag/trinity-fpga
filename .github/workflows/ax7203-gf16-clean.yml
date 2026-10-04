@@ -59,7 +59,7 @@ jobs:
             if grep -q "Failed to find a route" /tmp/np_$s.log || [ ! -f build/gf16_clean/gf16_clean_ax7203.fasm ]; then continue; fi
             cp /tmp/np_$s.log /tmp/np.log; CLEAN=$s; break
           done
-          [ "$CLEAN" = "0" ] && { echo "::error::no clean seed"; exit 1; }
+          [ "$CLEAN" = "0" ] && { echo "::error::no clean seed"; tail -n 15 /tmp/np_*.log; exit 1; }
           echo "seed=$CLEAN"
       - name: fasm2frames + xc7frames2bit
         run: |
