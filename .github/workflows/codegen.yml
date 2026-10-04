@@ -1,46 +1,32 @@
-# Does the VIBEE/Zig codegen path build and generate?
-#
-# This gate installed Zig with `brew install zig` -- an UNPINNED dependency, so
-# it built a tree written for Zig 0.15.x with whatever Homebrew shipped that
-# morning, which is now 0.16.0. A toolchain fetched by name is not a pinned
-# toolchain, the same way a dependency pinned to a branch is not pinned.
-#
-# 0.16 moved the filesystem, clocks, sleeping and subprocesses behind an
-# explicit `Io` capability. That migration was a real project and it is done:
-# `tri` and seven other executables build on 0.16, `zig build test` reports
-# 2664/2679 passing, and six shim modules restore the removed stdlib surface
-# (see .claude/rules/zig-016-migration.md). The pin is 0.16.0 to match.
-#
-# Ubuntu, not macOS: this is also the platform that can still surprise us --
-# the shims call libc directly and everything was measured on a Mac. Two
-# Linux-only breaks were found exactly this way.
-#
-# phi^2 + 1/phi^2 = 3 = TRINITY
+# THROWAWAY (exp/corpus-ab-main, exp/corpus-ab-fix): the #885 A/B.
+# Both branches carry this file and tools/codegen_ab_pick.py unchanged; they
+# differ only in tools/codegen_corpus.zig (main's, or the #886 fix). Four arms
+# on one runner, each a separate `zig build codegen-corpus`:
+#   1 plain tree
+#   2 one extra clean spec sorting before specs/tri/phi_utils_multi.tri
+#   3 a non-baseline spec before it cannot write its output
+#   4 a baseline spec at an unsampled index cannot write its output
+# An arm's red is recorded, not fatal. A setup step failing is fatal: the arm
+# after it would measure a different tree.
 
 name: Codegen Validation
 
 on:
-  push:
-    branches: [main, ralph/dev-*, vibee-v5-production]
-  pull_request:
-    branches: [main]
-  schedule:
-    - cron: '0 0 * * *'
   workflow_dispatch:
 
 env:
   ZIG_VERSION: '0.16.0'
 
 jobs:
-  validate:
-    name: Validate VIBEE Codegen
+  ab:
+    name: codegen-corpus A/B (${{ github.ref_name }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
 
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false   # the gitlink was unfetchable until recently; see README
+          submodules: false
 
       - name: Fetch Zig ${{ env.ZIG_VERSION }}
         run: |
@@ -50,217 +36,57 @@ jobs:
           tar xf zig.tar.xz
           echo "$PWD/zig-x86_64-linux-${ZIG_VERSION}" >> $GITHUB_PATH
 
-      - name: zig version
-        run: zig version
-
-      # One question per step. The previous version asked "does it build and
-      # generate and test" with a single exit code, so a compile error and a
-      # codegen regression were the same red.
-      - name: Does build.zig parse?
+      - name: zig version and CPU
         run: |
-          zig ast-check build.zig
-          echo 'build.zig parses' >> $GITHUB_STEP_SUMMARY
+          zig version
+          grep -m1 'model name' /proc/cpuinfo || true
 
-      - name: Does the build graph load?
-        run: |
-          set -o pipefail
-          zig build --help 2>&1 | tee graph.log | head -30
-
-      # -Dci=true skips the GUI/raylib targets: that is what the option is for.
-      # -freference-trace so a comptime error names this repository's line
-      # rather than a line inside the standard library.
-      - name: Does it compile?
-        id: build
-        run: |
-          set -o pipefail
-          zig build -Dci=true -freference-trace=12 2>&1 | tee build.log | tail -40
-
-      - name: Where it stopped
-        if: failure()
-        run: |
-          echo '### First errors' >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          grep -E 'error:' build.log 2>/dev/null | head -15 >> $GITHUB_STEP_SUMMARY || \
-            tail -20 build.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "Distinct files with errors: $(grep -oE '^[^:]+\.zig' build.log 2>/dev/null | sort -u | wc -l)" >> $GITHUB_STEP_SUMMARY
-
-      # The spec list is checked against the tree BEFORE generating. Three of
-      # the seven specs this step used to name -- golden_chain,
-      # llm_full_inference, vsa_swarm_agent -- are not in the tree, and the old
-      # step would have died on the first missing one with a codegen error,
-      # which reads as a compiler fault rather than a missing file.
-      - name: Are the named specs present?
-        run: |
-          set -e
-          missing=0
-          for s in batch_processing ternary_mathematics flash_attention ternary_embeddings; do
-            if [ -f "specs/tri/$s.vibee" ]; then
-              echo "  present  $s"
-            else
-              echo "::error::specs/tri/$s.vibee is named by this workflow and absent from the tree"
-              missing=$((missing+1))
-            fi
-          done
-          [ "$missing" -eq 0 ] || exit 1
-
-      # The four-spec check below is kept -- it compiles, which is what
-      # ast-check cannot do -- but four specs out of 1137 is not coverage.
-      # This walks every spec: 1033 produce behaviours, 777 generate
-      # ast-check-clean output, and a sample is additionally compiled. It is a
-      # ratchet, so a spec that regresses fails the build by name.
-      #
-      # A regression reached a commit because the failing spec was in neither
-      # the gate's four nor the head -80 slice I was measuring with.
-      - name: Does any spec stop generating clean Zig?
-        run: zig build codegen-corpus
-
-      - name: Does codegen produce compiling Zig?
-        run: |
-          set -e
-          for s in batch_processing ternary_mathematics flash_attention ternary_embeddings; do
-            echo "::group::$s"
-            zig build vibee -- gen "specs/tri/$s.vibee"
-            zig test "generated/$s.zig"
-            echo "::endgroup::"
-          done
-
-      # This step was `continue-on-error: true`, which meant it could not fail
-      # and so reported green while `zig build test` was erroring on six test
-      # compilations. A step that cannot fail says nothing, and its tick is
-      # indistinguishable from a real pass -- which is the exact defect this
-      # repository's other gates were audited for on the same day.
-      #
-      # `set -o pipefail` so the exit code survives the pipe to tail; without
-      # it the step reports tail's success no matter what zig did.
-      # `| tail -40` kept the summary tree and threw away the compile errors
-      # above it, so a red step said "3 artifacts failed" and not one word about
-      # why. Keep the whole log, print the error lines specifically, and upload
-      # it -- the summary is the least useful part of a failure.
-      # zig prints `Build Summary` only when a step fails, so on the success path
-      # the summary grep below matched nothing, exited 1, and `bash -e` failed a
-      # step whose tests had all passed. Making this step able to fail had turned
-      # it into a step that cannot pass -- the same defect wearing the opposite
-      # sign, and the harder one to notice, because a permanently red check reads
-      # as a permanently broken subject rather than as a broken check.
-      #
-      # `--summary all` so the line exists on both paths, and `|| true` on every
-      # reporting command so reporting can never decide the verdict. The verdict
-      # is decided in exactly one place: the explicit `exit 1`.
-      - name: Do the tests pass?
-        run: |
-          set -o pipefail
-          zig build test --summary all > test.log 2>&1 || {
-            echo "### Test failures" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -E 'error:|error!|failed:' test.log | head -30 | tee -a $GITHUB_STEP_SUMMARY || true
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            grep -oE 'Build Summary:.*' test.log | tee -a $GITHUB_STEP_SUMMARY || true
-            exit 1
-          }
-          grep -oE 'Build Summary:.*' test.log | tee -a $GITHUB_STEP_SUMMARY || true
-
-      # A process death is not a test failure: no assertion, no expected/found,
-      # no stack trace -- 'the following test command failed' and nothing else.
-      # The one known instance is jit.test.JitCompiler dot product correctness
-      # (#726): the JIT emits and executes x86-64 machine code, and on this
-      # runner the process dies with only an exit code. The machine this was
-      # written on is arm64, where those tests self-skip, so there is no local
-      # instrument to see the fault with. The next step is a real observation
-      # channel, not a patch: re-run every failed test binary under gdb and
-      # upload the transcript -- fault address, the instruction at $pc, and the
-      # backtrace -- before anyone edits the emitter. 0.16's test runner takes
-      # no positional filter (it panics on 'unrecognized command line
-      # argument'), so the whole binary runs; the crash lands where it landed
-      # before, in declaration order, and gdb catches whatever signal kills it.
-      - name: Test crash forensics (gdb, x86-64)
-        if: failure() && runner.arch == 'X64'
+      - name: arm 1 -- plain tree
+        id: plain
         continue-on-error: true
+        shell: bash
+        run: zig build codegen-corpus 2>&1 | tee arm1.log
+
+      - name: setup 2 -- extra clean spec
+        shell: bash
+        run: python3 tools/codegen_ab_pick.py extra | tee setup2.log
+
+      - name: arm 2 -- extra clean spec before phi_utils_multi
+        id: extra
+        continue-on-error: true
+        shell: bash
+        run: zig build codegen-corpus 2>&1 | tee arm2.log
+
+      - name: setup 3 -- non-baseline spec cannot write
+        shell: bash
         run: |
-          set -u
-          command -v gdb >/dev/null 2>&1 || { echo 'gdb unavailable on runner' > forensics.log; exit 0; }
-          : > forensics.log
-          grep -oE 'failed command: [^ ]+' test.log | cut -d' ' -f3- | sort -u | while read -r bin; do
-            [ -x "$bin" ] || continue
-            echo "=== $bin ===" >> forensics.log
-            gdb -q --batch \
-                -ex 'set pagination off' \
-                -ex run \
-                -ex 'echo \n--- registers ---\n' \
-                -ex 'info registers' \
-                -ex 'echo \n--- at the faulting instruction ---\n' \
-                -ex 'x/8i $pc' \
-                -ex 'echo \n--- backtrace ---\n' \
-                -ex bt \
-                --args "$bin" >> forensics.log 2>&1 || true
-          done
-          echo "### Crash forensics" >> $GITHUB_STEP_SUMMARY
-          echo 'gdb transcripts for failed test binaries are in the codegen-logs artifact (forensics.log)' >> $GITHUB_STEP_SUMMARY
+          python3 tools/codegen_ab_pick.py unextra | tee setup3.log
+          python3 tools/codegen_ab_pick.py nonbase-dir | tee -a setup3.log
 
-      - name: TODO stubs in generated code
-        if: always()
+      - name: arm 3 -- non-baseline spec before phi_utils_multi leaves no file
+        id: nonbase
+        continue-on-error: true
+        shell: bash
+        run: zig build codegen-corpus 2>&1 | tee arm3.log
+
+      - name: setup 4 -- baseline spec cannot write
+        shell: bash
         run: |
-          N=$(grep -r "TODO: implement" generated/*.zig 2>/dev/null | wc -l | tr -d ' ')
-          echo "### TODO stubs in generated code: $N" >> $GITHUB_STEP_SUMMARY
-          if [ "$N" -gt 0 ]; then
-            echo "::warning::$N TODO stub implementations in generated files"
-            grep -r "TODO: implement" generated/*.zig 2>/dev/null | head -10 || true
-          fi
+          python3 tools/codegen_ab_pick.py clear-dirs | tee setup4.log
+          python3 tools/codegen_ab_pick.py base-dir | tee -a setup4.log
 
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: codegen-logs
-          path: |
-            build.log
-            graph.log
-            test.log
-            forensics.log
-          retention-days: 30
-          if-no-files-found: ignore
+      - name: arm 4 -- baseline spec at an unsampled index leaves no file
+        id: base
+        continue-on-error: true
+        shell: bash
+        run: zig build codegen-corpus 2>&1 | tee arm4.log
 
-  count-patterns:
-    name: Count Pattern Coverage
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Count Specs and Behaviors
+      - name: summary
+        shell: bash
         run: |
-          SPECS=$(find specs/tri -name "*.vibee" 2>/dev/null | wc -l | tr -d ' ')
-          BEHAVIORS=$(grep -rh "^  - name:" specs/tri/*.vibee 2>/dev/null | wc -l | tr -d ' ')
-          IMPLEMENTATIONS=$(grep -rh "implementation: |" specs/tri/*.vibee 2>/dev/null | wc -l | tr -d ' ')
-          echo "### VIBEE corpus" >> $GITHUB_STEP_SUMMARY
-          echo "| | count |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| specs | $SPECS |" >> $GITHUB_STEP_SUMMARY
-          echo "| behaviors | $BEHAVIORS |" >> $GITHUB_STEP_SUMMARY
-          echo "| with inline implementation | $IMPLEMENTATIONS |" >> $GITHUB_STEP_SUMMARY
-          if [ -n "$BEHAVIORS" ] && [ "$BEHAVIORS" -gt 0 ]; then
-            COVERAGE=$((IMPLEMENTATIONS * 100 / BEHAVIORS))
-            echo "| coverage | ${COVERAGE}% (aspiration 95%) |" >> $GITHUB_STEP_SUMMARY
-            if [ "$COVERAGE" -lt 95 ]; then
-              echo "::warning::Implementation coverage ${COVERAGE}% (${IMPLEMENTATIONS}/${BEHAVIORS}); tracked as coverage debt, non-blocking."
-            fi
-          fi
-
-      # This step used to print a hardcoded
-      #     echo "✅ llm_full_inference - 14 behaviors, 14 tests"
-      # for two components whose spec files are NOT in this tree. A green tick
-      # that is an `echo` is worse than no line at all: it reports a status
-      # nothing measured. It now reads the tree and says what is actually there.
-      - name: Production component specs — present or not
-        run: |
-          echo "### v5 production components" >> $GITHUB_STEP_SUMMARY
-          echo "| spec | in tree | behaviors |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          for s in llm_full_inference vsa_swarm_agent golden_chain; do
-            f="specs/tri/$s.vibee"
-            if [ -f "$f" ]; then
-              n=$(grep -c "^  - name:" "$f" 2>/dev/null || echo 0)
-              echo "| \`$s\` | yes | $n |" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "| \`$s\` | **no** | — |" >> $GITHUB_STEP_SUMMARY
-            fi
+          echo "outcomes: plain=${{ steps.plain.outcome }} extra=${{ steps.extra.outcome }} nonbase=${{ steps.nonbase.outcome }} base=${{ steps.base.outcome }}"
+          for n in 1 2 3 4; do
+            echo "--- arm $n"
+            cat setup$n.log 2>/dev/null || true
+            grep -E 'DOES NOT COMPILE|NEW CLEAN|NO OUTPUT|REGRESSED|codegen corpus:|regressed,|compile sample|do not compile' arm$n.log || true
           done
