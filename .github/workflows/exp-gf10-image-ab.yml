@@ -1,9 +1,9 @@
-# Experiment for #856, not a gate. ax7203-gf10-sub last passed on 2026-07-14 with
-# regymm/openxc7@sha256:eced1cdd…; since the image moved to sha256:35c91073… (pushed 2026-10-01)
-# every seed fails, 7 of 8 at "post-placement validity check failed for Bel 'SLICE_…/A5FF'".
-# Same commit, four jobs: {old, new} image for Yosys x {old, new} image for nextpnr. Every job
-# runs all 8 seeds and reports how many are clean, and never fails on a bad seed, so the
-# post-job cache save runs and the four results can be compared side by side.
+# Experiment for #856, not a gate. Run 37206223497 showed the Yosys change (0.62 -> 0.68) breaks
+# ax7203-gf10-sub and the nextpnr change does not: with the old Yosys 2/8 seeds are clean under
+# either nextpnr, with the new Yosys 0/8 under either. This round asks two things of the new Yosys:
+# does any seed in 9..40 place, and does -nowidelut (no MUXF7/MUXF8 built from wide LUTs) make
+# the A5FF failure go away. Old Yosys with -nowidelut is the control. nextpnr is the current
+# image throughout.
 name: gf10-sub image A/B (experiment, #856)
 on:
   push:
@@ -11,32 +11,36 @@ on:
     paths: ['.github/workflows/exp-gf10-image-ab.yml']
 jobs:
   ab:
-    name: synth ${{ matrix.synth }} / pnr ${{ matrix.pnr }}
+    name: yosys ${{ matrix.synth }} ${{ matrix.flags_label }} seeds ${{ matrix.seeds_label }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         include:
-          - synth: old
-            pnr: old
-            synth_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
-            pnr_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
-          - synth: old
-            pnr: new
-            synth_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
-            pnr_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
           - synth: new
-            pnr: old
             synth_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
-            pnr_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+            flags: ''
+            flags_label: default
+            seeds: '9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40'
+            seeds_label: 9-40
           - synth: new
-            pnr: new
             synth_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
-            pnr_img: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+            flags: '-nowidelut'
+            flags_label: nowidelut
+            seeds: '1 2 3 4 5 6 7 8'
+            seeds_label: 1-8
+          - synth: old
+            synth_img: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+            flags: '-nowidelut'
+            flags_label: nowidelut
+            seeds: '1 2 3 4 5 6 7 8'
+            seeds_label: 1-8
     env:
       SYNTH_IMG: ${{ matrix.synth_img }}
-      PNR_IMG: ${{ matrix.pnr_img }}
+      PNR_IMG: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+      SYNTH_FLAGS: ${{ matrix.flags }}
+      SEEDS: ${{ matrix.seeds }}
       PART: xc7a200tfbg484-2
       OUT: build/gf10_sub
     steps:
@@ -58,7 +62,7 @@ jobs:
         shell: bash
         run: |
           docker run --rm "$SYNTH_IMG" yosys -V
-          docker run --rm "$PNR_IMG" bash -c 'nextpnr-xilinx --version 2>&1 | head -n 2; for d in /nextpnr-xilinx /nextpnr-xilinx/xilinx/external/prjxray-db /prjxray; do echo "$d: $(git -C "$d" log -1 --format="%h %cI %s" 2>/dev/null || echo no-git)"; done'
+          docker run --rm "$PNR_IMG" bash -c 'nextpnr-xilinx --version 2>&1 | head -n 2'
 
       - name: Yosys
         shell: bash
@@ -66,7 +70,7 @@ jobs:
           mkdir -p "$OUT"
           docker run --rm -v "$PWD:/work" -w /work "$SYNTH_IMG" yosys -p "
             read_verilog fpga/openxc7-synth/gf_adder_param.v fpga/vivado/gf10_sub_ax7203.v;
-            synth_xilinx -flatten -abc9 -nocarry -arch xc7 -top gf10_sub_ax7203;
+            synth_xilinx -flatten -abc9 -nocarry $SYNTH_FLAGS -arch xc7 -top gf10_sub_ax7203;
             setundef -zero -params; write_json $OUT/gf10_sub_ax7203.json" > /tmp/yosys.log 2>&1
           sed -n '/Printing statistics/,$p' /tmp/yosys.log | grep -E '^ +[0-9]+ +[A-Z$]' | tail -n 30 || true
 
@@ -74,7 +78,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: build/chipdb/xc7a200tfbg484-2.bin
-          key: chipdb-exp856-${{ matrix.pnr }}-xc7a200tfbg484-2-v1
+          key: chipdb-exp856-new-xc7a200tfbg484-2-v1
 
       - name: chipdb
         if: steps.chipdb.outputs.cache-hit != 'true'
@@ -84,12 +88,13 @@ jobs:
           docker run --rm -v "$PWD:/work" -w /work "$PNR_IMG" bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device $PART --bba /work/build/chipdb/$PART.bba && bbasm -l /work/build/chipdb/$PART.bba /work/build/chipdb/$PART.bin"
           rm -f "build/chipdb/$PART.bba"
 
-      - name: nextpnr, all 8 seeds
+      - name: nextpnr, every seed
         shell: bash
         run: |
-          CLEAN=0
-          echo "### synth ${{ matrix.synth }} / pnr ${{ matrix.pnr }}" >> "$GITHUB_STEP_SUMMARY"
-          for s in 1 2 3 4 5 6 7 8; do
+          CLEAN=0; TRIED=0; CLEAN_SEEDS=""
+          echo "### yosys ${{ matrix.synth }} ${{ matrix.flags_label }}, seeds ${{ matrix.seeds_label }}" >> "$GITHUB_STEP_SUMMARY"
+          for s in $SEEDS; do
+            TRIED=$((TRIED+1))
             rm -f "$OUT/gf10_sub_ax7203.fasm"
             docker run --rm -v "$PWD:/work" -w /work "$PNR_IMG" timeout --signal=KILL 900 nextpnr-xilinx \
               --chipdb "/work/build/chipdb/$PART.bin" \
@@ -101,12 +106,12 @@ jobs:
             route_failed=false; grep -q "Failed to find a route" "/tmp/np_$s.log" && route_failed=true
             clean=false; [ "$fasm_written" = true ] && [ "$route_failed" = false ] && clean=true
             if [ "$clean" = true ]; then
-              CLEAN=$((CLEAN+1)); why=clean
+              CLEAN=$((CLEAN+1)); CLEAN_SEEDS="$CLEAN_SEEDS $s"; why=clean
             else
               why=$(grep -m1 -E "^ERROR:|Failed to find a route" "/tmp/np_$s.log" || echo "no fasm, no error line")
             fi
             echo "seed=$s $why"
             echo "- seed $s: \`$why\`" >> "$GITHUB_STEP_SUMMARY"
           done
-          echo "RESULT synth=${{ matrix.synth }} pnr=${{ matrix.pnr }} clean=$CLEAN/8"
-          echo "**clean seeds: $CLEAN/8**" >> "$GITHUB_STEP_SUMMARY"
+          echo "RESULT yosys=${{ matrix.synth }} flags=${{ matrix.flags_label }} clean=$CLEAN/$TRIED seeds:$CLEAN_SEEDS"
+          echo "**clean seeds: $CLEAN/$TRIED ($CLEAN_SEEDS )**" >> "$GITHUB_STEP_SUMMARY"
