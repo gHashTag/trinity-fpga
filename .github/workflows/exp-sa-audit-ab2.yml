@@ -5,6 +5,11 @@
 # image, the first error line of every failed seed and the Fmax of every clean one. Nothing is
 # switched on the strength of this alone; gf16-conformance quotes Fmax, so its placer is the
 # owner's decision whatever this shows.
+#
+# gf8_mul is here as the counter-example. 71d888150 (2026-06-29 21:14) moved the MUL family from
+# heap to sa because gf8-mul found no clean seed under heap. ee41b861a, 28 minutes later, added
+# -nodsp after finding that 2x DSP48E1 in the netlist was why 5 of 7 MUL widths failed P&R. So the
+# heap failure was measured on a DSP netlist, and heap has not been tried on the -nodsp one since.
 name: SA/HeAP A/B for the thin-margin --placer sa workflows (experiment, #862 round 2)
 on:
   push:
@@ -18,10 +23,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        design: [gf6_mul, gf16_codec, gf16_mul, gf24_sub]
+        design: [gf6_mul, gf16_codec, gf16_mul, gf24_sub, gf8_mul]
         placer: [sa, heap]
         # Sources, top, extra synth flags and xdc copied from each workflow on main 38da24d3a.
         include:
+          - design: gf8_mul
+            srcs: fpga/openxc7-synth/gf_mul_param.v fpga/vivado/gf8_mul_ax7203.v
+            synth_extra: -nodsp
+            xdc: gf16_clean_ax7203.xdc
           - design: gf6_mul
             srcs: fpga/openxc7-synth/gf_mul_param.v fpga/vivado/gf6_mul_ax7203.v
             synth_extra: -nodsp
