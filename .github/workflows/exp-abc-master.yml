@@ -1,0 +1,119 @@
+# Experiment for #862 (S27), not a gate. Does the &mfs assertion still fire on current abc?
+#
+# Run 37233120147 (exp-abc-equiv.yml v4) kept the input of the abc call that dies in gf14_sub's
+# map_luts: yosys-abc aborts in &mfs with Abc_LitIsCompl "Lit >= 0" (rc 134), both inside Yosys
+# and alone on the kept files. Those files are research/abc-repro/input.{xaig,lut,box}, and
+# research/abc-repro/fail.abc is abc9's own script cut down to the steps the crash needs. On a
+# laptop with Yosys 0.67+post (b8e7da6f, macOS arm64, AppleClang) fail.abc asserts too; dropping
+# any one of &sweep, &dc2, &dch or &if's -W 300 makes it end normally, and so does dropping &mfs.
+#
+# This builds three abcs from source and runs fail.abc plus those five one-step-removed controls
+# on each:
+#   yosys-0.68  YosysHQ/abc at the commit Yosys v0.68 pins (2a9e9c2a). Positive control: it is the
+#               abc that asserts in the image, so if it does not assert here the build or the
+#               script is wrong, and the job fails.
+#   yosyshq     YosysHQ/abc, head of yosys-experimental.
+#   berkeley    berkeley-abc/abc, head of master. YosysHQ/abc has issues disabled, so this is
+#               where a report would go.
+# abc exits 0 when a script stops on a command error, so a control counts as having run only if
+# its closing &ps -l printed the LUT histogram ("LUT = ").
+name: abc &mfs assertion on current abc (experiment, #862)
+on:
+  push:
+    branches: [exp/abc-equiv]
+    paths: ['.github/workflows/exp-abc-master.yml', 'research/abc-repro/**']
+jobs:
+  abc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: yosys-0.68
+            repo: YosysHQ/abc
+            ref: 2a9e9c2a00e44abd90fc593edfc2c0ff4573f318
+            expect_subject: assert
+          - name: yosyshq
+            repo: YosysHQ/abc
+            ref: yosys-experimental
+            expect_subject: unknown
+          - name: berkeley
+            repo: berkeley-abc/abc
+            ref: master
+            expect_subject: unknown
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: research/abc-repro
+
+      - name: Build abc
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          git init -q abc-src
+          git -C abc-src remote add origin "https://github.com/${{ matrix.repo }}.git"
+          git -C abc-src fetch -q --depth 1 origin "${{ matrix.ref }}"
+          git -C abc-src checkout -q FETCH_HEAD
+          sha=$(git -C abc-src rev-parse HEAD)
+          date=$(git -C abc-src log -1 --format=%cI)
+          t0=$(date +%s)
+          rc=0; make -C abc-src -j"$(nproc)" ABC_USE_NO_READLINE=1 abc > build.txt 2>&1 || rc=$?
+          t1=$(date +%s)
+          echo "ABCBUILD name=${{ matrix.name }} repo=${{ matrix.repo }} sha=$sha date=$date rc=$rc build_s=$((t1 - t0))"
+          ndebug=$(grep -c -- "-DNDEBUG" build.txt || true)
+          echo "ABCBUILD name=${{ matrix.name }} compile_lines_with_NDEBUG=$ndebug"
+          built=false; [ "$rc" = 0 ] && [ -x abc-src/abc ] && built=true
+          if [ "$built" = false ]; then tail -40 build.txt; exit 1; fi
+
+      - name: fail.abc and its controls
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          cd research/abc-repro
+          sha256sum input.xaig input.lut input.box fail.abc | sed 's/^/ABCINPUT sha256 /'
+          grep -v -x -F '&mfs' fail.abc > ctl-no-mfs.abc
+          grep -v -x -F '&sweep' fail.abc > ctl-no-sweep.abc
+          grep -v -x -F '&dc2' fail.abc > ctl-no-dc2.abc
+          grep -v -x -F '&dch -f -r' fail.abc > ctl-no-dch.abc
+          sed 's/^&if -W 300$/\&if/' fail.abc > ctl-no-W.abc
+          subject_asserted=false
+          controls_ok=true
+          for case in fail ctl-no-mfs ctl-no-sweep ctl-no-dc2 ctl-no-dch ctl-no-W; do
+            lines=$(wc -l < "$case.abc")
+            rc=0; timeout --signal=KILL 300 "$GITHUB_WORKSPACE/abc-src/abc" -f "$case.abc" > "$case.txt" 2>&1 || rc=$?
+            asserts=$(grep -c "Assertion" "$case.txt" || true)
+            lut=$(grep -m1 -o "LUT = *[0-9]*" "$case.txt" | grep -o "[0-9]*" || true)
+            echo "ABCCASE build=${{ matrix.name }} case=$case script_lines=$lines rc=$rc asserts=$asserts lut=${lut:-none}"
+            grep -m1 "Assertion" "$case.txt" | sed "s/^/ABCMSG build=${{ matrix.name }} case=$case /" || true
+            is_subject=false; [ "$case" = fail ] && is_subject=true
+            crashed=false; [ "$asserts" -gt 0 ] && crashed=true
+            ran_to_end=false; [ "$rc" = 0 ] && [ -n "$lut" ] && ran_to_end=true
+            if [ "$is_subject" = true ]; then
+              subject_asserted=$crashed
+            else
+              if [ "$ran_to_end" = false ]; then controls_ok=false; fi
+            fi
+          done
+          echo "RESULT build=${{ matrix.name }} subject_asserted=$subject_asserted controls_ran_to_end=$controls_ok expect_subject=${{ matrix.expect_subject }}"
+          must_assert=false; [ "${{ matrix.expect_subject }}" = assert ] && must_assert=true
+          missed=false; [ "$must_assert" = true ] && [ "$subject_asserted" = false ] && missed=true
+          if [ "$missed" = true ]; then echo "ANOMALY positive control did not assert"; exit 1; fi
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          grep -h -E '^(ABCBUILD|ABCINPUT|ABCCASE|ABCMSG|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: abc-${{ matrix.name }}
+          path: |
+            log.txt
+            build.txt
+            research/abc-repro/*.txt
+            research/abc-repro/*.abc
+          if-no-files-found: warn
+          retention-days: 14

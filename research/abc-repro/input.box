@@ -1,0 +1,120 @@
+$__DFF_P__$abc9_flop 1 1 3 1
+#C D Q
+0 0 0 # $_DFF_[NP]_.D
+
+$__DFF_N__$abc9_flop 2 1 3 1
+#C D Q
+0 0 0 # $_DFF_[NP]_.D
+
+$__ABC9_DELAY 3 0 1 1
+#I
+0 # O
+
+$paramod\FDCE\INIT=1'x_$abc9_byp 4 0 2 1
+#CLR $abc9byp$\Q
+764 0 # Q
+
+$paramod\FDPE\INIT=1'x_$abc9_byp 5 0 2 1
+#PRE $abc9byp$\Q
+764 0 # Q
+
+$__XILINX_MUXF78 6 1 6 1
+#I0 I1 I2 I3 S0 S1
+294 297 311 317 390 273 # O
+
+CARRY4 7 1 10 8
+#CYINIT DI[0] DI[1] DI[2] DI[3] S[0] S[1] S[2] S[3] CI
+482 - - - - 223 - - - 222 # O[0]
+598 407 - - - 400 205 - - 334 # O[1]
+584 556 537 - - 523 558 226 - 239 # O[2]
+642 615 596 438 - 582 618 330 227 313 # O[3]
+536 379 - - - 340 - - - 271 # CO[0]
+494 465 445 - - 433 469 - - 157 # CO[1]
+592 540 520 356 - 512 548 292 - 228 # CO[2]
+580 526 507 398 385 508 528 378 380 114 # CO[3]
+
+FDCE 8 1 4 1
+#C CE CLR D
+- - 764 - # Q
+
+FDCE_1 9 1 4 1
+#C CE CLR D
+- - 764 - # Q
+
+FDPE 10 1 4 1
+#C CE D PRE
+- - - 764 # Q
+
+FDPE_1 11 1 4 1
+#C CE D PRE
+- - - 764 # Q
+
+MUXF7 12 1 3 1
+#I0 I1 S
+217 223 296 # O
+
+MUXF8 13 1 3 1
+#I0 I1 S
+104 94 273 # O
+
+RAM128X1D 14 1 17 2
+#D WCLK WE A[0] A[1] A[2] A[3] A[4] A[5] A[6] DPRA[0] DPRA[1] DPRA[2] DPRA[3] DPRA[4] DPRA[5] DPRA[6]
+- - - - - - - - - - 1039 1028 869 804 635 524 470 # DPO
+- - - 1010 999 840 775 606 495 451 - - - - - - - # SPO
+
+RAM32M 15 1 30 8
+#ADDRA[0] ADDRA[1] ADDRA[2] ADDRA[3] ADDRA[4] ADDRB[0] ADDRB[1] ADDRB[2] ADDRB[3] ADDRB[4] ADDRC[0] ADDRC[1] ADDRC[2] ADDRC[3] ADDRC[4] ADDRD[0] ADDRD[1] ADDRD[2] ADDRD[3] ADDRD[4] DIA[0] DIA[1] DIB[0] DIB[1] DIC[0] DIC[1] DID[0] DID[1] WCLK WE
+642 631 472 407 238 - - - - - - - - - - - - - - - - - - - - - - - - - # DOA[0]
+642 631 472 407 238 - - - - - - - - - - - - - - - - - - - - - - - - - # DOA[1]
+- - - - - 642 631 472 407 238 - - - - - - - - - - - - - - - - - - - - # DOB[0]
+- - - - - 642 631 472 407 238 - - - - - - - - - - - - - - - - - - - - # DOB[1]
+- - - - - - - - - - 642 631 472 407 238 - - - - - - - - - - - - - - - # DOC[0]
+- - - - - - - - - - 642 631 472 407 238 - - - - - - - - - - - - - - - # DOC[1]
+- - - - - - - - - - - - - - - 642 631 472 407 238 - - - - - - - - - - # DOD[0]
+- - - - - - - - - - - - - - - 642 631 472 407 238 - - - - - - - - - - # DOD[1]
+
+RAM32X1D 16 1 13 2
+#D WCLK WE A0 A1 A2 A3 A4 DPRA0 DPRA1 DPRA2 DPRA3 DPRA4
+- - - - - - - - 642 631 472 407 238 # DPO
+- - - 642 632 472 407 238 - - - - - # SPO
+
+RAM32X1D_1 17 1 13 2
+#D WCLK WE A0 A1 A2 A3 A4 DPRA0 DPRA1 DPRA2 DPRA3 DPRA4
+- - - - - - - - 642 631 472 407 238 # DPO
+- - - 642 632 472 407 238 - - - - - # SPO
+
+RAM64M 18 1 30 4
+#ADDRA[0] ADDRA[1] ADDRA[2] ADDRA[3] ADDRA[4] ADDRA[5] ADDRB[0] ADDRB[1] ADDRB[2] ADDRB[3] ADDRB[4] ADDRB[5] ADDRC[0] ADDRC[1] ADDRC[2] ADDRC[3] ADDRC[4] ADDRC[5] ADDRD[0] ADDRD[1] ADDRD[2] ADDRD[3] ADDRD[4] ADDRD[5] DIA DIB DIC DID WCLK WE
+642 631 472 407 238 - - - - - - - - - - - - - - - - - - - - - - - - - # DOA
+- - - - - - 642 631 472 407 238 - - - - - - - - - - - - - - - - - - - # DOB
+- - - - - - - - - - - - 642 631 472 407 238 - - - - - - - - - - - - - # DOC
+- - - - - - - - - - - - - - - - - - 642 631 472 407 238 - - - - - - - # DOD
+
+RAM64X1D 19 1 15 2
+#D WCLK WE A0 A1 A2 A3 A4 A5 DPRA0 DPRA1 DPRA2 DPRA3 DPRA4 DPRA5
+- - - - - - - - - 642 631 472 407 238 127 # DPO
+- - - 642 632 472 407 238 127 - - - - - - # SPO
+
+SRL16 20 1 6 1
+#A0 A1 A2 A3 CLK D
+631 472 407 238 - - # Q
+
+SRL16E 21 1 7 1
+#A0 A1 A2 A3 CE CLK D
+631 472 407 238 - - - # Q
+
+SRLC16 22 1 6 2
+#A0 A1 A2 A3 CLK D
+631 472 407 238 - - # Q
+- - - - - - # Q15
+
+SRLC16E 23 1 7 2
+#A0 A1 A2 A3 CE CLK D
+631 472 407 238 - - - # Q
+- - - - - - - # Q15
+
+SRLC32E 24 1 8 2
+#A[0] A[1] A[2] A[3] A[4] CE CLK D
+642 631 472 407 238 - - - # Q
+- - - - - - - - # Q31
+

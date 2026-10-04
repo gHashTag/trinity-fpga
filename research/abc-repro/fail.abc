@@ -1,0 +1,9 @@
+read_lut input.lut
+read_box input.box
+&read input.xaig
+&sweep
+&dc2
+&dch -f -r
+&if -W 300
+&mfs
+&ps -l
