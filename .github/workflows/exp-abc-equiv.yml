@@ -10,8 +10,13 @@
 # half, so pre against post covers it, and the first half's FSM recoding is on both sides. Both
 # sides go through the Xilinx simulation models (techmap -wb -D EQUIV -autoproc with
 # +/xilinx/cells_sim.v, as equiv_opt -map does) and async2sync for the asynchronous resets, then
-# equiv_make -inames, equiv_simple and equiv_induct. STARTUPE2 has no simulation model; it is
-# loaded as a blackbox from cells_xtra.v so that equiv_make can pair the two instances. -undef lets
+# equiv_make -inames, equiv_simple and equiv_induct. STARTUPE2 has no simulation model, and
+# equiv_induct imports every cell into SAT, so run 37224086688 stopped on "No SAT model available
+# for cell u_startup (STARTUPE2)" in all six cases, controls included. The instance is now cut out
+# on both sides with expose -evert, which removes it and turns each of its pins into a port named
+# u_startup.<pin>: its outputs (CFGMCLK is these designs' clock) become the same free inputs on
+# both sides, and its inputs become outputs that must match. Its port list comes from the
+# blackbox loaded from cells_xtra.v. -undef lets
 # post refine an x of pre, which map_luts' own opt_expr -mux_undef does; the subject is also run
 # without -undef, for reference only.
 #
@@ -160,7 +165,7 @@ jobs:
           equiv() {  # case gold_top gold_il gate_top gate_il mode expect
             u=""; [ "$6" = undef ] && u=" -undef"
             printf '%s\n' "read_verilog -lib +/xilinx/cells_xtra.v" \
-              "read_rtlil $3" "rename $2 gold" "read_rtlil $5" "rename $4 gate" \
+              "read_rtlil $3" "rename $2 gold" "read_rtlil $5" "rename $4 gate" "expose -evert t:STARTUPE2" \
               "setundef -zero -params" "techmap -wb -D EQUIV -autoproc -map +/xilinx/cells_sim.v" "async2sync" \
               "equiv_make -inames gold gate equiv" "equiv_simple$u equiv" "equiv_induct$u equiv" "equiv_status equiv" > "out/eq-$1.ys"
             t0=$(date +%s.%N)
@@ -176,6 +181,12 @@ jobs:
             grep -F -m 3 "Unproven \$equiv" "out/eq-$1.txt" | cut -c1-200 | sed "s/^/UNPROVEN case=$1 /" || true
             no_cells=false; grep -qF "No \$equiv cells" "out/eq-$1.txt" && no_cells=true
             if [ "$no_cells" = true ]; then echo "ANOMALY case=$1 equiv_make produced no \$equiv cells"; fi
+            ev_gold=$(grep -c -E "New module port: [^ ]*gold/[^ ]*u_startup" "out/eq-$1.txt" || true)
+            ev_gate=$(grep -c -E "New module port: [^ ]*gate/[^ ]*u_startup" "out/eq-$1.txt" || true)
+            echo "EVERT case=$1 gold_ports=$ev_gold gate_ports=$ev_gate"
+            uneven=false; [ "$ev_gold" -ne "$ev_gate" ] && uneven=true
+            [ "$ev_gold" -eq 0 ] && uneven=true
+            if [ "$uneven" = true ]; then echo "ANOMALY case=$1 STARTUPE2 was not cut the same way on both sides"; fi
             failed=false; [ "$ran" = false ] && failed=true
             if [ "$failed" = true ]; then tail -n 15 "out/eq-$1.txt"; fi
             echo "$pass" > "out/eq-$1.pass"
@@ -201,7 +212,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|EQUIV|UNPROVEN|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|EQUIV|EVERT|UNPROVEN|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
