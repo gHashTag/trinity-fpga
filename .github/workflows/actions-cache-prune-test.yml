@@ -1,0 +1,25 @@
+name: actions-cache-prune-test
+
+# actions-cache-prune.yml runs the copy of its rules on the default branch, so a
+# change to those rules is tested here, on the pull request that makes it.
+
+on:
+  pull_request:
+    paths:
+      - .github/scripts/cache-prune.js
+      - .github/scripts/cache-prune.test.js
+      - .github/workflows/actions-cache-prune.yml
+      - .github/workflows/actions-cache-prune-test.yml
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+      - run: node --test .github/scripts/cache-prune.test.js
