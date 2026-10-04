@@ -37,6 +37,13 @@
 # Also measured: whether the assertion fires in each of three one-shot gf14_sub runs and whether
 # they give the same JSON; whether the split run gives the one-shot JSON, so that the netlist
 # proven is the netlist CI builds; and whether the split run hits the assertion too.
+#
+# Last step, for an upstream report and for what the crash costs. Locally (Yosys 0.67, abc does
+# not assert on this design) the same map_luts gives 380 LCs with &mfs and 435 without, so &mfs
+# removes 12.6% of gf14_sub's LCs, and CI's 488 is a netlist without it. The step reruns map_luts
+# from the pre netlist keeping abc's temp files, runs yosys-abc alone on them (a reproducer needs
+# no Yosys if it asserts there too), and reruns with &mfs taken out of abc's script, which should
+# give the split netlist byte for byte if the crash leaves exactly the &if mapping.
 name: abc crash equivalence (experiment, #862)
 on:
   push:
@@ -338,11 +345,53 @@ jobs:
           if [ "$crash_in_split" = false ]; then echo "::error::the split run did not hit the abc assertion, so the proof does not cover the crash"; exit 1; fi
           if [ "$subject_equivalent" = false ]; then echo "::error::gf14_sub after the abc crash is not proven equivalent to its pre-abc netlist"; exit 1; fi
 
+      - name: Standalone abc reproducer and the cost of the missing &mfs
+        if: always()
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          mapper() {  # tag abc-script-or-empty
+            {
+              printf '%s\n' "read_verilog -lib -specify +/xilinx/cells_sim.v" "read_verilog -lib +/xilinx/cells_xtra.v" "read_rtlil out/$SUB-pre.il" "hierarchy -top $SUB"
+              has_script=false; [ -n "$2" ] && has_script=true
+              if [ "$has_script" = true ]; then echo "scratchpad -set abc9.script $2"; fi
+              printf '%s\n' "scratchpad -set abc9.nocleanup 1" "$SYNTH -top $SUB -run map_luts:" "setundef -zero -params" "write_json out/$SUB-$1.json"
+            } > "out/abc-$1.ys"
+            rc=0; docker run --rm -v "$PWD:/work" -w /work "$IMG" timeout --signal=KILL 600 yosys -s "out/abc-$1.ys" > "out/abc-$1.txt" 2>&1 || rc=$?
+            asserts=$(grep -c "Assertion" "out/abc-$1.txt" || true)
+            luts=$(awk '/ABC RESULTS: +\$lut cells:/{v=$NF} END{print v}' "out/abc-$1.txt")
+            lcs=$(awk '/Estimated number of LCs/{v=$NF} END{print v}' "out/abc-$1.txt")
+            a=$(sha256sum "out/$SUB-split.json" 2>/dev/null | cut -d' ' -f1) || a=missing
+            b=$(sha256sum "out/$SUB-$1.json" 2>/dev/null | cut -d' ' -f1) || b=missing
+            same=false; [ "$a" = "$b" ] && same=true
+            echo "REPRO run=$1 rc=$rc abc_asserts=$asserts lut_cells=$luts lcs=$lcs same_json_as_split=$same"
+          }
+          # 1. From the written pre netlist, as split does, but keeping abc's temp files.
+          mapper keep ""
+          d=$(find . -maxdepth 1 -type d -name '_tmp_yosys-abc-*' -print -quit | sed 's#^\./##')
+          found=false; [ -n "$d" ] && found=true
+          if [ "$found" = true ]; then
+            docker run --rm -v "$PWD:/work" -w /work "$IMG" chmod -R a+rwX "$d"
+            mkdir -p out/abc-repro
+            cp "$d/input.xaig" "$d/input.lut" "$d/input.box" "$d/abc.script" out/abc-repro/
+            sed -e "s#/work/$d/##g" -e "s#$d/##g" "$d/abc.script" > out/abc-repro/repro.abc
+            # 2. abc alone on those four files, no Yosys: is this a self-contained reproducer?
+            rc=0; docker run --rm -v "$PWD:/work" -w /work/out/abc-repro "$IMG" sh -c 'exec timeout --signal=KILL 300 "$(dirname "$(command -v yosys)")/yosys-abc" -s -f repro.abc' > out/abc-repro/standalone.txt 2>&1 || rc=$?
+            asserts=$(grep -c "Assertion" out/abc-repro/standalone.txt || true)
+            echo "REPRO run=standalone rc=$rc abc_asserts=$asserts"
+            sha256sum out/abc-repro/input.xaig out/abc-repro/input.lut out/abc-repro/input.box | sed 's/^/REPRO sha256 /'
+          fi
+          if [ "$found" = false ]; then echo "ANOMALY abc9.nocleanup left no _tmp_yosys-abc-* directory"; fi
+          # 3. The same map_luts with &mfs removed from abc's script. If the crash leaves the &if
+          #    mapping, this gives the split netlist byte for byte; 'nomfs' vs a working &mfs is
+          #    what the crash costs, and that needs a build where &mfs does not assert.
+          mapper nomfs '+&scorr;&sweep;&dc2;&dch,-f,-r;&ps;&if,-W,300,-v;&ps,-l'
+
       - name: Summary
         if: always()
         shell: bash
         run: |
-          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|FFCUT|EQUIV|CEX|EVERT|NOTE|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|FFCUT|EQUIV|CEX|EVERT|NOTE|RESULT|REPRO|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -354,4 +403,5 @@ jobs:
             out/*.il
             out/*.ffs
             out/*.cex
+            out/abc-repro/
           retention-days: 14
