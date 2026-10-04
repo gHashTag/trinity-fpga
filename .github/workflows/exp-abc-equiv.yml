@@ -7,23 +7,33 @@
 # Method. One yosys session runs synth_xilinx in two halves, -run :map_luts and -run map_luts:, and
 # writes the top module between them (pre: gate-level logic plus the already mapped FFs) and after
 # them (post: the netlist the bitstream is built from). The abc call that crashes is in the second
-# half, so pre against post covers it, and the first half's FSM recoding is on both sides. Both
-# sides go through the Xilinx simulation models (techmap -wb -D EQUIV -autoproc with
-# +/xilinx/cells_sim.v, as equiv_opt -map does) and async2sync for the asynchronous resets, then
-# equiv_make -inames, equiv_simple and equiv_induct. STARTUPE2 has no simulation model, and
-# equiv_induct imports every cell into SAT, so run 37224086688 stopped on "No SAT model available
-# for cell u_startup (STARTUPE2)" in all six cases, controls included. The instance is now cut out
-# on both sides with expose -evert, which removes it and turns each of its pins into a port named
-# u_startup.<pin>: its outputs (CFGMCLK is these designs' clock) become the same free inputs on
-# both sides, and its inputs become outputs that must match. Its port list comes from the
-# blackbox loaded from cells_xtra.v. -undef lets
-# post refine an x of pre, which map_luts' own opt_expr -mux_undef does; the subject is also run
-# without -undef, for reference only.
+# half, so pre against post covers it, and the first half's FSM recoding is on both sides.
+#
+# v3 changes the comparison. v2 used equiv_make -inames + equiv_simple + equiv_induct, and in run
+# 37225893876 its positive controls failed (gf12_clean 114 unproven, gf14_add 120), so it could not
+# prove even designs abc did not crash on. Its mutant control "passed" only because it was judged
+# by unproven > 0: the mutant's 120 unproven points were the subject's own 120, so it was vacuous.
+#
+# v3 cuts every flip-flop out instead. All FFs are already FDCE/FDPE before map_luts and map_luts
+# keeps their cell names (154/154 for gf14_add and gf14_sub, 146/146 for gf12_clean; the step
+# checks it). FFCUT_PY replaces FF K with an input ffq_K that drives its old Q net and three
+# outputs: ffns_K = CE ? D : Q, ffar_K = CLR or PRE, ffck_K = C. Both sides then go through the
+# Xilinx simulation models (techmap -wb -D EQUIV -autoproc with +/xilinx/cells_sim.v), STARTUPE2
+# is cut out with expose -evert (it has no SAT model; its pins become ports u_startup.<pin>), and
+# miter -equiv + sat -prove-asserts checks every output and every FF's next state at once, for
+# all inputs and all states. Same INIT, same clock, same async reset and same next state for
+# every FF is sufficient for the two netlists to be sequentially equivalent; it is stronger than
+# needed, so a "FAIL" here could be a false alarm, but a "SUCCESS" cannot be.
+# -ignore_gold_x lets post refine an x of pre (pre has INIT 1'x, post 1'0). Inputs are 2-valued
+# (-set-def-inputs): without it, x on an input gives a spurious counterexample (gold 1, gate x).
 #
 # Positive controls: gf12_clean and gf14_add, pre against post, must prove.
-# Negative controls, so that "proven" can be believed: gf14_sub pre against gf14_add post must not
-# prove (the two designs differ by one XOR on b's sign bit), and neither may gf14_sub pre against
-# its own post with the first LUT6's INIT inverted.
+# Negative controls must end in a counterexample ("model found: FAIL!"), not in any non-zero exit:
+# a port mismatch also exits 1 and proves nothing. Mutants change one LUT INIT in post: the first
+# LUT6 inverted (v2's mutant), the LUT that drives u_add.result_packed[7] inverted and with only
+# INIT bit 0 flipped, and the same inverted mutant in gf14_add. v2's cross-design control
+# (gf14_sub pre against gf14_add post) is dropped: the two have different FF cell names, so the
+# miter would stop on a port mismatch rather than find a counterexample.
 # Also measured: whether the assertion fires in each of three one-shot gf14_sub runs and whether
 # they give the same JSON; whether the split run gives the one-shot JSON, so that the netlist
 # proven is the netlist CI builds; and whether the split run hits the assertion too.
@@ -115,26 +125,42 @@ jobs:
           split "$ADD" fpga/vivado/gf14_add_ax7203.v add1
           split "$CLEAN" fpga/vivado/gf12_clean_ax7203.v clean1
 
-      - name: Mutant for the negative control
+      - name: Mutants for the negative controls
         shell: bash
         env:
+          # POST -> MUT with one LUT's INIT changed. TARGET=first picks the first LUT6 (else the
+          # widest LUT); any other TARGET is the text after "connect \O " of the LUT to change.
+          # MODE=invert flips every INIT bit, MODE=bit0 flips only bit 0 (all inputs 0), which
+          # can be an unreachable minterm -- a bit0 mutant that proves equal needs a look, not a
+          # verdict.
           MUTATE_PY: |
             import os, re, sys
             src, dst = os.environ["POST"], os.environ["MUT"]
+            target, mode = os.environ["TARGET"], os.environ["MODE"]
             lines = open(src).read().split("\n")
             first = {}
+            current = None
+            driver = None
             for i, line in enumerate(lines):
                 m = re.match(r"\s*cell \\(LUT[1-6]) (\S+)$", line)
                 is_lut = m is not None
+                is_cell = line.startswith("  cell ")
+                if is_cell:
+                    current = (i, m.group(1), m.group(2)) if is_lut else None
                 if is_lut:
                     first.setdefault(m.group(1), (i, m.group(2)))
+                drives = current is not None and line.strip() == "connect \\O " + target
+                if drives:
+                    driver = current
             order = [t for t in ("LUT6", "LUT5", "LUT4", "LUT3", "LUT2", "LUT1") if t in first]
-            have_lut = bool(order)
+            by_order = target == "first" and bool(order)
+            if by_order:
+                driver = (first[order[0]][0], order[0], first[order[0]][1])
+            have_lut = driver is not None
             if not have_lut:
-                print(f"ANOMALY: no LUT cell in {src}")
+                print(f"ANOMALY: no LUT for TARGET={target} in {src}")
                 sys.exit(1)
-            kind = order[0]
-            start, name = first[kind]
+            start, kind, name = driver
             before = after = None
             for j in range(start + 1, len(lines)):
                 is_end = lines[j].strip() == "end"
@@ -144,7 +170,9 @@ jobs:
                 is_init = m is not None
                 if is_init:
                     before = m.group(3)
-                    after = before.translate(str.maketrans("01", "10"))
+                    inverted = mode == "invert"
+                    flipped = before.translate(str.maketrans("01", "10"))
+                    after = flipped if inverted else before[:-1] + flipped[-1]
                     lines[j] = f"{m.group(1)}{m.group(2)}'{after}"
                     break
             mutated = after is not None
@@ -152,55 +180,157 @@ jobs:
                 print(f"ANOMALY: {kind} {name} has no binary INIT parameter")
                 sys.exit(1)
             open(dst, "w").write("\n".join(lines))
-            print(f"MUTANT cell={name} type={kind} bits={len(before)} init_before={before} init_after={after}")
+            print(f"MUTANT out={dst} target={target} mode={mode} cell={name} type={kind} init_before={before} init_after={after}")
         run: |
           exec > >(tee -a log.txt) 2>&1
           printf '%s\n' "$MUTATE_PY" > out/mutate.py
-          POST="out/$SUB-post.il" MUT="out/$SUB-post-mut.il" python3 out/mutate.py
+          R7='\u_add.result_packed [7]'
+          POST="out/$SUB-post.il" MUT="out/$SUB-post-mut.il" TARGET=first MODE=invert python3 out/mutate.py
+          POST="out/$SUB-post.il" MUT="out/$SUB-post-mreint.il" TARGET="$R7" MODE=invert python3 out/mutate.py
+          POST="out/$SUB-post.il" MUT="out/$SUB-post-mbit.il" TARGET="$R7" MODE=bit0 python3 out/mutate.py
+          POST="out/$ADD-post.il" MUT="out/$ADD-post-mut.il" TARGET="$R7" MODE=invert python3 out/mutate.py
 
       - name: Equivalence, subject and controls
         shell: bash
+        env:
+          # in.il out.il ffs.txt [ref.ffs]: every FDCE/FDPE K becomes input ffq_K, which drives
+          # its old Q net, and outputs ffns_K = CE ? D : Q, ffar_K = CLR or PRE, ffck_K = C.
+          # With ref.ffs (the gold side's list) it also checks that both sides have the same FF
+          # names and types, and the same INIT wherever gold's INIT is not x. The miter cannot
+          # see INIT or the FF type, because the FFs are gone, so this check carries them.
+          FFCUT_PY: |
+            import re, sys
+            src, dst, ffs_out = sys.argv[1:4]
+            lines = open(src).read().split("\n")
+            out, ffs, other_seq = [], {}, []
+            i, port = 0, 100000
+            while i < len(lines):
+                line = lines[i]
+                m = re.match(r"^  cell \\(FDCE|FDPE) (\S+)$", line)
+                is_ff = m is not None
+                seq = re.match(r"^  cell (\\(FD|SRL|RAM|LD)\w*|\$\S*(dff|ff|dlatch|sr)\S*) ", line, re.I)
+                is_other_seq = seq is not None and not is_ff
+                if is_other_seq:
+                    other_seq.append(line.strip())
+                if not is_ff:
+                    out.append(line)
+                    i += 1
+                    continue
+                kind, name = m.groups()
+                conn, par = {}, {}
+                i += 1
+                while lines[i] != "  end":
+                    f = lines[i].split(None, 2)
+                    is_conn = f[0] == "connect"
+                    if is_conn:
+                        conn[f[1][1:]] = f[2]
+                    is_par = f[0] == "parameter"
+                    if is_par:
+                        par[f[1][1:]] = f[2]
+                    i += 1
+                i += 1
+                init = par.pop("INIT", "none")
+                rest = ",".join(f"{k}={v}" for k, v in sorted(par.items())) or "-"
+                ffs[name] = (kind, init, rest)
+                key = re.sub(r"[^A-Za-z0-9]", "_", name)
+                q, ns, ar, ck = (f"\\ff{t}_{key}" for t in ("q", "ns", "ar", "ck"))
+                reset = conn.get("CLR", conn.get("PRE"))
+                out += [f"  wire width 1 input {port} {q}", f"  wire width 1 output {port + 1} {ns}",
+                        f"  wire width 1 output {port + 2} {ar}", f"  wire width 1 output {port + 3} {ck}",
+                        f"  cell $mux $ffcut_{key}", "    parameter \\WIDTH 1", f"    connect \\A {q}",
+                        f"    connect \\B {conn['D']}", f"    connect \\S {conn['CE']}", f"    connect \\Y {ns}",
+                        "  end", f"  connect {conn['Q']} {q}", f"  connect {ar} {reset}", f"  connect {ck} {conn['C']}"]
+                port += 4
+            open(dst, "w").write("\n".join(out))
+            open(ffs_out, "w").write("".join(f"{n}\t{k}\t{v}\t{r}\n" for n, (k, v, r) in sorted(ffs.items())))
+            bad = [f"other sequential cell: {c}" for c in other_seq]
+            have_ref = len(sys.argv) > 4
+            if have_ref:
+                ref = {}
+                for row in open(sys.argv[4]).read().splitlines():
+                    n, k, v, r = row.split("\t")
+                    ref[n] = (k, v, r)
+                names_differ = set(ref) != set(ffs)
+                if names_differ:
+                    bad.append(f"FF names differ: {len(set(ref) - set(ffs))} only in gold, {len(set(ffs) - set(ref))} only in gate")
+                for n in sorted(set(ref) & set(ffs)):
+                    (rk, rv, rr), (k, v, r) = ref[n], ffs[n]
+                    init_ok = rv == v or "x" in rv
+                    same = rk == k and rr == r and init_ok
+                    if not same:
+                        bad.append(f"{n}: gold {rk} INIT={rv} {rr}, gate {k} INIT={v} {r}")
+            print(f"FFCUT src={src} ffs={len(ffs)} ref={have_ref} problems={len(bad)}")
+            for b in bad[:5]:
+                print(f"FFCUT problem: {b}")
+            failed = bool(bad) or len(ffs) == 0
+            sys.exit(1 if failed else 0)
+          # yosys sat -show-ports table -> DIFF lines for each miter output pair whose gold and
+          # gate values differ, then COUNT <differing> <pairs>.
+          CEX_PY: |
+            import re, sys
+            vals = {}
+            for line in open(sys.argv[1], errors="replace"):
+                m = re.match(r"^\s+\\(gold|gate)_(\S+)\s+\S+\s+\S+\s+(\S+)\s*$", line)
+                is_row = m is not None
+                if is_row:
+                    vals[(m.group(1), m.group(2))] = m.group(3)
+            names = sorted(n for s, n in vals if s == "gold" and ("gate", n) in vals)
+            diff = [n for n in names if vals[("gold", n)] != vals[("gate", n)]]
+            for n in diff:
+                print(f"DIFF {n} gold={vals[('gold', n)]} gate={vals[('gate', n)]}")
+            print(f"COUNT {len(diff)} {len(names)}")
         run: |
           exec > >(tee -a log.txt) 2>&1
-          equiv() {  # case gold_top gold_il gate_top gate_il mode expect
-            u=""; [ "$6" = undef ] && u=" -undef"
+          printf '%s\n' "$FFCUT_PY" > out/ffcut.py
+          printf '%s\n' "$CEX_PY" > out/cex.py
+          equiv() {  # case top gold_il gate_il expect(equal|differ)
+            cut_ok=false
+            python3 out/ffcut.py "$3" "out/eq-$1-gold.il" "out/eq-$1-gold.ffs" \
+              && python3 out/ffcut.py "$4" "out/eq-$1-gate.il" "out/eq-$1-gate.ffs" "out/eq-$1-gold.ffs" \
+              && cut_ok=true
             printf '%s\n' "read_verilog -lib +/xilinx/cells_xtra.v" \
-              "read_rtlil $3" "rename $2 gold" "read_rtlil $5" "rename $4 gate" "expose -evert t:STARTUPE2" \
-              "setundef -zero -params" "techmap -wb -D EQUIV -autoproc -map +/xilinx/cells_sim.v" "async2sync" \
-              "equiv_make -inames gold gate equiv" "equiv_simple$u equiv" "equiv_induct$u equiv" "equiv_status equiv" > "out/eq-$1.ys"
+              "read_rtlil out/eq-$1-gold.il" "rename $2 gold" "read_rtlil out/eq-$1-gate.il" "rename $2 gate" \
+              "expose -evert t:STARTUPE2" "setundef -zero -params" \
+              "techmap -wb -D EQUIV -autoproc -map +/xilinx/cells_sim.v" "opt_clean" \
+              "miter -equiv -flatten -make_assert -make_outputs -ignore_gold_x gold gate miter" "hierarchy -top miter" \
+              "sat -verify -prove-asserts -enable_undef -set-def-inputs -show-ports miter" > "out/eq-$1.ys"
             t0=$(date +%s.%N)
             rc=0; docker run --rm -v "$PWD:/work" -w /work "$IMG" timeout --signal=KILL 600 yosys -s "out/eq-$1.ys" > "out/eq-$1.txt" 2>&1 || rc=$?
             s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')
-            read -r p n < <(awk '/Of those cells/{p=$4; n=$8} END{print p+0, n+0}' "out/eq-$1.txt")
-            ran=false; [ "$rc" -eq 0 ] && ran=true
+            proved=false; grep -qF "no model found: SUCCESS!" "out/eq-$1.txt" && proved=true
+            cex=false; grep -qF "model found: FAIL!" "out/eq-$1.txt" && cex=true
+            python3 out/cex.py "out/eq-$1.txt" > "out/eq-$1.cex" || true
+            ndiff=$(awk '/^COUNT/{print $2}' "out/eq-$1.cex"); ndiff=${ndiff:-0}
+            nout=$(awk '/^COUNT/{print $3}' "out/eq-$1.cex"); nout=${nout:-0}
+            want_equal=false; [ "$5" = equal ] && want_equal=true
+            want_differ=false; [ "$5" = differ ] && want_differ=true
             pass=false
-            [ "$7" = proven ] && [ "$ran" = true ] && [ "$n" -eq 0 ] && [ "$p" -gt 0 ] && pass=true
-            [ "$7" = unproven ] && [ "$ran" = true ] && [ "$n" -gt 0 ] && pass=true
-            [ "$7" = none ] && pass=na
-            echo "EQUIV case=$1 gold=$2 gate=$4 mode=$6 rc=$rc proven=$p unproven=$n expect=$7 pass=$pass s=$s"
-            grep -F -m 3 "Unproven \$equiv" "out/eq-$1.txt" | cut -c1-200 | sed "s/^/UNPROVEN case=$1 /" || true
-            no_cells=false; grep -qF "No \$equiv cells" "out/eq-$1.txt" && no_cells=true
-            if [ "$no_cells" = true ]; then echo "ANOMALY case=$1 equiv_make produced no \$equiv cells"; fi
+            [ "$want_equal" = true ] && [ "$cut_ok" = true ] && [ "$rc" -eq 0 ] && [ "$proved" = true ] && pass=true
+            [ "$want_differ" = true ] && [ "$cut_ok" = true ] && [ "$cex" = true ] && [ "$ndiff" -gt 0 ] && pass=true
+            echo "EQUIV case=$1 top=$2 rc=$rc ff_cut=$cut_ok proved=$proved counterexample=$cex differing_outputs=$ndiff/$nout expect=$5 pass=$pass s=$s"
+            grep -m 3 '^DIFF' "out/eq-$1.cex" | sed "s/^/CEX case=$1 /" || true
             ev_gold=$(grep -c -E "New module port: [^ ]*gold/[^ ]*u_startup" "out/eq-$1.txt" || true)
             ev_gate=$(grep -c -E "New module port: [^ ]*gate/[^ ]*u_startup" "out/eq-$1.txt" || true)
             echo "EVERT case=$1 gold_ports=$ev_gold gate_ports=$ev_gate"
             uneven=false; [ "$ev_gold" -ne "$ev_gate" ] && uneven=true
             [ "$ev_gold" -eq 0 ] && uneven=true
             if [ "$uneven" = true ]; then echo "ANOMALY case=$1 STARTUPE2 was not cut the same way on both sides"; fi
-            failed=false; [ "$ran" = false ] && failed=true
-            if [ "$failed" = true ]; then tail -n 15 "out/eq-$1.txt"; fi
+            neither=false; [ "$proved" = false ] && [ "$cex" = false ] && neither=true
+            if [ "$neither" = true ]; then echo "ANOMALY case=$1 sat gave neither a proof nor a counterexample"; tail -n 15 "out/eq-$1.txt"; fi
             echo "$pass" > "out/eq-$1.pass"
           }
-          pre() { echo "out/$1-pre.il"; }
-          post() { echo "out/$1-post.il"; }
-          equiv subject       "$SUB"   "$(pre "$SUB")"   "$SUB"   "$(post "$SUB")"        undef proven
-          equiv subject-plain "$SUB"   "$(pre "$SUB")"   "$SUB"   "$(post "$SUB")"        plain none
-          equiv pos-clean     "$CLEAN" "$(pre "$CLEAN")" "$CLEAN" "$(post "$CLEAN")"      undef proven
-          equiv pos-add       "$ADD"   "$(pre "$ADD")"   "$ADD"   "$(post "$ADD")"        undef proven
-          equiv neg-cross     "$SUB"   "$(pre "$SUB")"   "$ADD"   "$(post "$ADD")"        undef unproven
-          equiv neg-mutant    "$SUB"   "$(pre "$SUB")"   "$SUB"   "out/$SUB-post-mut.il"  undef unproven
+          equiv subject      "$SUB"   "out/$SUB-pre.il"   "out/$SUB-post.il"        equal
+          equiv pos-clean     "$CLEAN" "out/$CLEAN-pre.il" "out/$CLEAN-post.il"      equal
+          equiv pos-add       "$ADD"   "out/$ADD-pre.il"   "out/$ADD-post.il"        equal
+          equiv neg-mut-first "$SUB"   "out/$SUB-pre.il"   "out/$SUB-post-mut.il"    differ
+          equiv neg-mut-r7    "$SUB"   "out/$SUB-pre.il"   "out/$SUB-post-mreint.il" differ
+          equiv neg-mut-add   "$ADD"   "out/$ADD-pre.il"   "out/$ADD-post-mut.il"    differ
+          equiv neg-mut-bit0  "$SUB"   "out/$SUB-pre.il"   "out/$SUB-post-mbit.il"   differ
           ok() { [ "$(cat "out/eq-$1.pass")" = true ]; }
-          controls_ok=false; ok pos-clean && ok pos-add && ok neg-cross && ok neg-mutant && controls_ok=true
+          controls_ok=false
+          ok pos-clean && ok pos-add && ok neg-mut-first && ok neg-mut-r7 && ok neg-mut-add && controls_ok=true
+          bit0_caught=false; ok neg-mut-bit0 && bit0_caught=true
+          echo "NOTE neg-mut-bit0 caught=$bit0_caught (reported, not a control: bit 0 of a LUT INIT can be unreachable)"
           subject_equivalent=false; ok subject && subject_equivalent=true
           crash_in_split=false; [ "$(cat "out/$SUB.split-asserts")" -gt 0 ] && crash_in_split=true
           echo "RESULT subject_equivalent=$subject_equivalent controls_ok=$controls_ok crash_in_split=$crash_in_split"
@@ -212,7 +342,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|EQUIV|EVERT|UNPROVEN|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|FFCUT|EQUIV|CEX|EVERT|NOTE|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -222,4 +352,6 @@ jobs:
             out/*.txt
             out/*.ys
             out/*.il
+            out/*.ffs
+            out/*.cex
           retention-days: 14
