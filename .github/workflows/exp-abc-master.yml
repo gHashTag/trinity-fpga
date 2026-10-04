@@ -7,15 +7,19 @@
 # laptop with Yosys 0.67+post (b8e7da6f, macOS arm64, AppleClang) fail.abc asserts too; dropping
 # any one of &sweep, &dc2, &dch or &if's -W 300 makes it end normally, and so does dropping &mfs.
 #
-# This builds three abcs from source and runs fail.abc plus those five one-step-removed controls
-# on each:
-#   yosys-0.68  YosysHQ/abc at the commit Yosys v0.68 pins (2a9e9c2a). Positive control: it is the
-#               abc that asserts in the image, so if it does not assert here the build or the
-#               script is wrong, and the job fails.
-#   yosyshq     YosysHQ/abc, head of yosys-experimental.
-#   berkeley    berkeley-abc/abc, head of master. YosysHQ/abc has issues disabled, so this is
-#               where a report would go.
-# abc exits 0 when a script stops on a command error, so a control counts as having run only if
+# Run 37234749853 answered the first question. fail.abc asserts on YosysHQ/abc at the commit
+# Yosys v0.68 pins (2a9e9c2a), and ends normally on YosysHQ/abc yosys-experimental (1293962a,
+# which Yosys main pins) and on berkeley-abc master (ab2139ee): 497 LUTs on both.
+#
+# This run asks which change fixed it. Commit a62edac0 ("&mfs: Don't take black-box-driven
+# internal nodes for CI buffers", src/aig/gia/giaMfs.c +4 -2) names this assertion in its message.
+# Both jobs build the v0.68 pin; the second applies that one commit's diff on top. If the pin
+# asserts and pin+a62edac0 ends normally, the six-line change is the fix for this input.
+#   yosys-0.68           positive control: must assert, or the build or the script is wrong.
+#   yosys-0.68+a62edac0  subject: must end normally with a LUT count. The job fails if the diff
+#                        does not apply.
+# Each job also runs the five one-step-removed controls.
+# abc exits 0 when a script stops on a command error, so a case counts as having run only if
 # its closing &ps -l printed the LUT histogram ("LUT = ").
 name: abc &mfs assertion on current abc (experiment, #862)
 on:
@@ -33,15 +37,13 @@ jobs:
           - name: yosys-0.68
             repo: YosysHQ/abc
             ref: 2a9e9c2a00e44abd90fc593edfc2c0ff4573f318
+            pick: ''
             expect_subject: assert
-          - name: yosyshq
+          - name: yosys-0.68+a62edac0
             repo: YosysHQ/abc
-            ref: yosys-experimental
-            expect_subject: unknown
-          - name: berkeley
-            repo: berkeley-abc/abc
-            ref: master
-            expect_subject: unknown
+            ref: 2a9e9c2a00e44abd90fc593edfc2c0ff4573f318
+            pick: a62edac052ceb21320a0fdc57a789821c7535b48
+            expect_subject: pass
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,6 +59,17 @@ jobs:
           git -C abc-src checkout -q FETCH_HEAD
           sha=$(git -C abc-src rev-parse HEAD)
           date=$(git -C abc-src log -1 --format=%cI)
+          pick="${{ matrix.pick }}"
+          has_pick=false; [ -n "$pick" ] && has_pick=true
+          if [ "$has_pick" = true ]; then
+            git -C abc-src fetch -q --depth 2 origin "$pick"
+            patch="$PWD/pick.patch"
+            git -C abc-src diff "$pick^" "$pick" > "$patch"
+            applied=false; git -C abc-src apply "$patch" && applied=true
+            echo "ABCBUILD name=${{ matrix.name }} pick=$pick applied=$applied patch_lines=$(wc -l < "$patch")"
+            if [ "$applied" = false ]; then echo "ANOMALY pick did not apply"; exit 1; fi
+            git -C abc-src diff --stat | sed 's/^/ABCBUILD diffstat /'
+          fi
           t0=$(date +%s)
           rc=0; make -C abc-src -j"$(nproc)" ABC_USE_NO_READLINE=1 abc > build.txt 2>&1 || rc=$?
           t1=$(date +%s)
@@ -78,6 +91,7 @@ jobs:
           grep -v -x -F '&dch -f -r' fail.abc > ctl-no-dch.abc
           sed 's/^&if -W 300$/\&if/' fail.abc > ctl-no-W.abc
           subject_asserted=false
+          subject_ran=false
           controls_ok=true
           for case in fail ctl-no-mfs ctl-no-sweep ctl-no-dc2 ctl-no-dch ctl-no-W; do
             lines=$(wc -l < "$case.abc")
@@ -91,14 +105,18 @@ jobs:
             ran_to_end=false; [ "$rc" = 0 ] && [ -n "$lut" ] && ran_to_end=true
             if [ "$is_subject" = true ]; then
               subject_asserted=$crashed
+              subject_ran=$ran_to_end
             else
               if [ "$ran_to_end" = false ]; then controls_ok=false; fi
             fi
           done
-          echo "RESULT build=${{ matrix.name }} subject_asserted=$subject_asserted controls_ran_to_end=$controls_ok expect_subject=${{ matrix.expect_subject }}"
+          echo "RESULT build=${{ matrix.name }} subject_asserted=$subject_asserted subject_ran_to_end=$subject_ran controls_ran_to_end=$controls_ok expect_subject=${{ matrix.expect_subject }}"
           must_assert=false; [ "${{ matrix.expect_subject }}" = assert ] && must_assert=true
           missed=false; [ "$must_assert" = true ] && [ "$subject_asserted" = false ] && missed=true
           if [ "$missed" = true ]; then echo "ANOMALY positive control did not assert"; exit 1; fi
+          must_pass=false; [ "${{ matrix.expect_subject }}" = pass ] && must_pass=true
+          not_fixed=false; [ "$must_pass" = true ] && [ "$subject_ran" = false ] && not_fixed=true
+          if [ "$not_fixed" = true ]; then echo "ANOMALY subject did not end normally with the pick applied"; exit 1; fi
 
       - name: Summary
         if: always()
