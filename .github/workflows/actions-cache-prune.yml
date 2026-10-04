@@ -1,0 +1,60 @@
+name: actions-cache-prune
+
+# Keep the 10 GB Actions cache for entries that can still be restored.
+# gHashTag/trinity-fpga#844.
+#
+# setup-zig saves a new entry on every run of every Zig job, and an entry saved
+# on a pull request can only be restored by that pull request. Left alone they
+# filled the budget (161 entries, 10.73 GB on 2026-10-04) and evicted every
+# chipdb, so each FPGA job rebuilt it from nothing (#843).
+#
+# The rules live in .github/scripts/cache-prune.js and are tested by
+# .github/scripts/cache-prune.test.js, which this job runs before it deletes
+# anything.
+
+on:
+  pull_request:
+    types: [closed]
+  schedule:
+    - cron: '41 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be deleted, delete nothing
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: actions-cache-prune
+  cancel-in-progress: false
+
+jobs:
+  prune:
+    # A fork's pull request gets a read-only token and could not delete anything.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # The default branch, not the closed pull request's merge ref, which may
+      # already be gone and must not decide what gets deleted.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          sparse-checkout: .github/scripts
+
+      - name: Test the prune rules
+        run: node --test .github/scripts/cache-prune.test.js
+
+      - name: Prune
+        uses: actions/github-script@v7
+        env:
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        with:
+          script: |
+            const { run } = require(`${process.env.GITHUB_WORKSPACE}/.github/scripts/cache-prune.js`);
+            await run({ github, context, core, dryRun: process.env.DRY_RUN === 'true' });
