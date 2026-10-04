@@ -1,0 +1,214 @@
+# Experiment for #862 (S27), not a gate. In the gf14-sub build, yosys-abc dies on an assertion
+# (Abc_LitIsCompl, "Lit >= 0", rc 134) inside &mfs during synth_xilinx's map_luts step. Yosys
+# logs it and carries on: in main run 37212248879 it read back the mapping abc had written before
+# &mfs (563 $lut cells) and synthesis finished. Whether that netlist still computes the RTL is not
+# known. This proves it, or finds a counterexample, with Yosys's own equivalence checker.
+#
+# Method. One yosys session runs synth_xilinx in two halves, -run :map_luts and -run map_luts:, and
+# writes the top module between them (pre: gate-level logic plus the already mapped FFs) and after
+# them (post: the netlist the bitstream is built from). The abc call that crashes is in the second
+# half, so pre against post covers it, and the first half's FSM recoding is on both sides. Both
+# sides go through the Xilinx simulation models (techmap -wb -D EQUIV -autoproc with
+# +/xilinx/cells_sim.v, as equiv_opt -map does) and async2sync for the asynchronous resets, then
+# equiv_make -inames, equiv_simple and equiv_induct. STARTUPE2 has no simulation model; it is
+# loaded as a blackbox from cells_xtra.v so that equiv_make can pair the two instances. -undef lets
+# post refine an x of pre, which map_luts' own opt_expr -mux_undef does; the subject is also run
+# without -undef, for reference only.
+#
+# Positive controls: gf12_clean and gf14_add, pre against post, must prove.
+# Negative controls, so that "proven" can be believed: gf14_sub pre against gf14_add post must not
+# prove (the two designs differ by one XOR on b's sign bit), and neither may gf14_sub pre against
+# its own post with the first LUT6's INIT inverted.
+# Also measured: whether the assertion fires in each of three one-shot gf14_sub runs and whether
+# they give the same JSON; whether the split run gives the one-shot JSON, so that the netlist
+# proven is the netlist CI builds; and whether the split run hits the assertion too.
+name: abc crash equivalence (experiment, #862)
+on:
+  push:
+    branches: [exp/abc-equiv]
+    paths: ['.github/workflows/exp-abc-equiv.yml']
+env:
+  IMG: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+  ADDER: fpga/openxc7-synth/gf_adder_param.v
+  SYNTH: synth_xilinx -flatten -abc9 -nocarry -arch xc7
+  SUB: gf14_sub_ax7203
+  ADD: gf14_add_ax7203
+  CLEAN: gf12_clean_ax7203
+jobs:
+  equiv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            fpga/openxc7-synth
+            fpga/vivado
+
+      - name: Pull the pinned image
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          for i in 1 2 3 4 5 6; do
+            t0=$(date +%s.%N)
+            pulled=false; docker pull -q "$IMG" >/dev/null && pulled=true
+            echo "TIMING pull attempt=$i ok=$pulled s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')"
+            if [ "$pulled" = true ]; then break; fi
+            sleep $((i*20))
+          done
+          have_image=false; docker image inspect "$IMG" >/dev/null 2>&1 && have_image=true
+          if [ "$have_image" = false ]; then echo "::error::cannot pull $IMG"; exit 1; fi
+          echo "VERSION yosys=[$(docker run --rm "$IMG" yosys -V)]"
+          echo "VERSION abc=[$(docker run --rm "$IMG" yosys-abc -c version 2>&1 | tr '\n' ' ')]"
+
+      - name: One-shot synthesis, as CI does it
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          mkdir -p out
+          oneshot() {  # tag top rtl
+            printf '%s\n' "read_verilog $ADDER $3" "$SYNTH -top $2" "setundef -zero -params" "write_json out/$1.json" > "out/$1.ys"
+            t0=$(date +%s.%N)
+            rc=0; docker run --rm -v "$PWD:/work" -w /work "$IMG" timeout --signal=KILL 1200 yosys -s "out/$1.ys" > "out/$1.txt" 2>&1 || rc=$?
+            s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')
+            asserts=$(grep -c "Assertion" "out/$1.txt" || true)
+            sha=$(sha256sum "out/$1.json" 2>/dev/null | cut -d' ' -f1) || sha=missing
+            lcs=$(awk '/Estimated number of LCs/{v=$NF} END{print v}' "out/$1.txt")
+            echo "SYNTH tag=$1 top=$2 rc=$rc abc_asserts=$asserts lcs=$lcs json=$sha s=$s"
+            first=$(grep -m 1 "Assertion" "out/$1.txt" | cut -c1-200) || first=""
+            has_first=false; [ -n "$first" ] && has_first=true
+            if [ "$has_first" = true ]; then echo "ABCMSG tag=$1 $first"; fi
+            echo "$sha" >> "out/$2.shas"
+          }
+          for n in 1 2 3; do oneshot "sub$n" "$SUB" fpga/vivado/gf14_sub_ax7203.v; done
+          oneshot add1 "$ADD" fpga/vivado/gf14_add_ax7203.v
+          oneshot clean1 "$CLEAN" fpga/vivado/gf12_clean_ax7203.v
+          distinct=$(sort -u "out/$SUB.shas" | wc -l)
+          deterministic=false; [ "$distinct" -eq 1 ] && deterministic=true
+          echo "DETERMINISM top=$SUB runs=3 distinct_json=$distinct deterministic=$deterministic"
+
+      - name: Split synthesis, pre and post map_luts
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          split() {  # top rtl oneshot_tag
+            printf '%s\n' "read_verilog $ADDER $2" \
+              "$SYNTH -top $1 -run :map_luts" "select $1" "write_rtlil -selected out/$1-pre.il" "select -clear" \
+              "$SYNTH -top $1 -run map_luts:" "setundef -zero -params" "write_json out/$1-split.json" \
+              "select $1" "write_rtlil -selected out/$1-post.il" "select -clear" > "out/$1-split.ys"
+            rc=0; docker run --rm -v "$PWD:/work" -w /work "$IMG" timeout --signal=KILL 1200 yosys -s "out/$1-split.ys" > "out/$1-split.txt" 2>&1 || rc=$?
+            asserts=$(grep -c "Assertion" "out/$1-split.txt" || true)
+            a=$(sha256sum "out/$3.json" 2>/dev/null | cut -d' ' -f1) || a=missing
+            b=$(sha256sum "out/$1-split.json" 2>/dev/null | cut -d' ' -f1) || b=missing
+            same=false; [ "$a" = "$b" ] && same=true
+            pre_cells=$(grep -c '^  cell ' "out/$1-pre.il" || true)
+            post_cells=$(grep -c '^  cell ' "out/$1-post.il" || true)
+            echo "SPLIT top=$1 rc=$rc abc_asserts=$asserts same_json_as_oneshot=$same pre_cells=$pre_cells post_cells=$post_cells"
+            echo "$asserts" > "out/$1.split-asserts"
+          }
+          split "$SUB" fpga/vivado/gf14_sub_ax7203.v sub1
+          split "$ADD" fpga/vivado/gf14_add_ax7203.v add1
+          split "$CLEAN" fpga/vivado/gf12_clean_ax7203.v clean1
+
+      - name: Mutant for the negative control
+        shell: bash
+        env:
+          MUTATE_PY: |
+            import os, re, sys
+            src, dst = os.environ["POST"], os.environ["MUT"]
+            lines = open(src).read().split("\n")
+            first = {}
+            for i, line in enumerate(lines):
+                m = re.match(r"\s*cell \\(LUT[1-6]) (\S+)$", line)
+                is_lut = m is not None
+                if is_lut:
+                    first.setdefault(m.group(1), (i, m.group(2)))
+            order = [t for t in ("LUT6", "LUT5", "LUT4", "LUT3", "LUT2", "LUT1") if t in first]
+            have_lut = bool(order)
+            if not have_lut:
+                print(f"ANOMALY: no LUT cell in {src}")
+                sys.exit(1)
+            kind = order[0]
+            start, name = first[kind]
+            before = after = None
+            for j in range(start + 1, len(lines)):
+                is_end = lines[j].strip() == "end"
+                if is_end:
+                    break
+                m = re.match(r"(\s*parameter \\INIT )(\d+)'([01]+)$", lines[j])
+                is_init = m is not None
+                if is_init:
+                    before = m.group(3)
+                    after = before.translate(str.maketrans("01", "10"))
+                    lines[j] = f"{m.group(1)}{m.group(2)}'{after}"
+                    break
+            mutated = after is not None
+            if not mutated:
+                print(f"ANOMALY: {kind} {name} has no binary INIT parameter")
+                sys.exit(1)
+            open(dst, "w").write("\n".join(lines))
+            print(f"MUTANT cell={name} type={kind} bits={len(before)} init_before={before} init_after={after}")
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          printf '%s\n' "$MUTATE_PY" > out/mutate.py
+          POST="out/$SUB-post.il" MUT="out/$SUB-post-mut.il" python3 out/mutate.py
+
+      - name: Equivalence, subject and controls
+        shell: bash
+        run: |
+          exec > >(tee -a log.txt) 2>&1
+          equiv() {  # case gold_top gold_il gate_top gate_il mode expect
+            u=""; [ "$6" = undef ] && u=" -undef"
+            printf '%s\n' "read_verilog -lib +/xilinx/cells_xtra.v" \
+              "read_rtlil $3" "rename $2 gold" "read_rtlil $5" "rename $4 gate" \
+              "setundef -zero -params" "techmap -wb -D EQUIV -autoproc -map +/xilinx/cells_sim.v" "async2sync" \
+              "equiv_make -inames gold gate equiv" "equiv_simple$u equiv" "equiv_induct$u equiv" "equiv_status equiv" > "out/eq-$1.ys"
+            t0=$(date +%s.%N)
+            rc=0; docker run --rm -v "$PWD:/work" -w /work "$IMG" timeout --signal=KILL 600 yosys -s "out/eq-$1.ys" > "out/eq-$1.txt" 2>&1 || rc=$?
+            s=$(awk -v a="$t0" -v b="$(date +%s.%N)" 'BEGIN{printf "%.1f", b - a}')
+            read -r p n < <(awk '/Of those cells/{p=$4; n=$8} END{print p+0, n+0}' "out/eq-$1.txt")
+            ran=false; [ "$rc" -eq 0 ] && ran=true
+            pass=false
+            [ "$7" = proven ] && [ "$ran" = true ] && [ "$n" -eq 0 ] && [ "$p" -gt 0 ] && pass=true
+            [ "$7" = unproven ] && [ "$ran" = true ] && [ "$n" -gt 0 ] && pass=true
+            [ "$7" = none ] && pass=na
+            echo "EQUIV case=$1 gold=$2 gate=$4 mode=$6 rc=$rc proven=$p unproven=$n expect=$7 pass=$pass s=$s"
+            grep -F -m 3 "Unproven \$equiv" "out/eq-$1.txt" | cut -c1-200 | sed "s/^/UNPROVEN case=$1 /" || true
+            no_cells=false; grep -qF "No \$equiv cells" "out/eq-$1.txt" && no_cells=true
+            if [ "$no_cells" = true ]; then echo "ANOMALY case=$1 equiv_make produced no \$equiv cells"; fi
+            failed=false; [ "$ran" = false ] && failed=true
+            if [ "$failed" = true ]; then tail -n 15 "out/eq-$1.txt"; fi
+            echo "$pass" > "out/eq-$1.pass"
+          }
+          pre() { echo "out/$1-pre.il"; }
+          post() { echo "out/$1-post.il"; }
+          equiv subject       "$SUB"   "$(pre "$SUB")"   "$SUB"   "$(post "$SUB")"        undef proven
+          equiv subject-plain "$SUB"   "$(pre "$SUB")"   "$SUB"   "$(post "$SUB")"        plain none
+          equiv pos-clean     "$CLEAN" "$(pre "$CLEAN")" "$CLEAN" "$(post "$CLEAN")"      undef proven
+          equiv pos-add       "$ADD"   "$(pre "$ADD")"   "$ADD"   "$(post "$ADD")"        undef proven
+          equiv neg-cross     "$SUB"   "$(pre "$SUB")"   "$ADD"   "$(post "$ADD")"        undef unproven
+          equiv neg-mutant    "$SUB"   "$(pre "$SUB")"   "$SUB"   "out/$SUB-post-mut.il"  undef unproven
+          ok() { [ "$(cat "out/eq-$1.pass")" = true ]; }
+          controls_ok=false; ok pos-clean && ok pos-add && ok neg-cross && ok neg-mutant && controls_ok=true
+          subject_equivalent=false; ok subject && subject_equivalent=true
+          crash_in_split=false; [ "$(cat "out/$SUB.split-asserts")" -gt 0 ] && crash_in_split=true
+          echo "RESULT subject_equivalent=$subject_equivalent controls_ok=$controls_ok crash_in_split=$crash_in_split"
+          if [ "$controls_ok" = false ]; then echo "::error::a control failed: the harness cannot be trusted, so the subject result means nothing"; exit 1; fi
+          if [ "$crash_in_split" = false ]; then echo "::error::the split run did not hit the abc assertion, so the proof does not cover the crash"; exit 1; fi
+          if [ "$subject_equivalent" = false ]; then echo "::error::gf14_sub after the abc crash is not proven equivalent to its pre-abc netlist"; exit 1; fi
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          grep -h -E '^(TIMING|VERSION|SYNTH|ABCMSG|DETERMINISM|SPLIT|MUTANT|EQUIV|UNPROVEN|RESULT|ANOMALY)' log.txt | sed 's/^/    /' >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: exp-abc-equiv
+          path: |
+            log.txt
+            out/*.txt
+            out/*.ys
+            out/*.il
+          retention-days: 14
