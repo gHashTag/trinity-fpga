@@ -37,6 +37,10 @@ jobs:
           docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c "cd /nextpnr-xilinx && python3 xilinx/python/bbaexport.py --device xc7a200tfbg484-2 --bba /work/build/gf14_add/chipdb/xc7a200tfbg484-2.bba && bbasm -l /work/build/gf14_add/chipdb/xc7a200tfbg484-2.bba /work/build/gf14_add/chipdb/xc7a200tfbg484-2.bin"
       - name: nextpnr (seed search)
         run: |
+          # --placer heap, not sa (#862). SA leaves invalid tiles on this design ("post-placement validity
+          # check failed for Bel 'SLICE_.../A5FF'", openXC7/nextpnr-xilinx#162) and placed 3 of seeds 1-16
+          # (10, 11, 15; 44-52 s each, Fmax 25.6-27.9 MHz). HeAP placed 16 of 16, 4-5 s each, Fmax 43.5-47.9 MHz
+          # (regymm/openxc7 sha256:35c91073, run 37213406352).
           CLEAN=0; for s in 1 2 3 4 5 6 7 8; do
             rm -f build/gf14_add/gf14_add_ax7203.fasm
             docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 timeout --signal=KILL 1800 nextpnr-xilinx \
@@ -45,7 +49,7 @@ jobs:
               --json /work/build/gf14_add/gf14_add_ax7203.json \
               --write /work/build/gf14_add/gf14_add_ax7203_routed.json \
               --fasm /work/build/gf14_add/gf14_add_ax7203.fasm \
-              --freq 50.0 --seed $s --placer sa --router router1 --timing-allow-fail > /tmp/np_$s.log 2>&1 || true
+              --freq 50.0 --seed $s --placer heap --router router1 --timing-allow-fail > /tmp/np_$s.log 2>&1 || true
             if grep -q "Failed to find a route" /tmp/np_$s.log || [ ! -f build/gf14_add/gf14_add_ax7203.fasm ]; then continue; fi
             cp /tmp/np_$s.log /tmp/np.log; CLEAN=$s; break
           done; [ "$CLEAN" = "0" ] && { echo "::error::no clean seed"; tail -n 15 /tmp/np_*.log; exit 1; }; echo "seed=$CLEAN"
