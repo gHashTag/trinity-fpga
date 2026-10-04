@@ -19,6 +19,8 @@ on:
       - 'fpga/vivado/trinet_node_v2_ax7203.v'
       - 'fpga/openxc7-synth/trinet_siphash24.v'
       - 'formal/trinet_node_v2_tb.v'
+      # the comment-key guard mutates this bench (#877)
+      - 'formal/tern_tc_layer_rtl_tb.v'
       - 'conformance/key_default_check.py'
       - '.github/workflows/trinet-portability.yml'
       # the scripts this job runs: fixing a check must re-run it
@@ -29,6 +31,7 @@ on:
       - 'fpga/vivado/trinet_node_v2_ax7203.v'
       - 'fpga/openxc7-synth/trinet_siphash24.v'
       - 'formal/trinet_node_v2_tb.v'
+      - 'formal/tern_tc_layer_rtl_tb.v'
       - 'conformance/key_default_check.py'
   schedule:
     - cron: '41 5 * * *'
