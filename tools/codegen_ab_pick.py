@@ -96,13 +96,19 @@ def behaviours(text):
 
 
 def probe(gen, spec):
-    """Generate to a scratch file: (behaviours, gen rc, ast-check rc, ': error: ' seen)."""
+    """Generate to a scratch file: (behaviours, gen rc, ast-check rc, ': error: ' seen, wrote).
+
+    wrote: a non-empty regular file exists at the scratch destination. 19
+    specs report behaviours and write nothing (#886's run 37242677263);
+    blocking one of those changes nothing, so nonbase-dir must not pick one.
+    """
     with tempfile.TemporaryDirectory() as d:
         dest = os.path.join(d, "out.zig")
         r = subprocess.run([gen, "gen", spec, dest], capture_output=True, text=True)
         n = behaviours(r.stderr) or behaviours(r.stdout)
+        wrote = os.path.isfile(dest) and os.path.getsize(dest) > 0
         a = subprocess.run(["zig", "ast-check", dest], capture_output=True, text=True)
-        return n, r.returncode, a.returncode, ": error: " in a.stderr
+        return n, r.returncode, a.returncode, ": error: " in a.stderr, wrote
 
 
 def block(spec):
@@ -128,8 +134,8 @@ def main():
         src = base[0]
         dst = EXTRA_STEM + os.path.splitext(src)[1]
         shutil.copyfile(src, dst)
-        n, grc, arc, err = probe(vibee_gen(), dst)
-        say(f"extra {dst} copied from {src}: behaviours={n} gen_rc={grc} astcheck_rc={arc} error_line={err}")
+        n, grc, arc, err, wrote = probe(vibee_gen(), dst)
+        say(f"extra {dst} copied from {src}: behaviours={n} gen_rc={grc} astcheck_rc={arc} error_line={err} wrote={wrote}")
         say(f"extra sorts before {PHI}: {dst < PHI}")
     elif cmd == "unextra":
         for ext in (".tri", ".vibee"):
@@ -148,11 +154,15 @@ def main():
             recorded = s in in_base
             if recorded:
                 continue
-            n, grc, arc, err = probe(gen, s)
+            n, grc, arc, err, wrote = probe(gen, s)
             silent = n == 0
             if silent:
                 continue
-            say(f"nonbase {s}: behaviours={n} gen_rc={grc} astcheck_rc={arc} error_line={err}")
+            already_no_file = not wrote
+            if already_no_file:
+                say(f"skip {s}: behaviours={n} gen_rc={grc} and no file even unblocked")
+                continue
+            say(f"nonbase {s}: behaviours={n} gen_rc={grc} astcheck_rc={arc} error_line={err} wrote={wrote}")
             block(s)
             return
     elif cmd == "base-dir":

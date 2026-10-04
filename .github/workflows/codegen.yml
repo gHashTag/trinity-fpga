@@ -1,6 +1,7 @@
 # THROWAWAY (exp/corpus-ab-main, exp/corpus-ab-fix): the #885 A/B.
 # Both branches carry this file and tools/codegen_ab_pick.py unchanged; they
-# differ only in tools/codegen_corpus.zig (main's, or the #886 fix). Four arms
+# differ in tools/codegen_corpus.zig and its baseline: main's 788, or #886's
+# 769 (02b9958de drops 19 entries that never wrote a .zig). Four arms
 # on one runner, each a separate `zig build codegen-corpus`:
 #   1 plain tree
 #   2 one extra clean spec sorting before specs/tri/phi_utils_multi.tri
