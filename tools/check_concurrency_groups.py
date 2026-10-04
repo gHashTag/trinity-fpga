@@ -9,7 +9,7 @@ had 194 runs queued at once, and figure-names.yml ran three copies on main at
 the same time (#869).
 
 A workflow passes when it never runs on a push to main, or does and has a
-top-level `concurrency:` with a group. Three things fail:
+top-level `concurrency:` with a group. Four things fail:
 
   - UNGROUPED: it runs on a push to main and has no top-level group. A job's
     own `concurrency:` does not count -- the run still starts and queues; only
@@ -25,11 +25,12 @@ top-level `concurrency:` with a group. Three things fail:
     (conformance-selftest.yml and conformance-golden-selftests.yml), so a group
     keyed on `github.workflow` would make one file's push replace the other's
     pending run. Every file with a group is compared, not only push ones.
-
-Noted, not failed: a workflow that can be dispatched by hand and whose group
-has no `github.run_id` (DISPATCH_CANCELS). A newer push then replaces its
-pending dispatch, or cancels a running one under cancel-in-progress. Two
-workflows here are built that way on purpose; the choice is the owner's.
+  - DISPATCH_CANCELS: it runs on a push to main, can be dispatched by hand,
+    and its group has no `github.run_id`. A newer push then replaces its
+    pending dispatch, or cancels a running one under cancel-in-progress. This
+    was a note until the last two such files, bench007-probe-ax7203.yml (a
+    bitstream build of up to four hours) and trinity-identity-gate.yml, took
+    the #870 group; neither commit that set their old groups gave a reason.
 
 "Runs on a push to main" follows GitHub's filters: `branches:` patterns read
 in order, the last match deciding and `!` excluding (`*` stops at `/`, `**`
@@ -320,13 +321,13 @@ def main() -> int:
 
     on_main = [r for r in rows if r["on_main"]]
     covered = [r for r in on_main if r["class"] in ("GROUPED", "DISPATCH_CANCELS", "REUSABLE")]
-    bad = [r for r in rows if r["class"] in ("UNGROUPED", "BAD_REUSABLE", "SHARED_KEY")]
-    noted = [r for r in rows if r["class"] == "DISPATCH_CANCELS"]
+    failing = ("UNGROUPED", "BAD_REUSABLE", "SHARED_KEY", "DISPATCH_CANCELS")
+    bad = [r for r in rows if r["class"] in failing]
     print(f"workflows read: {len(rows)} of {len(files)}; on a push to main: {len(on_main)}, "
           f"with a group of their own (or called): {len(covered)}")
 
     rc = 0
-    for cls in ("UNGROUPED", "BAD_REUSABLE", "SHARED_KEY"):
+    for cls in failing:
         hits = [r for r in bad if r["class"] == cls]
         found = bool(hits)
         if found:
@@ -341,11 +342,6 @@ def main() -> int:
               "    group: ${{ github.workflow_ref }}-${{ github.event_name == 'workflow_dispatch'"
               " && github.run_id || github.event_name }}\n"
               "    cancel-in-progress: ${{ github.event_name == 'pull_request' }}")
-    has_notes = bool(noted)
-    if has_notes:
-        print(f"\nNOTE DISPATCH_CANCELS (not a failure): {len(noted)} workflow(s)")
-        for r in noted:
-            print(f"  {r['file']}: {r['why']}")
     has_unread = bool(unread)
     if has_unread:
         print(f"\nCANNOT TELL: {len(unread)} workflow(s) not read:")
