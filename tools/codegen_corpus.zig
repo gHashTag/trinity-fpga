@@ -106,8 +106,12 @@ pub fn main(init: std.process.Init.Minimal) !void {
 
     var clean: std.ArrayList([]const u8) = .empty;
     defer clean.deinit(gpa);
-    var no_output: std.ArrayList([]const u8) = .empty;
-    defer no_output.deinit(gpa);
+    const NoOutput = struct { spec: []const u8, why: []u8 };
+    var no_output: std.ArrayList(NoOutput) = .empty;
+    defer {
+        for (no_output.items) |n| gpa.free(n.why);
+        no_output.deinit(gpa);
+    }
     var with_behaviours: usize = 0;
     var dirty: usize = 0;
 
@@ -116,6 +120,7 @@ pub fn main(init: std.process.Init.Minimal) !void {
         defer gpa.free(dest);
 
         const g = try generate(gpa, io, gen, spec, dest);
+        defer if (g.why) |w| gpa.free(w);
         const no_behaviours = g.behaviours == 0;
         if (no_behaviours) continue;
         with_behaviours += 1;
@@ -126,7 +131,9 @@ pub fn main(init: std.process.Init.Minimal) !void {
         // ": error: " in it, so such a spec used to count as clean.
         const left_no_file = !g.wrote;
         if (left_no_file) {
-            try no_output.append(gpa, spec);
+            const why = try gpa.dupe(u8, g.why orelse "(no reason recorded)");
+            errdefer gpa.free(why);
+            try no_output.append(gpa, .{ .spec = spec, .why = why });
             dirty += 1;
             continue;
         }
@@ -139,8 +146,8 @@ pub fn main(init: std.process.Init.Minimal) !void {
         }
     }
 
-    for (no_output.items) |s| {
-        std.debug.print("  NO OUTPUT: {s} reported behaviours, then exited non-zero or left no file\n", .{s});
+    for (no_output.items) |n| {
+        std.debug.print("  NO OUTPUT: {s} reported behaviours, then {s}\n", .{ n.spec, n.why });
     }
 
     if (update) {
@@ -299,6 +306,10 @@ const Generated = struct {
     behaviours: usize,
     /// The generator exited 0 and left a non-empty file at `dest`.
     wrote: bool,
+    /// When `wrote` is false: the exit status and the generator's last error
+    /// line, owned by the caller. "Left no file" without a reason sent the
+    /// first reader of this gate's output to rebuild the generator locally.
+    why: ?[]u8 = null,
 };
 
 fn generate(gpa: std.mem.Allocator, io: std.Io, gen: []const u8, spec: []const u8, dest: []const u8) !Generated {
@@ -324,10 +335,66 @@ fn generate(gpa: std.mem.Allocator, io: std.Io, gen: []const u8, spec: []const u
         const st = std.Io.Dir.cwd().statFile(io, dest, .{}) catch break :blk false;
         break :blk st.kind == .file and st.size > 0;
     };
+    const wrote = exited_zero and nonempty_file;
+    const why: ?[]u8 = if (wrote) null else try describeFailure(gpa, r.term, nonempty_file, r.stderr);
     return .{
         .behaviours = parseBehaviours(r.stdout, r.stderr),
-        .wrote = exited_zero and nonempty_file,
+        .wrote = wrote,
+        .why = why,
     };
+}
+
+/// "exit 1, error: Foo" or "exit 0, no file, Error: the generator produced
+/// 0 bytes for ...". The line is the last one that starts with `error`/`Error`
+/// once trimmed -- Zig's own report of an error returned from main, and the
+/// generator's write and empty-output messages, all have that shape; the
+/// parser's "  spec error: ..." lines do not. Failing that, the last
+/// non-empty line.
+fn describeFailure(gpa: std.mem.Allocator, term: tri_proc.Term, nonempty_file: bool, stderr: []const u8) ![]u8 {
+    var status_buf: [32]u8 = undefined;
+    const status = switch (term) {
+        .exited => |c| try std.fmt.bufPrint(&status_buf, "exit {d}", .{c}),
+        .signal => |s| try std.fmt.bufPrint(&status_buf, "signal {d}", .{@intFromEnum(s)}),
+        .stopped => |s| try std.fmt.bufPrint(&status_buf, "stopped {d}", .{@intFromEnum(s)}),
+        .unknown => |u| try std.fmt.bufPrint(&status_buf, "unknown {d}", .{u}),
+    };
+    const file_note: []const u8 = if (nonempty_file) "" else ", no file";
+
+    var last_error: ?[]const u8 = null;
+    var last_line: ?[]const u8 = null;
+    var it = std.mem.splitScalar(u8, stderr, '\n');
+    while (it.next()) |raw| {
+        const line = std.mem.trim(u8, raw, " \t\r");
+        const blank = line.len == 0;
+        if (blank) continue;
+        last_line = line;
+        const is_error_line = std.mem.startsWith(u8, line, "error") or std.mem.startsWith(u8, line, "Error");
+        if (is_error_line) last_error = line;
+    }
+    const picked = last_error orelse last_line orelse "(no stderr)";
+    const shown = picked[0..@min(picked.len, 200)];
+    return std.fmt.allocPrint(gpa, "{s}{s}, {s}", .{ status, file_note, shown });
+}
+
+test "describeFailure names the exit status and the last error line" {
+    const gpa = std.testing.allocator;
+    const stderr =
+        \\  spec error: missing field
+        \\Generating Verilog...
+        \\error: UnsupportedType
+        \\/src/vibeec/verilog_codegen.zig:10:5: 0x1 in generate
+    ;
+    const a = try describeFailure(gpa, .{ .exited = 1 }, false, stderr);
+    defer gpa.free(a);
+    try std.testing.expectEqualStrings("exit 1, no file, error: UnsupportedType", a);
+
+    const b = try describeFailure(gpa, .{ .exited = 0 }, false, "Error: the generator produced 0 bytes for x.zig\n");
+    defer gpa.free(b);
+    try std.testing.expectEqualStrings("exit 0, no file, Error: the generator produced 0 bytes for x.zig", b);
+
+    const c = try describeFailure(gpa, .{ .exited = 0 }, false, "");
+    defer gpa.free(c);
+    try std.testing.expectEqualStrings("exit 0, no file, (no stderr)", c);
 }
 
 fn parseBehaviours(stdout: []const u8, stderr: []const u8) usize {
