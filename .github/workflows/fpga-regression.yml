@@ -19,12 +19,15 @@ on:
       - 'src/tri/tri_sacred_fpga.zig'
       - 'fpga/openxc7-synth/**'
       - '.github/workflows/fpga-regression.yml'
+  # every push path, so a PR that touches only one of them still runs this
   pull_request:
     branches: [main]
     paths:
       - 'specs/fpga/**'
       - 'src/tri/tri_fpga.zig'
+      - 'src/tri/tri_sacred_fpga.zig'
       - 'fpga/openxc7-synth/**'
+      - '.github/workflows/fpga-regression.yml'
   workflow_dispatch:
 
 env:

@@ -14,6 +14,7 @@ name: TRI-NET portability and receipt keys
 on:
   workflow_dispatch:
   push:
+    branches: [main]
     paths:
       - 'fpga/portable/**'
       - 'fpga/vivado/trinet_node_v2_ax7203.v'
@@ -23,6 +24,7 @@ on:
       - '.github/workflows/trinet-portability.yml'
       # the scripts this job runs: fixing a check must re-run it
       - 'conformance/portability_check.py'
+  # every push path, so a PR that touches only one of them still runs this
   pull_request:
     paths:
       - 'fpga/portable/**'
@@ -30,6 +32,8 @@ on:
       - 'fpga/openxc7-synth/trinet_siphash24.v'
       - 'formal/trinet_node_v2_tb.v'
       - 'conformance/key_default_check.py'
+      - '.github/workflows/trinet-portability.yml'
+      - 'conformance/portability_check.py'
   schedule:
     - cron: '41 5 * * *'
 
