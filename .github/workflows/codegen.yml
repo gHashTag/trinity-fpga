@@ -14,7 +14,7 @@ jobs:
   validate:
     name: Validate VIBEE Codegen (determinism probe)
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,8 @@ jobs:
         continue-on-error: true
         run: zig build codegen-corpus
 
-      - name: Determinism probe
+      - name: Determinism probe 2 (no-output specs, 60 repeats, compile all baseline)
         env:
-          REPEAT: '5'
-        run: python3 tools/codegen_determinism_probe.py
+          REPEAT: '60'
+          WORKERS: '4'
+        run: python3 tools/codegen_determinism_probe2.py
