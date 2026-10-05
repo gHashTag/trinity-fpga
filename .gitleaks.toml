@@ -32,11 +32,9 @@ paths = [
 ]
 
 [[allowlists]]
-description = "Workflow cache keys are not credentials"
-condition = "AND"
+description = "Workflow chipdb cache keys are not credentials. No paths: paths + condition=AND skips whole files in gitleaks 8.30."
 regexTarget = "line"
-paths = ['''\.github/workflows/.*\.ya?ml''']
-regexes = ['''^\s*(restore-)?keys?:''']
+regexes = ['''^\s*(restore-)?keys?:\s*chipdb-[a-z0-9-]+\s*$''']
 
 [[allowlists]]
 description = "Known non-secret lines: public token address, RFC 6455 example"
