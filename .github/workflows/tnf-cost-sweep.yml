@@ -234,12 +234,13 @@ jobs:
               echo "luts=$(grep -E 'SLICE_LUTX' /tmp/np_${TOP}.log | tail -1 | grep -oE '[0-9]+/' | head -1 | tr -d /)"
               echo "ffs=$(grep -E 'SLICE_FFX' /tmp/np_${TOP}.log | tail -1 | grep -oE '[0-9]+/' | head -1 | tr -d /)"
               echo "fmax=$(grep -E 'Max frequency for clock' /tmp/np_${TOP}.log | tail -1 | sed 's/^.*: //')"
-              # Worst slack is reported against the nextpnr --freq target below,
-              # NOT against an XDC create_clock: corona_decode_ax7203.xdc carries
-              # pin constraints only. Recording the target with the slack is what
-              # makes the number readable.
+              # Fmax is judged against the nextpnr --freq target below, NOT an
+              # XDC create_clock: the sweep XDC carries pins and IOSTANDARD only.
+              # nextpnr-xilinx prints no worst-slack line, so none is recorded;
+              # crit_delay is the logic/routing split of the post-route critical
+              # path, which is what the Fmax line is computed from.
               echo "target_freq_mhz=50.0"
-              echo "wns=$(grep -E 'Max delay|worst slack|Slack' /tmp/np_${TOP}.log | tail -3 | tr '\n' ';')"
+              echo "crit_delay=$(grep -E 'ns logic, .* ns routing' /tmp/np_${TOP}.log | tail -1 | sed 's/^Info: //')"
               echo "crit_path=$(grep -E 'Critical path report|critical path' -A2 /tmp/np_${TOP}.log | tail -1)"
               echo "log_sha256=$(sha256sum /tmp/np_${TOP}.log | cut -d' ' -f1)"
             } | tee metrics/${TOP}.pnr.txt
