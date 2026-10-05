@@ -1,0 +1,44 @@
+# Secret scanning for gHashTag/trinity-fpga.
+# CI runs gitleaks on every pull request and every push to main
+# (.github/workflows/secret-scan.yml). A finding fails the build.
+# Secrets belong in the environment or in gitignored files
+# (see firmware/xvc-esp32/secrets.h.example), never in the tree.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "hardcoded-password-literal"
+description = "Hardcoded password/passphrase string literal (e.g. Wi-Fi credentials in firmware)"
+regex = '''(?i)\b[a-z_]*(passphrase|password|passwd|wifi_?pass|psk)[a-z_]*\b["']?\s*[:=]\s*["']([^"'<>${}\s]{6,})["']'''
+secretGroup = 2
+keywords = ["passphrase", "password", "passwd", "wifi", "psk"]
+[[rules.allowlists]]
+regexTarget = "match"
+regexes = ['''(?i)(your|example|changeme|placeholder|dummy|test|xxx|\*\*\*)''']
+
+[[allowlists]]
+description = "Known non-secrets by path: synthetic Kaggle data, public contract addresses, BibTeX keys, archived fake keys"
+paths = [
+  '''targets/kaggle/kaggle/(data|generators|scripts|results)/.*''',
+  '''deploy/(trinity-nexus/)?contracts/deployment-.*\.json''',
+  '''research/bibliography_defects\.py''',
+  '''deploy/trinity-nexus/vibee/archive/.*''',
+  '''wave_audit/.*\.md''',
+]
+
+[[allowlists]]
+description = "Workflow cache keys are not credentials"
+condition = "AND"
+regexTarget = "line"
+paths = ['''\.github/workflows/.*\.ya?ml''']
+regexes = ['''^\s*(restore-)?keys?:''']
+
+[[allowlists]]
+description = "Known non-secret lines: public token address, RFC 6455 example"
+regexTarget = "line"
+regexes = [
+  '''TRI_TOKEN_ADDRESS''',
+  '''Sec-WebSocket-Key''',
+  '''restore-keys:''',
+]
