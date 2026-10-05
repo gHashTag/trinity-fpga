@@ -1,12 +1,16 @@
-# Secret scanning for gHashTag/trinity-fpga.
-# CI runs gitleaks on every pull request and every push to main
-# (.github/workflows/secret-scan.yml). A finding fails the build.
-# Secrets belong in the environment or in gitignored files
-# (see firmware/xvc-esp32/secrets.h.example), never in the tree.
+# Secret gate for gHashTag/trinity-fpga. Shared rules: canonical copy in gHashTag/t27 .gitleaks.toml (PR #6433).
+#
+# Three layers, each catching what the one before missed:
+#   1. lefthook pre-commit  -> gitleaks scans staged changes (lefthook.yml)
+#   2. lefthook pre-push    -> gitleaks scans commits not yet on any remote
+#   3. CI secret-scan       -> gitleaks scans the PR range; cannot be skipped
+#                              with --no-verify (.github/workflows/secret-scan.yml)
+# Secrets belong in the environment or in gitignored files, never in the tree.
 
 [extend]
 useDefault = true
 
+# The default rules miss Wi-Fi passphrases and other plain passwords.
 [[rules]]
 id = "hardcoded-password-literal"
 description = "Hardcoded password/passphrase string literal (e.g. Wi-Fi credentials in firmware)"
