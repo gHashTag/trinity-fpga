@@ -1,0 +1,174 @@
+# bitwalk on Linux x86_64: a probe for #848 (S5), not a gate.
+#
+# bitwalk is gHashTag/t27's specs/xilinx7/{packets,frames,far,flow}.t27, generated to Rust
+# by t27c gen-rust plus a hand driver (bitwalk.rs). Until now it has only been built on one
+# macOS laptop. This job builds it on a hosted runner from a pinned t27 commit, as a static
+# musl binary so it also runs inside the openXC7 image and on Railway. It then runs it
+# against prjxray's fasm2frames + xc7frames2bit on the same FASM, the same prjxray-db and the
+# same runner, interleaved. The job fails unless the .frames are byte-identical and the .bit
+# payloads (from the sync word on) match.
+#
+# The FASM is the blinky artifact of an earlier "AX7203 Blinky Bitstream" run, so no yosys or
+# nextpnr runs here. That run's .bit is a third oracle.
+#
+# Runs on a push to its own exp branch, because workflow_dispatch needs the file on main.
+
+name: bitwalk Linux probe
+
+on:
+  push:
+    branches: [exp/bitwalk-linux]
+  workflow_dispatch:
+    inputs:
+      t27_sha:
+        description: gHashTag/t27 commit to build bitwalk from
+        required: false
+      fasm_run:
+        description: run id of an "AX7203 Blinky Bitstream" run with the ax7203-blinky-bitstream artifact
+        required: false
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  T27_SHA: ${{ inputs.t27_sha || '634b3ff26ee6a7d3781459b7d76ef4cd047c7220' }}
+  FASM_RUN: ${{ inputs.fasm_run || '37212145640' }}
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out gHashTag/t27 at the pinned commit
+        uses: actions/checkout@v4
+        with:
+          repository: gHashTag/t27
+          ref: ${{ env.T27_SHA }}
+          path: t27
+          fetch-depth: 1
+
+      - name: Build t27c
+        working-directory: t27
+        run: |
+          set -euo pipefail
+          rustc --version
+          cargo --version
+          s=$(date +%s%N)
+          cargo build --release -p t27c 2>&1 | tail -3
+          e=$(date +%s%N)
+          echo "t27c build: $(( (e - s) / 1000000 )) ms"
+          lock_moved=false
+          git diff --quiet -- Cargo.lock || lock_moved=true
+          echo "Cargo.lock changed by the build: $lock_moved"
+
+      - name: Generate the xilinx7 specs to Rust and build bitwalk (static musl)
+        working-directory: t27
+        run: |
+          set -euo pipefail
+          rustup target add x86_64-unknown-linux-musl
+          s=$(date +%s%N)
+          for spec in packets frames far flow; do
+            ./target/release/t27c gen-rust "specs/xilinx7/$spec.t27" > "specs/xilinx7/$spec.rs"
+          done
+          g=$(date +%s%N)
+          rustc -O --edition 2021 --target x86_64-unknown-linux-musl \
+            specs/xilinx7/bitwalk.rs -o "$RUNNER_TEMP/bitwalk"
+          e=$(date +%s%N)
+          echo "gen-rust x4: $(( (g - s) / 1000000 )) ms, rustc: $(( (e - g) / 1000000 )) ms"
+          file "$RUNNER_TEMP/bitwalk"
+          sha256sum specs/xilinx7/packets.t27 specs/xilinx7/frames.t27 specs/xilinx7/far.t27 \
+            specs/xilinx7/flow.t27 specs/xilinx7/bitwalk.rs specs/xilinx7/fasm_digest.py \
+            "$RUNNER_TEMP/bitwalk" | tee "$RUNNER_TEMP/sha256.txt"
+
+      - name: Download the blinky FASM and .bit
+        uses: actions/download-artifact@v4
+        with:
+          name: ax7203-blinky-bitstream
+          run-id: ${{ env.FASM_RUN }}
+          github-token: ${{ github.token }}
+          path: fasm
+
+      - name: Pull openXC7 Docker image
+        run: |
+          for i in 1 2 3 4 5 6; do
+            docker pull regymm/openxc7:latest && break
+            echo "::warning::docker pull attempt $i failed, sleeping $((i*20))s"; sleep $((i*20))
+          done
+          docker image inspect regymm/openxc7:latest >/dev/null
+
+      - name: bitwalk vs fasm2frames + xc7frames2bit, interleaved, 3 rounds
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          cp "$RUNNER_TEMP/bitwalk" out/bitwalk
+          docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c '
+            set -euo pipefail
+            DB=/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
+            P=xc7a200tfbg484-2
+            F=/work/fasm/blinky_ax7203.fasm
+            O=/work/out
+            echo "prjxray-db: $(git -C /nextpnr-xilinx/xilinx/external/prjxray-db rev-parse HEAD 2>/dev/null || echo unknown)"
+            # Wall ms of one command, its output sent to the log. A failure is recorded in
+            # failed.txt, because a command substitution inside echo would hide it from set -e.
+            # 0 ms is printed as 1, because flow.t27's speedup (before / after) divides by it.
+            ms() {
+              local s e rc d failed
+              s=$(date +%s%N); rc=0; "$@" >&2 || rc=$?; e=$(date +%s%N)
+              failed=false; [ "$rc" -ne 0 ] && failed=true
+              if [ "$failed" = true ]; then echo "rc=$rc: $*" >> /work/out/failed.txt; fi
+              d=$(( (e - s) / 1000000 )); echo $(( d < 1 ? 1 : d ))
+            }
+            echo "digest $(ms sh -c "python3 /work/t27/specs/xilinx7/fasm_digest.py $DB $P > $O/db.digest") ms, $(wc -l < $O/db.digest) lines"
+            source /prjxray/env/bin/activate
+            : > $O/runs-fasm.txt
+            : > $O/runs-write.txt
+            for i in 1 2 3; do
+              echo "blinky.fasm fasm2frames $(ms fasm2frames --db-root $DB --part $P $F $O/a$i.frames)" >> $O/runs-fasm.txt
+              echo "blinky.fasm bitwalk $(ms $O/bitwalk --fasm $O/db.digest $F $O/b$i.frames)" >> $O/runs-fasm.txt
+              echo "blinky.frames xc7frames2bit $(ms /prjxray/build/tools/xc7frames2bit --part_file $DB/$P/part.yaml --part_name $P --frm_file $O/a$i.frames --output_file $O/a$i.bit)" >> $O/runs-write.txt
+              echo "blinky.frames bitwalk $(ms $O/bitwalk --write $O/b$i.frames $O/b$i.bit --part_file $DB/$P/part.yaml --part_name $P)" >> $O/runs-write.txt
+            done
+            cat $O/runs-fasm.txt $O/runs-write.txt
+            any_failed=false; [ -s $O/failed.txt ] && any_failed=true
+            if [ "$any_failed" = true ]; then echo "commands that failed:"; cat $O/failed.txt; exit 1; fi
+            echo "--- flow.t27 verdicts (bitwalk --flow-runs)"
+            $O/bitwalk --flow-runs $O/runs-fasm.txt --ref fasm2frames
+            $O/bitwalk --flow-runs $O/runs-write.txt --ref xc7frames2bit
+          '
+
+      - name: Byte-compare
+        run: |
+          set -euo pipefail
+          payload() { python3 -c 'import sys, hashlib; b = open(sys.argv[1], "rb").read(); i = b.find(bytes.fromhex("aa995566")); print(hashlib.sha256(b[i:]).hexdigest() if i >= 0 else "no-sync-word")' "$1"; }
+          ok=true
+          for i in 1 2 3; do
+            same_frames=false
+            cmp -s "out/a$i.frames" "out/b$i.frames" && same_frames=true
+            pa=$(payload "out/a$i.bit")
+            pb=$(payload "out/b$i.bit")
+            same_payload=false
+            [ "$pa" = "$pb" ] && same_payload=true
+            echo "round $i: frames identical $same_frames, payload identical $same_payload ($pa)"
+            round_bad=false
+            [ "$same_frames" = true ] && [ "$same_payload" = true ] || round_bad=true
+            if [ "$round_bad" = true ]; then ok=false; fi
+          done
+          po=$(payload fasm/blinky_ax7203.bit)
+          pb=$(payload out/b1.bit)
+          same_as_artifact=false
+          [ "$po" = "$pb" ] && same_as_artifact=true
+          echo "bitwalk payload vs run $FASM_RUN's .bit: identical $same_as_artifact"
+          {
+            echo "## bitwalk on Linux x86_64 (t27 $T27_SHA)"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/sha256.txt"
+            cat out/runs-fasm.txt out/runs-write.txt
+            echo "byte-identical in all 3 rounds: $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$ok" != true ]; then
+            echo "::error::bitwalk and prjxray disagree"
+            exit 1
+          fi
