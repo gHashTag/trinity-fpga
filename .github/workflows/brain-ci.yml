@@ -516,9 +516,9 @@ jobs:
           echo "## Verdict" >> $GITHUB_STEP_SUMMARY
           # A failed detect-build never writes `present`, and the test below
           # read the empty value as "no root build.zig" and passed (#883).
-          detect_ok=false
-          [ "${{ needs.detect-build.result }}" == "success" ] && detect_ok=true
-          if [ "$detect_ok" != true ]; then
+          detect_failed=true
+          [ "${{ needs.detect-build.result }}" == "success" ] && detect_failed=false
+          if [ "$detect_failed" = true ]; then
             echo "### ! Brain CI cannot tell whether it applies: detect-build was ${{ needs.detect-build.result }}" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
