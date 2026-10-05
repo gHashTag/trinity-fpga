@@ -55,8 +55,10 @@ jobs:
       #
       # Yosys was inferring DSP48E1 for the GF multiplier. Every GF multiplier
       # workflow in this repo that works already passes the flag
-      # (ax7203-gf10-mul, gf12-mul-clean, gf16-mul-clean); this was the only GF
-      # mul path omitting it, and the only one that had never routed.
+      # (ax7203-gf10-mul, gf12-mul-clean, gf16-mul-clean). CORRECTED 2026-10-05:
+      # this was not the only GF mul path omitting it. build-ax7203-bitstream-mul
+      # omitted it too and failed on the same $PACKER_GND_NET line (run
+      # 29235721559, 2026-07-13); it gets the flag in the same change as this note.
       #
       # Both branches, not just the failing one: they exist to isolate the effect
       # of -nocarry, so changing one alone would leave them differing in two

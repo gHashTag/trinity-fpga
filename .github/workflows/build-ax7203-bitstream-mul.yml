@@ -30,9 +30,15 @@ jobs:
       - name: Build bitstream
         run: |
           DESIGN="${{ github.event.inputs.design }}"
+          # -nodsp: without it Yosys maps the GF multiplier onto a DSP48E1, and
+          # nextpnr-xilinx cannot route the constant inputs of that DSP:
+          #   Failed to find a route for arc 90 of net $PACKER_GND_NET
+          # (run 29235721559, gf16_mul, the only run on main until 2026-10-05).
+          # ax7203-format-cost.yml hit the same line on gf8_mul and was fixed by
+          # the same flag (run 34016575130); the gf*-mul-clean workflows pass it.
           docker run --rm -v "$(pwd):/github" -e DESIGN="$DESIGN" regymm/openxc7:latest bash -c '
           cd /github/fpga/openxc7-synth
-          yosys -q -p "read_verilog gf_adder_param.v gf_mul_param.v ${DESIGN}.v; synth_xilinx -abc9 -nocarry -arch xc7; write_json ${DESIGN}.json" || exit 1
+          yosys -q -p "read_verilog gf_adder_param.v gf_mul_param.v ${DESIGN}.v; synth_xilinx -abc9 -nocarry -nodsp -arch xc7; write_json ${DESIGN}.json" || exit 1
           cp /github/chipdb-xc7a200tfbg484-2.bin /chipdb/xc7a200tfbg484-2.bin
           nextpnr-xilinx --chipdb /chipdb/xc7a200tfbg484-2.bin --json ${DESIGN}.json --xdc ax7203_corona.xdc --fasm ${DESIGN}.fasm --placer heap --router router1 --timing-allow-fail --freq 5.0 || exit 1
           /prjxray/env/bin/fasm2frames --db-root /nextpnr-xilinx/xilinx/external/prjxray-db/artix7 --part xc7a200tfbg484-2 ${DESIGN}.fasm ${DESIGN}.frames 2>/dev/null
