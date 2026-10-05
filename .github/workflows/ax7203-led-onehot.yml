@@ -12,6 +12,13 @@ on:
       - 'fpga/vivado/led_onehot_ax7203.v'
       - 'specs/fpga/constraints/led_onehot_ax7203.xdc'
       - '.github/workflows/ax7203-led-onehot.yml'
+      - '.github/actions/openxc7-chipdb/**'
+  # The one build that runs when the shared chipdb action changes. None of the
+  # other workflows that call it watch .github/actions/, so without this an
+  # action-only change would reach main without a single run behind it.
+  pull_request:
+    paths:
+      - '.github/actions/openxc7-chipdb/**'
 
 jobs:
   bitstream:
