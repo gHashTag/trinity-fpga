@@ -11,6 +11,10 @@
 # The FASM is the blinky artifact of an earlier "AX7203 Blinky Bitstream" run, so no yosys or
 # nextpnr runs here. That run's .bit is a third oracle.
 #
+# Arm d (memo) is an experiment on the --write path: the same driver with far.t27's fdri_index
+# replaced per line by a table lookup, built from a patched copy in the runner. Its payload must
+# also be byte-identical to xc7frames2bit's.
+#
 # Runs on a push to its own exp branch, because workflow_dispatch needs the file on main.
 
 name: bitwalk Linux probe
@@ -89,9 +93,113 @@ jobs:
           else
             echo "::warning::the static glibc arm did not build; only musl is timed"
           fi
+          # Run 37255344733 timed --write on one line, half and all of the frames file (best of
+          # 5): 30 ms, then +99 ms for the first half and +206 ms for the second. The cost per
+          # line grows with the line position. By reading the code (an inference until this arm
+          # is timed): write_bit calls w::fdri_index once per line, and fdri_index adds
+          # group_frames(k) for every earlier group k, which counts a group by walking every one
+          # of its frames, so a whole-part write is O(frames^2). The memo arm is the same driver
+          # with that call replaced by a lookup in a table built once from walk_addresses, linked
+          # like the glibc arm so the two differ only in the lookup. It is built from a patched
+          # copy; the t27 sources are not changed. bitwalk-idx.rs is the unpatched driver plus a
+          # test that the table is a drop-in: see the next step.
+          patched=false
+          python3 - specs/xilinx7/bitwalk.rs specs/xilinx7/bitwalk-memo.rs specs/xilinx7/bitwalk-idx.rs <<'PY' && patched=true
+          import sys
+          src = open(sys.argv[1]).read()
+          loop = "    for line in std::fs::read_to_string(frames_path).unwrap().lines() {\n"
+          call = "        let i = w::fdri_index(part, addr);\n"
+          table = ("    let index: HashMap<u32, u32> = walk_addresses(part).iter().enumerate()\n"
+                   "        .filter_map(|(i, a)| (*a).map(|a| (a, i as u32))).collect();\n")
+          lookup = "        let i = *index.get(&addr).unwrap_or(&w::NO_FRAME);\n"
+          for anchor in (loop, call):
+              not_once = src.count(anchor) != 1
+              if not_once:
+                  sys.exit("memo patch: not exactly one match for: " + anchor.strip())
+          open(sys.argv[2], "w").write(src.replace(loop, table + loop).replace(call, lookup))
+          test = """
+          #[cfg(test)]
+          mod idx_check {
+              use super::*;
+
+              // Addresses fdri_index accepts in a part, counted from its own conditions: a group
+              // of the part, a column below GROUP_COLS, a minor below that column COL_FRAMES.
+              fn accepted(part: u32) -> usize {
+                  let g0 = w::first_group(part);
+                  let mut n = 0usize;
+                  for g in g0..g0 + w::PART_GROUPS[part as usize] {
+                      let first = w::first_column(g);
+                      for c in 0..w::GROUP_COLS[g as usize] {
+                          n += w::COL_FRAMES[(first + c) as usize] as usize;
+                      }
+                  }
+                  n
+              }
+
+              #[test]
+              fn fdri_index_is_the_walk_position() {
+                  let (mut addrs, mut differ, mut repeated, mut unwalked, mut control) = (0usize, 0usize, 0usize, 0usize, 0usize);
+                  for part in 0..w::PARTS {
+                      let mut seen = HashSet::new();
+                      let mut without_pads = 0u32;
+                      for (i, a) in walk_addresses(part).iter().enumerate() {
+                          let Some(a) = *a else { continue };
+                          addrs += 1;
+                          let again = !seen.insert(a);
+                          if again { repeated += 1; }
+                          let got = w::fdri_index(part, a);
+                          let wrong = got != i as u32;
+                          if wrong { differ += 1; }
+                          // Negative control: the same position with the pad frames left out.
+                          let control_wrong = got != without_pads;
+                          if control_wrong { control += 1; }
+                          without_pads += 1;
+                      }
+                      unwalked += accepted(part).abs_diff(seen.len());
+                  }
+                  println!("fdri_index against walk_addresses: {addrs} addresses over {} parts, {differ} differ, {repeated} repeated, {unwalked} accepted by fdri_index but not walked", w::PARTS);
+                  println!("negative control, positions without the pad frames: {control} differ (must be > 0)");
+                  assert!(differ == 0 && repeated == 0 && unwalked == 0, "fdri_index and walk_addresses disagree");
+                  assert!(control > 0, "the check cannot see a wrong position");
+              }
+          }
+          """
+          open(sys.argv[3], "w").write(src + test)
+          PY
+          memo_built=false
+          if [ "$patched" = true ]; then
+            rustc -O --edition 2021 -C target-feature=+crt-static \
+              specs/xilinx7/bitwalk-memo.rs -o "$RUNNER_TEMP/bitwalk-memo" && memo_built=true
+          fi
+          memo_src=""
+          if [ "$memo_built" = true ]; then
+            memo_src=specs/xilinx7/bitwalk-memo.rs
+          else
+            echo "::warning::the memo arm did not build; it is not timed"
+          fi
           sha256sum specs/xilinx7/packets.t27 specs/xilinx7/frames.t27 specs/xilinx7/far.t27 \
-            specs/xilinx7/flow.t27 specs/xilinx7/bitwalk.rs specs/xilinx7/fasm_digest.py \
+            specs/xilinx7/flow.t27 specs/xilinx7/bitwalk.rs specs/xilinx7/fasm_digest.py $memo_src \
             "$RUNNER_TEMP"/bitwalk* | tee "$RUNNER_TEMP/sha256.txt"
+
+      # The memo arm is a drop-in for fdri_index only if the two agree on every address the walk
+      # visits and the walk visits every address fdri_index accepts. Fatal: a disagreement would
+      # be a far.t27 defect, not a timing result.
+      - name: Check fdri_index against walk_addresses on every part
+        working-directory: t27
+        run: |
+          set -euo pipefail
+          no_source=true
+          [ -f specs/xilinx7/bitwalk-idx.rs ] && no_source=false
+          if [ "$no_source" = true ]; then
+            echo "::warning::the patch did not apply, so there is no memo arm to check"
+            echo "idx_check: not run, the patch did not apply" > "$RUNNER_TEMP/idx.txt"
+            exit 0
+          fi
+          rustc -O --edition 2021 --test specs/xilinx7/bitwalk-idx.rs -o "$RUNNER_TEMP/idx_check"
+          s=$(date +%s%N)
+          "$RUNNER_TEMP/idx_check" --nocapture | tee "$RUNNER_TEMP/idx.txt"
+          e=$(date +%s%N)
+          echo "idx_check run: $(( (e - s) / 1000000 )) ms" | tee -a "$RUNNER_TEMP/idx.txt"
 
       - name: Download the blinky FASM and .bit
         uses: actions/download-artifact@v4
@@ -118,6 +226,9 @@ jobs:
           has_gnu=false
           [ -x "$RUNNER_TEMP/bitwalk-gnu" ] && has_gnu=true
           if [ "$has_gnu" = true ]; then cp "$RUNNER_TEMP/bitwalk-gnu" out/bitwalk-gnu; fi
+          has_memo=false
+          [ -x "$RUNNER_TEMP/bitwalk-memo" ] && has_memo=true
+          if [ "$has_memo" = true ]; then cp "$RUNNER_TEMP/bitwalk-memo" out/bitwalk-memo; fi
           docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c '
             set -euo pipefail
             DB=/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
@@ -141,6 +252,8 @@ jobs:
             : > $O/runs-fasm.txt
             : > $O/runs-write.txt
             has_gnu=false; [ -x $O/bitwalk-gnu ] && has_gnu=true
+            # The memo arm only changes --write, so it reads the frames fasm2frames wrote.
+            has_memo=false; [ -x $O/bitwalk-memo ] && has_memo=true
             X2B=/prjxray/build/tools/xc7frames2bit
             PF="--part_file $DB/$P/part.yaml --part_name $P"
             for i in 1 2 3 4 5; do
@@ -153,6 +266,9 @@ jobs:
               echo "blinky.frames bitwalk $(ms $O/bitwalk --write $O/b$i.frames $O/b$i.bit $PF)" >> $O/runs-write.txt
               if [ "$has_gnu" = true ]; then
                 echo "blinky.frames bitwalk-gnu $(ms $O/bitwalk-gnu --write $O/c$i.frames $O/c$i.bit $PF)" >> $O/runs-write.txt
+              fi
+              if [ "$has_memo" = true ]; then
+                echo "blinky.frames bitwalk-memo $(ms $O/bitwalk-memo --write $O/a$i.frames $O/d$i.bit $PF)" >> $O/runs-write.txt
               fi
             done
             cat $O/runs-fasm.txt $O/runs-write.txt
@@ -172,6 +288,9 @@ jobs:
                 if [ "$has_gnu" = true ]; then
                   echo "$size.frames bitwalk-gnu $(ms $O/bitwalk-gnu --write $O/$size.frames $O/$size-c$i.bit $PF)" >> $O/runs-size.txt
                 fi
+                if [ "$has_memo" = true ]; then
+                  echo "$size.frames bitwalk-memo $(ms $O/bitwalk-memo --write $O/$size.frames $O/$size-d$i.bit $PF)" >> $O/runs-size.txt
+                fi
               done
             done
             echo "--- writers on the first line and the first half of the frames file"
@@ -189,11 +308,17 @@ jobs:
             if [ "$has_gnu" = true ]; then
               { echo -n "bitwalk glibc --write: "; { time $O/bitwalk-gnu --write $O/c1.frames $O/s-c.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
             fi
+            if [ "$has_memo" = true ]; then
+              { echo -n "bitwalk glibc memo --write: "; { time $O/bitwalk-memo --write $O/a1.frames $O/s-d.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+            fi
             if [ "$size_ok" = true ]; then
               { echo -n "xc7frames2bit, one line: "; { time $X2B $PF --frm_file $O/one.frames --output_file $O/s-one-a.bit > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
               { echo -n "bitwalk musl --write, one line: "; { time $O/bitwalk --write $O/one.frames $O/s-one-b.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
               if [ "$has_gnu" = true ]; then
                 { echo -n "bitwalk glibc --write, one line: "; { time $O/bitwalk-gnu --write $O/one.frames $O/s-one-c.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+              fi
+              if [ "$has_memo" = true ]; then
+                { echo -n "bitwalk glibc memo --write, one line: "; { time $O/bitwalk-memo --write $O/one.frames $O/s-one-d.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
               fi
             fi
             echo "--- user and sys time, one pass each"
@@ -226,6 +351,16 @@ jobs:
               [ "$same_frames" = true ] && [ "$same_payload" = true ] || round_bad=true
               if [ "$round_bad" = true ]; then ok=false; fi
             done
+            # The memo arm wrote from fasm2frames output, so only its payload is compared.
+            memo_ran=false
+            [ -f "out/d$i.bit" ] && memo_ran=true
+            if [ "$memo_ran" = true ]; then
+              pd=$(payload "out/d$i.bit")
+              same_memo=false
+              [ "$pa" = "$pd" ] && same_memo=true
+              echo "round $i arm d: payload identical $same_memo (frames from fasm2frames)"
+              if [ "$same_memo" != true ]; then ok=false; fi
+            fi
           done
           po=$(payload fasm/blinky_ax7203.bit)
           pb=$(payload out/b1.bit)
@@ -235,7 +370,7 @@ jobs:
           # The short files are informational: a disagreement there is reported, not fatal.
           : > out/size-compare.txt
           for size in one half; do
-            for arm in b c; do
+            for arm in b c d; do
               both_ran=false
               [ -f "out/$size-a1.bit" ] && [ -f "out/$size-${arm}1.bit" ] && both_ran=true
               if [ "$both_ran" != true ]; then continue; fi
@@ -251,11 +386,12 @@ jobs:
             echo '```'
             echo "image $(cat "$RUNNER_TEMP/image.txt")"
             cat "$RUNNER_TEMP/sha256.txt"
+            cat "$RUNNER_TEMP/idx.txt"
             cat out/runs-fasm.txt out/runs-write.txt
             cat out/runs-size.txt
             cat out/size-compare.txt
             cat out/split.txt
-            echo "byte-identical in all 5 rounds, every arm (b musl, c glibc): $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
+            echo "byte-identical in all 5 rounds, every arm (b musl, c glibc, d glibc memo): $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$ok" != true ]; then
@@ -272,6 +408,8 @@ jobs:
           path: |
             ${{ runner.temp }}/bitwalk
             ${{ runner.temp }}/bitwalk-gnu
+            ${{ runner.temp }}/bitwalk-memo
+            ${{ runner.temp }}/idx.txt
             ${{ runner.temp }}/sha256.txt
             ${{ runner.temp }}/image.txt
           retention-days: 14
