@@ -87,7 +87,7 @@ jobs:
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri-compile -Dci=true
+          zig build tri-compile -Dci=true -Dcpu=x86_64_v3
 
       - name: Run Brain Health Check
         id: health
@@ -230,7 +230,7 @@ jobs:
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri-compile -Dci=true
+          zig build tri-compile -Dci=true -Dcpu=x86_64_v3
 
   # =========================================================================
   # Phase 2: Unit Tests — Individual Brain Regions
@@ -275,7 +275,7 @@ jobs:
 
       - name: Test ${{ matrix.region }}
         run: |
-          zig build test-${{ matrix.region }} -Dci=true
+          zig build test-${{ matrix.region }} -Dci=true -Dcpu=x86_64_v3
 
   # =========================================================================
   # Phase 3: Integration Test — Brain Aggregator
@@ -305,7 +305,7 @@ jobs:
 
       - name: Test Brain Integration
         run: |
-          zig build test-brain -Dci=true
+          zig build test-brain -Dci=true -Dcpu=x86_64_v3
 
   # =========================================================================
   # Phase 4: Stress Test — "Functional MRI" Gate
@@ -347,7 +347,7 @@ jobs:
           # check is untouched and starts gating again the moment a test
           # prints a Score: line.
           set -o pipefail
-          if zig build test-brain-stress -Dci=true 2>&1 | tee /tmp/stress-output.txt; then
+          if zig build test-brain-stress -Dci=true -Dcpu=x86_64_v3 2>&1 | tee /tmp/stress-output.txt; then
             echo "PASSED=true" >> $GITHUB_OUTPUT
           else
             echo "PASSED=false" >> $GITHUB_OUTPUT
@@ -472,7 +472,7 @@ jobs:
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri-compile -Dci=true
+          zig build tri-compile -Dci=true -Dcpu=x86_64_v3
 
       - name: CLI Commands Test
         run: |
@@ -519,7 +519,7 @@ jobs:
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri-compile -Dci=true
+          zig build tri-compile -Dci=true -Dcpu=x86_64_v3
 
       - name: Export Metrics
         run: |
@@ -632,11 +632,11 @@ jobs:
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
         run: |
-          zig build tri-compile -Dci=true
+          zig build tri-compile -Dci=true -Dcpu=x86_64_v3
 
       - name: Run Full Stress Test
         run: |
-          zig build test-brain-stress -Dci=true 2>&1 | tee /tmp/weekly-stress.txt
+          zig build test-brain-stress -Dci=true -Dcpu=x86_64_v3 2>&1 | tee /tmp/weekly-stress.txt
 
       - name: Record Weekly Snapshot
         run: |
