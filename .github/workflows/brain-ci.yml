@@ -254,6 +254,10 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
+          # One entry per region. Without it the five legs share one key: the
+          # first to finish saves, the other four are refused ("Unable to
+          # reserve cache"), and every leg restores that one region's build.
+          cache-key: ${{ matrix.region }}
 
       - name: Test ${{ matrix.region }}
         run: |
