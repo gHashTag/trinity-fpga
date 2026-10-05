@@ -111,7 +111,8 @@ jobs:
             echo "prjxray-db: $(git -C /nextpnr-xilinx/xilinx/external/prjxray-db rev-parse HEAD 2>/dev/null || echo unknown)"
             # Wall ms of one command, its output sent to the log. A failure is recorded in
             # failed.txt, because a command substitution inside echo would hide it from set -e.
-            # 0 ms is printed as 1, because flow.t27's speedup (before / after) divides by it.
+            # 0 ms is printed as 1, because the speedup in flow.t27 (before / after) divides by it.
+            # No apostrophes in this block: it is one single-quoted bash -c argument.
             ms() {
               local s e rc d failed
               s=$(date +%s%N); rc=0; "$@" >&2 || rc=$?; e=$(date +%s%N)
