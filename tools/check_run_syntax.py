@@ -34,6 +34,16 @@ value, `'"$PART"'` or `'$X'`, is one word -- and parsed with `bash -n` / `sh -n`
 in turn. A quote followed by anything else is "cannot tell". A double-quoted
 `bash -c "..."` is not read: the outer shell expands it first.
 
+A composite action (`.github/actions/**/action.yml` or `action.yaml`,
+`runs.using: composite`) is read the same way: each of its `runs.steps` that
+has a `run:` must name its `shell:` (GitHub refuses one that does not, so a
+step without it is "cannot tell"), and there are no job or workflow defaults
+to inherit. The runner is the caller's: every workflow job that uses the
+action by its `./` path, directly or through another local action, and if any
+of them may be macOS the step is "cannot tell" unless the gate's bash is 3.x.
+An action no workflow here calls is still parsed. Node and Docker actions have
+no `run:` steps and are skipped.
+
 Exit 0 clean, 1 a step that does not parse, 2 a workflow this could not read
 (cannot tell is not clean). tools/test_check_run_syntax.py plants every case.
 """
@@ -221,8 +231,36 @@ def inner_scripts(script: str) -> list[tuple[str, str]]:
     return found
 
 
-def check(path: pathlib.Path) -> tuple[list[str], str | None]:
+def check_run(script: str, shells: tuple[str, ...], where: str) -> list[str]:
+    """`bash -n` / `sh -n` on one step's script, then on each single-quoted -c
+    script in it. CannotTell from inner_scripts goes to the caller."""
     global _INNER_SEEN
+    bad = []
+    outer_parses = bool(shells)
+    for sh in shells:
+        r = subprocess.run([sh, "-n"], input=script, capture_output=True, text=True)
+        if r.returncode:
+            err = " ".join(r.stderr.split())[:240]
+            bad.append(f"{where} [{sh} -n]\n    {err}")
+            outer_parses = False
+            break
+    # Only a script whose own quoting is sound can be read for the strings
+    # it hands to bash -c; a broken one was reported above.
+    if not outer_parses:
+        return bad
+    inner = inner_scripts(script)
+    _INNER_SEEN += len(inner)
+    for n, (ish, text) in enumerate(inner, 1):
+        r = subprocess.run([ish, "-n"], input=text, capture_output=True, text=True)
+        inner_bad = r.returncode != 0
+        if inner_bad:
+            err = " ".join(r.stderr.split())[:240]
+            bad.append(f"{where} [{ish} -n on {ish} -c script {n}, lines from its opening quote]"
+                       f"\n    {err}")
+    return bad
+
+
+def check(path: pathlib.Path) -> tuple[list[str], str | None]:
     import yaml  # inside: a missing PyYAML is "cannot tell", not a crash
     try:
         wf = yaml.safe_load(path.read_text())
@@ -239,35 +277,108 @@ def check(path: pathlib.Path) -> tuple[list[str], str | None]:
                 return [], f"{path.name} :: {jn}: step {k} is not a mapping"
             if "run" not in step:
                 continue
-            try:
-                shells = shell_of(step, job, wf)
-            except CannotTell as e:
-                return [], f"{path.name} :: {jn} :: step {k}: {e}"
             where = f"{path.relative_to(ROOT)} :: {jn} :: {step.get('name') or f'step {k}'}"
-            outer_parses = bool(shells)
-            for sh in shells:
-                r = subprocess.run([sh, "-n"], input=str(step["run"]), capture_output=True, text=True)
-                if r.returncode:
-                    err = " ".join(r.stderr.split())[:240]
-                    bad.append(f"{where} [{sh} -n]\n    {err}")
-                    outer_parses = False
-                    break
-            # Only a script whose own quoting is sound can be read for the strings
-            # it hands to bash -c; a broken one was reported above.
-            if not outer_parses:
-                continue
             try:
-                inner = inner_scripts(str(step["run"]))
+                bad += check_run(str(step["run"]), shell_of(step, job, wf), where)
             except CannotTell as e:
                 return [], f"{path.name} :: {jn} :: step {k}: {e}"
-            _INNER_SEEN += len(inner)
-            for n, (ish, text) in enumerate(inner, 1):
-                r = subprocess.run([ish, "-n"], input=text, capture_output=True, text=True)
-                inner_bad = r.returncode != 0
-                if inner_bad:
-                    err = " ".join(r.stderr.split())[:240]
-                    bad.append(f"{where} [{ish} -n on {ish} -c script {n}, lines from its opening quote]"
-                               f"\n    {err}")
+    return bad, None
+
+
+def local_uses(steps) -> list[str]:
+    """The `./` actions a steps list calls, as repo-relative directories."""
+    found = []
+    for step in steps if isinstance(steps, list) else []:
+        uses = step.get("uses") if isinstance(step, dict) else None
+        local = isinstance(uses, str) and uses.startswith("./")
+        if local:
+            found.append(uses[2:].rstrip("/"))
+    return found
+
+
+def action_dir(path: pathlib.Path) -> str:
+    return path.parent.relative_to(ROOT).as_posix()
+
+
+def action_callers(workflows: list[pathlib.Path], actions: list[pathlib.Path]) -> dict[str, list[dict]]:
+    """Every workflow job that runs each local action, directly or through
+    another local action, keyed by the action's directory. A file that does
+    not load is skipped here; check() and check_action() report it."""
+    import yaml
+    direct: dict[str, list[dict]] = {}
+    for f in workflows:
+        try:
+            wf = yaml.safe_load(f.read_text())
+        except yaml.YAMLError:
+            continue
+        jobs = wf.get("jobs") if isinstance(wf, dict) else None
+        for job in jobs.values() if isinstance(jobs, dict) else []:
+            steps = job.get("steps") if isinstance(job, dict) else None
+            for rel in local_uses(steps):
+                direct.setdefault(rel, []).append(job)
+    parents: dict[str, list[str]] = {}
+    for f in actions:
+        try:
+            act = yaml.safe_load(f.read_text())
+        except yaml.YAMLError:
+            continue
+        runs = act.get("runs") if isinstance(act, dict) else None
+        steps = runs.get("steps") if isinstance(runs, dict) else None
+        for child in local_uses(steps):
+            parents.setdefault(child, []).append(action_dir(f))
+
+    def jobs_of(rel: str, seen: frozenset) -> list[dict]:
+        jobs = list(direct.get(rel, []))
+        for parent in parents.get(rel, []):
+            fresh = parent not in seen
+            if fresh:
+                jobs += jobs_of(parent, seen | {parent})
+        return jobs
+
+    return {action_dir(f): jobs_of(action_dir(f), frozenset({action_dir(f)})) for f in actions}
+
+
+def check_action(path: pathlib.Path, callers: list[dict]) -> tuple[list[str], str | None]:
+    """check() for one action.yml; `callers` are the jobs that run it."""
+    import yaml
+    rel = path.relative_to(ROOT).as_posix()
+    try:
+        act = yaml.safe_load(path.read_text())
+    except yaml.YAMLError as e:
+        return [], f"{rel}: not YAML ({e.__class__.__name__})"
+    runs = act.get("runs") if isinstance(act, dict) else None
+    no_runs = not isinstance(runs, dict)
+    if no_runs:
+        return [], f"{rel}: no runs mapping"
+    composite = runs.get("using") == "composite"
+    if not composite:
+        return [], None  # node and docker actions have no run: steps
+    steps = runs.get("steps")
+    no_steps = not isinstance(steps, list)
+    if no_steps:
+        return [], f"{rel}: a composite action with no steps list"
+    mac_caller = any(may_run_on_macos(job) for job in callers)
+    bad = []
+    for k, step in enumerate(steps, 1):
+        not_mapping = not isinstance(step, dict)
+        if not_mapping:
+            return [], f"{rel}: step {k} is not a mapping"
+        no_run = "run" not in step
+        if no_run:
+            continue
+        unnamed_shell = not step.get("shell")
+        if unnamed_shell:
+            return [], f"{rel} :: step {k}: a composite run step must name its shell"
+        where = f"{rel} :: {step.get('name') or f'step {k}'}"
+        try:
+            shells = _shell_named(step, {}, {})
+            # The same bash 3.2 question as shell_of, asked of the callers' runners.
+            old_bash_unchecked = bool(shells) and mac_caller and bash_major() != 3
+            if old_bash_unchecked:
+                raise CannotTell(f"a caller may run on macOS (bash 3.2); this gate has bash {bash_major()}")
+            bad += check_run(str(step["run"]), shells, where)
+        except CannotTell as e:
+            return [], f"{rel} :: step {k}: {e}"
     return bad, None
 
 
@@ -290,8 +401,24 @@ def main() -> int:
         bad += b
         if err:
             unread.append(err)
-    print(f"workflows read: {len(files) - len(unread)} of {len(files)}; bash -c '...' scripts read out"
-          f" of them: {_INNER_SEEN}; steps and scripts that do not parse: {len(bad)}")
+    wf_unread = len(unread)
+    actions_root = ROOT / ".github" / "actions"
+    has_actions = actions_root.is_dir()
+    actions = sorted(list(actions_root.rglob("action.yml")) + list(actions_root.rglob("action.yaml"))
+                     if has_actions else [])
+    callers = action_callers(files, actions)
+    uncalled = 0
+    for a in actions:
+        b, err = check_action(a, callers[action_dir(a)])
+        bad += b
+        no_caller = not callers[action_dir(a)]
+        if no_caller:
+            uncalled += 1
+        if err:
+            unread.append(err)
+    print(f"workflows read: {len(files) - wf_unread} of {len(files)}; actions read: "
+          f"{len(actions) - (len(unread) - wf_unread)} of {len(actions)} ({uncalled} with no caller here); "
+          f"bash -c '...' scripts read out of them: {_INNER_SEEN}; steps and scripts that do not parse: {len(bad)}")
     for b in bad:
         print("  " + b)
     for u in unread:
