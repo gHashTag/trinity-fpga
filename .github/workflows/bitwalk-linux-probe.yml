@@ -77,9 +77,21 @@ jobs:
           e=$(date +%s%N)
           echo "gen-rust x4: $(( (g - s) / 1000000 )) ms, rustc: $(( (e - g) / 1000000 )) ms"
           file "$RUNNER_TEMP/bitwalk"
+          # Run 37254020608 measured bitwalk --write 2x slower than xc7frames2bit here, against
+          # 1.17x faster on a macOS laptop. The same source linked statically against glibc
+          # separates the C library (musl malloc and memcpy) from the program. An arm that does
+          # not build is reported and skipped, not fatal: the musl arm is the deliverable.
+          gnu_built=false
+          rustc -O --edition 2021 -C target-feature=+crt-static \
+            specs/xilinx7/bitwalk.rs -o "$RUNNER_TEMP/bitwalk-gnu" && gnu_built=true
+          if [ "$gnu_built" = true ]; then
+            file "$RUNNER_TEMP/bitwalk-gnu"
+          else
+            echo "::warning::the static glibc arm did not build; only musl is timed"
+          fi
           sha256sum specs/xilinx7/packets.t27 specs/xilinx7/frames.t27 specs/xilinx7/far.t27 \
             specs/xilinx7/flow.t27 specs/xilinx7/bitwalk.rs specs/xilinx7/fasm_digest.py \
-            "$RUNNER_TEMP/bitwalk" | tee "$RUNNER_TEMP/sha256.txt"
+            "$RUNNER_TEMP"/bitwalk* | tee "$RUNNER_TEMP/sha256.txt"
 
       - name: Download the blinky FASM and .bit
         uses: actions/download-artifact@v4
@@ -95,13 +107,17 @@ jobs:
             docker pull regymm/openxc7:latest && break
             echo "::warning::docker pull attempt $i failed, sleeping $((i*20))s"; sleep $((i*20))
           done
-          docker image inspect regymm/openxc7:latest >/dev/null
+          docker image inspect --format "{{index .RepoDigests 0}}" regymm/openxc7:latest \
+            | tee "$RUNNER_TEMP/image.txt"
 
-      - name: bitwalk vs fasm2frames + xc7frames2bit, interleaved, 3 rounds
+      - name: bitwalk vs fasm2frames + xc7frames2bit, interleaved, 5 rounds
         run: |
           set -euo pipefail
           mkdir -p out
           cp "$RUNNER_TEMP/bitwalk" out/bitwalk
+          has_gnu=false
+          [ -x "$RUNNER_TEMP/bitwalk-gnu" ] && has_gnu=true
+          if [ "$has_gnu" = true ]; then cp "$RUNNER_TEMP/bitwalk-gnu" out/bitwalk-gnu; fi
           docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c '
             set -euo pipefail
             DB=/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
@@ -124,15 +140,38 @@ jobs:
             source /prjxray/env/bin/activate
             : > $O/runs-fasm.txt
             : > $O/runs-write.txt
-            for i in 1 2 3; do
+            has_gnu=false; [ -x $O/bitwalk-gnu ] && has_gnu=true
+            X2B=/prjxray/build/tools/xc7frames2bit
+            PF="--part_file $DB/$P/part.yaml --part_name $P"
+            for i in 1 2 3 4 5; do
               echo "blinky.fasm fasm2frames $(ms fasm2frames --db-root $DB --part $P $F $O/a$i.frames)" >> $O/runs-fasm.txt
               echo "blinky.fasm bitwalk $(ms $O/bitwalk --fasm $O/db.digest $F $O/b$i.frames)" >> $O/runs-fasm.txt
-              echo "blinky.frames xc7frames2bit $(ms /prjxray/build/tools/xc7frames2bit --part_file $DB/$P/part.yaml --part_name $P --frm_file $O/a$i.frames --output_file $O/a$i.bit)" >> $O/runs-write.txt
-              echo "blinky.frames bitwalk $(ms $O/bitwalk --write $O/b$i.frames $O/b$i.bit --part_file $DB/$P/part.yaml --part_name $P)" >> $O/runs-write.txt
+              if [ "$has_gnu" = true ]; then
+                echo "blinky.fasm bitwalk-gnu $(ms $O/bitwalk-gnu --fasm $O/db.digest $F $O/c$i.frames)" >> $O/runs-fasm.txt
+              fi
+              echo "blinky.frames xc7frames2bit $(ms $X2B $PF --frm_file $O/a$i.frames --output_file $O/a$i.bit)" >> $O/runs-write.txt
+              echo "blinky.frames bitwalk $(ms $O/bitwalk --write $O/b$i.frames $O/b$i.bit $PF)" >> $O/runs-write.txt
+              if [ "$has_gnu" = true ]; then
+                echo "blinky.frames bitwalk-gnu $(ms $O/bitwalk-gnu --write $O/c$i.frames $O/c$i.bit $PF)" >> $O/runs-write.txt
+              fi
             done
             cat $O/runs-fasm.txt $O/runs-write.txt
             any_failed=false; [ -s $O/failed.txt ] && any_failed=true
             if [ "$any_failed" = true ]; then echo "commands that failed:"; cat $O/failed.txt; exit 1; fi
+            # One more pass of each writer under the bash time keyword, outside the timed rounds:
+            # user against sys time tells computation (parsing, the ECC loop) from page faults
+            # and allocator traffic.
+            TIMEFORMAT="%R s real, %U s user, %S s sys"
+            : > $O/split.txt
+            { echo -n "xc7frames2bit: "; { time $X2B $PF --frm_file $O/a1.frames --output_file $O/s-a.bit > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+            { echo -n "bitwalk musl --write: "; { time $O/bitwalk --write $O/b1.frames $O/s-b.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+            { echo -n "bitwalk musl --fasm: "; { time $O/bitwalk --fasm $O/db.digest $F $O/s-b.frames > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+            if [ "$has_gnu" = true ]; then
+              { echo -n "bitwalk glibc --write: "; { time $O/bitwalk-gnu --write $O/c1.frames $O/s-c.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+            fi
+            echo "--- user and sys time, one pass each"
+            cat $O/split.txt
+            echo "frames file: $(wc -c < $O/a1.frames) bytes, $(wc -l < $O/a1.frames) lines"
             echo "--- flow.t27 verdicts (bitwalk --flow-runs)"
             $O/bitwalk --flow-runs $O/runs-fasm.txt --ref fasm2frames
             $O/bitwalk --flow-runs $O/runs-write.txt --ref xc7frames2bit
@@ -143,17 +182,22 @@ jobs:
           set -euo pipefail
           payload() { python3 -c 'import sys, hashlib; b = open(sys.argv[1], "rb").read(); i = b.find(bytes.fromhex("aa995566")); print(hashlib.sha256(b[i:]).hexdigest() if i >= 0 else "no-sync-word")' "$1"; }
           ok=true
-          for i in 1 2 3; do
-            same_frames=false
-            cmp -s "out/a$i.frames" "out/b$i.frames" && same_frames=true
+          for i in 1 2 3 4 5; do
             pa=$(payload "out/a$i.bit")
-            pb=$(payload "out/b$i.bit")
-            same_payload=false
-            [ "$pa" = "$pb" ] && same_payload=true
-            echo "round $i: frames identical $same_frames, payload identical $same_payload ($pa)"
-            round_bad=false
-            [ "$same_frames" = true ] && [ "$same_payload" = true ] || round_bad=true
-            if [ "$round_bad" = true ]; then ok=false; fi
+            for arm in b c; do
+              arm_ran=false
+              [ -f "out/$arm$i.bit" ] && arm_ran=true
+              if [ "$arm_ran" != true ]; then continue; fi
+              same_frames=false
+              cmp -s "out/a$i.frames" "out/$arm$i.frames" && same_frames=true
+              pb=$(payload "out/$arm$i.bit")
+              same_payload=false
+              [ "$pa" = "$pb" ] && same_payload=true
+              echo "round $i arm $arm: frames identical $same_frames, payload identical $same_payload ($pa)"
+              round_bad=false
+              [ "$same_frames" = true ] && [ "$same_payload" = true ] || round_bad=true
+              if [ "$round_bad" = true ]; then ok=false; fi
+            done
           done
           po=$(payload fasm/blinky_ax7203.bit)
           pb=$(payload out/b1.bit)
@@ -164,12 +208,27 @@ jobs:
             echo "## bitwalk on Linux x86_64 (t27 $T27_SHA)"
             echo
             echo '```'
+            echo "image $(cat "$RUNNER_TEMP/image.txt")"
             cat "$RUNNER_TEMP/sha256.txt"
             cat out/runs-fasm.txt out/runs-write.txt
-            echo "byte-identical in all 3 rounds: $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
+            cat out/split.txt
+            echo "byte-identical in all 5 rounds, every arm (b musl, c glibc): $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$ok" != true ]; then
             echo "::error::bitwalk and prjxray disagree"
             exit 1
           fi
+
+      # Kept as a workflow artifact only, so a Railway or CI job can fetch the exact binary that
+      # was byte-compared here instead of rebuilding t27c (53-75 s cold).
+      - name: Keep the bitwalk binaries, their sha256 and the image digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: bitwalk-linux-x86_64
+          path: |
+            ${{ runner.temp }}/bitwalk
+            ${{ runner.temp }}/bitwalk-gnu
+            ${{ runner.temp }}/sha256.txt
+            ${{ runner.temp }}/image.txt
+          retention-days: 14
