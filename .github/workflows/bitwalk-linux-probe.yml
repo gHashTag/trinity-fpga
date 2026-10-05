@@ -158,6 +158,26 @@ jobs:
             cat $O/runs-fasm.txt $O/runs-write.txt
             any_failed=false; [ -s $O/failed.txt ] && any_failed=true
             if [ "$any_failed" = true ]; then echo "commands that failed:"; cat $O/failed.txt; exit 1; fi
+            # Fixed cost against reading cost: the same writers on the first line of the frames file
+            # and on its first half. Every writer still walks every frame of the part for ECC and
+            # output, so what grows with the line count is the parsing. Informational: a writer
+            # that refuses a short file is reported, not fatal, since the rounds above are the test.
+            head -n 1 $O/a1.frames > $O/one.frames
+            head -n $(( $(wc -l < $O/a1.frames) / 2 )) $O/a1.frames > $O/half.frames
+            : > $O/runs-size.txt
+            for i in 1 2 3 4 5; do
+              for size in one half; do
+                echo "$size.frames xc7frames2bit $(ms $X2B $PF --frm_file $O/$size.frames --output_file $O/$size-a$i.bit)" >> $O/runs-size.txt
+                echo "$size.frames bitwalk $(ms $O/bitwalk --write $O/$size.frames $O/$size-b$i.bit $PF)" >> $O/runs-size.txt
+                if [ "$has_gnu" = true ]; then
+                  echo "$size.frames bitwalk-gnu $(ms $O/bitwalk-gnu --write $O/$size.frames $O/$size-c$i.bit $PF)" >> $O/runs-size.txt
+                fi
+              done
+            done
+            echo "--- writers on the first line and the first half of the frames file"
+            cat $O/runs-size.txt
+            size_ok=true; [ -s $O/failed.txt ] && size_ok=false
+            if [ "$size_ok" != true ]; then echo "::warning::a writer failed on a short frames file"; cat $O/failed.txt; fi
             # One more pass of each writer under the bash time keyword, outside the timed rounds:
             # user against sys time tells computation (parsing, the ECC loop) from page faults
             # and allocator traffic.
@@ -169,12 +189,20 @@ jobs:
             if [ "$has_gnu" = true ]; then
               { echo -n "bitwalk glibc --write: "; { time $O/bitwalk-gnu --write $O/c1.frames $O/s-c.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
             fi
+            if [ "$size_ok" = true ]; then
+              { echo -n "xc7frames2bit, one line: "; { time $X2B $PF --frm_file $O/one.frames --output_file $O/s-one-a.bit > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+              { echo -n "bitwalk musl --write, one line: "; { time $O/bitwalk --write $O/one.frames $O/s-one-b.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+              if [ "$has_gnu" = true ]; then
+                { echo -n "bitwalk glibc --write, one line: "; { time $O/bitwalk-gnu --write $O/one.frames $O/s-one-c.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+              fi
+            fi
             echo "--- user and sys time, one pass each"
             cat $O/split.txt
             echo "frames file: $(wc -c < $O/a1.frames) bytes, $(wc -l < $O/a1.frames) lines"
             echo "--- flow.t27 verdicts (bitwalk --flow-runs)"
             $O/bitwalk --flow-runs $O/runs-fasm.txt --ref fasm2frames
             $O/bitwalk --flow-runs $O/runs-write.txt --ref xc7frames2bit
+            $O/bitwalk --flow-runs $O/runs-size.txt --ref xc7frames2bit
           '
 
       - name: Byte-compare
@@ -204,6 +232,19 @@ jobs:
           same_as_artifact=false
           [ "$po" = "$pb" ] && same_as_artifact=true
           echo "bitwalk payload vs run $FASM_RUN's .bit: identical $same_as_artifact"
+          # The short files are informational: a disagreement there is reported, not fatal.
+          : > out/size-compare.txt
+          for size in one half; do
+            for arm in b c; do
+              both_ran=false
+              [ -f "out/$size-a1.bit" ] && [ -f "out/$size-${arm}1.bit" ] && both_ran=true
+              if [ "$both_ran" != true ]; then continue; fi
+              same_short=false
+              [ "$(payload "out/$size-a1.bit")" = "$(payload "out/$size-${arm}1.bit")" ] && same_short=true
+              echo "$size.frames arm $arm: payload identical to xc7frames2bit $same_short" | tee -a out/size-compare.txt
+              if [ "$same_short" != true ]; then echo "::warning::$size.frames arm $arm differs from xc7frames2bit"; fi
+            done
+          done
           {
             echo "## bitwalk on Linux x86_64 (t27 $T27_SHA)"
             echo
@@ -211,6 +252,8 @@ jobs:
             echo "image $(cat "$RUNNER_TEMP/image.txt")"
             cat "$RUNNER_TEMP/sha256.txt"
             cat out/runs-fasm.txt out/runs-write.txt
+            cat out/runs-size.txt
+            cat out/size-compare.txt
             cat out/split.txt
             echo "byte-identical in all 5 rounds, every arm (b musl, c glibc): $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
             echo '```'
