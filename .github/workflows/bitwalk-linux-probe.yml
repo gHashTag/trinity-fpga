@@ -15,6 +15,10 @@
 # replaced per line by a table lookup, built from a patched copy in the runner. Its payload must
 # also be byte-identical to xc7frames2bit's.
 #
+# Arm e (option 2 of gHashTag/t27#6348) keeps the driver and fdri_index unchanged and replaces
+# the generated group_frames, which walks a group frame by frame, with the sum of COL_FRAMES
+# over the group's columns. It is also a patched copy in the runner, with the same payload rule.
+#
 # Runs on a push to its own exp branch, because workflow_dispatch needs the file on main.
 
 name: bitwalk Linux probe
@@ -162,6 +166,30 @@ jobs:
                   assert!(differ == 0 && repeated == 0 && unwalked == 0, "fdri_index and walk_addresses disagree");
                   assert!(control > 0, "the check cannot see a wrong position");
               }
+
+              // Option 2 of t27#6348 is a drop-in only if every group's walk count equals the
+              // sum of COL_FRAMES over its columns. Run 37256265500 compared totals per part.
+              #[test]
+              fn group_frames_is_the_column_sum() {
+                  let groups = w::first_group(w::PARTS);
+                  let (mut differ, mut control) = (0u32, 0u32);
+                  for g in 0..groups {
+                      let first = w::first_column(g);
+                      let cols = w::GROUP_COLS[g as usize];
+                      let sum: u32 = (0..cols).map(|c| w::COL_FRAMES[(first + c) as usize]).sum();
+                      let walked = w::group_frames(g);
+                      let wrong = walked != sum;
+                      if wrong { differ += 1; }
+                      // Negative control: the same sum without the last column of the group.
+                      let short: u32 = (0..cols.saturating_sub(1)).map(|c| w::COL_FRAMES[(first + c) as usize]).sum();
+                      let control_wrong = walked != short;
+                      if control_wrong { control += 1; }
+                  }
+                  println!("group_frames against the COL_FRAMES sum: {groups} groups, {differ} differ");
+                  println!("negative control, the sum without the last column: {control} of {groups} differ (must be all)");
+                  assert!(differ == 0, "group_frames is not the column sum");
+                  assert!(control == groups, "the check cannot see a missing column");
+              }
           }
           """
           open(sys.argv[3], "w").write(src + test)
@@ -177,9 +205,54 @@ jobs:
           else
             echo "::warning::the memo arm did not build; it is not timed"
           fi
+          # Arm e: option 2 of t27#6348. A copy of the generated sources in opt2/, where far.rs's
+          # group_frames sums COL_FRAMES instead of walking every frame. bitwalk.rs reaches its
+          # modules by #[path] next to itself, so the copy builds unchanged. The unpatched
+          # bitwalk-idx.rs is copied too, so the next step runs the same checks on option 2.
+          opt2=false
+          python3 - specs/xilinx7 specs/xilinx7/opt2 <<'PY2' && opt2=true
+          import os, shutil, sys
+          src_dir, out_dir = sys.argv[1], sys.argv[2]
+          far = open(os.path.join(src_dir, "far.rs")).read()
+          head = "pub fn group_frames(g: u32) -> u32 {\n"
+          not_once = far.count(head) != 1
+          if not_once:
+              sys.exit("option 2 patch: not exactly one match for: " + head.strip())
+          start = far.index(head)
+          end = far.index("\n}\n", start) + 3
+          body = (head
+                  + "    let first = first_column(g);\n"
+                  + "    let mut n: u32 = 0;\n"
+                  + "    let mut c: u32 = 0;\n"
+                  + "    while c < GROUP_COLS[(g) as usize] {\n"
+                  + "        n = n + COL_FRAMES[(first + c) as usize];\n"
+                  + "        c = c + 1;\n"
+                  + "    }\n"
+                  + "    return n;\n"
+                  + "}\n")
+          os.makedirs(out_dir, exist_ok=True)
+          open(os.path.join(out_dir, "far.rs"), "w").write(far[:start] + body + far[end:])
+          print("option 2 patch: replaced lines", far.count("\n", 0, start) + 1, "to", far.count("\n", 0, end), "of far.rs")
+          for name in ("packets.rs", "frames.rs", "flow.rs", "bitwalk.rs"):
+              shutil.copy(os.path.join(src_dir, name), out_dir)
+          has_idx = os.path.exists(os.path.join(src_dir, "bitwalk-idx.rs"))
+          if has_idx:
+              shutil.copy(os.path.join(src_dir, "bitwalk-idx.rs"), out_dir)
+          PY2
+          opt2_built=false
+          if [ "$opt2" = true ]; then
+            rustc -O --edition 2021 -C target-feature=+crt-static \
+              specs/xilinx7/opt2/bitwalk.rs -o "$RUNNER_TEMP/bitwalk-opt2" && opt2_built=true
+          fi
+          opt2_src=""
+          if [ "$opt2_built" = true ]; then
+            opt2_src=specs/xilinx7/opt2/far.rs
+          else
+            echo "::warning::the option 2 arm did not build; it is not timed"
+          fi
           sha256sum specs/xilinx7/packets.t27 specs/xilinx7/frames.t27 specs/xilinx7/far.t27 \
             specs/xilinx7/flow.t27 specs/xilinx7/bitwalk.rs specs/xilinx7/fasm_digest.py $memo_src \
-            "$RUNNER_TEMP"/bitwalk* | tee "$RUNNER_TEMP/sha256.txt"
+            specs/xilinx7/far.rs $opt2_src "$RUNNER_TEMP"/bitwalk* | tee "$RUNNER_TEMP/sha256.txt"
 
       # The memo arm is a drop-in for fdri_index only if the two agree on every address the walk
       # visits and the walk visits every address fdri_index accepts. Fatal: a disagreement would
@@ -197,9 +270,28 @@ jobs:
           fi
           rustc -O --edition 2021 --test specs/xilinx7/bitwalk-idx.rs -o "$RUNNER_TEMP/idx_check"
           s=$(date +%s%N)
-          "$RUNNER_TEMP/idx_check" --nocapture | tee "$RUNNER_TEMP/idx.txt"
+          "$RUNNER_TEMP/idx_check" --nocapture --test-threads=1 | tee "$RUNNER_TEMP/idx.txt"
           e=$(date +%s%N)
           echo "idx_check run: $(( (e - s) / 1000000 )) ms" | tee -a "$RUNNER_TEMP/idx.txt"
+          # The same tests against option 2's far.rs. Not fatal: a disagreement there is a
+          # defect of the proposal, not of far.t27, and the byte-compare still judges arm e.
+          has_opt2=false
+          [ -f specs/xilinx7/opt2/bitwalk-idx.rs ] && has_opt2=true
+          if [ "$has_opt2" = true ]; then
+            echo "--- option 2: far.rs with group_frames as a COL_FRAMES sum" | tee -a "$RUNNER_TEMP/idx.txt"
+            opt2_compiled=false
+            rustc -O --edition 2021 --test specs/xilinx7/opt2/bitwalk-idx.rs -o "$RUNNER_TEMP/idx_check_opt2" && opt2_compiled=true
+            opt2_ok=false
+            if [ "$opt2_compiled" = true ]; then
+              s=$(date +%s%N)
+              "$RUNNER_TEMP/idx_check_opt2" --nocapture --test-threads=1 | tee -a "$RUNNER_TEMP/idx.txt" && opt2_ok=true
+              e=$(date +%s%N)
+              echo "idx_check_opt2 run: $(( (e - s) / 1000000 )) ms" | tee -a "$RUNNER_TEMP/idx.txt"
+            fi
+            if [ "$opt2_ok" != true ]; then
+              echo "::warning::option 2 fails the fdri_index checks" | tee -a "$RUNNER_TEMP/idx.txt"
+            fi
+          fi
 
       - name: Download the blinky FASM and .bit
         uses: actions/download-artifact@v4
@@ -229,6 +321,9 @@ jobs:
           has_memo=false
           [ -x "$RUNNER_TEMP/bitwalk-memo" ] && has_memo=true
           if [ "$has_memo" = true ]; then cp "$RUNNER_TEMP/bitwalk-memo" out/bitwalk-memo; fi
+          has_opt2=false
+          [ -x "$RUNNER_TEMP/bitwalk-opt2" ] && has_opt2=true
+          if [ "$has_opt2" = true ]; then cp "$RUNNER_TEMP/bitwalk-opt2" out/bitwalk-opt2; fi
           docker run --rm -v "$PWD:/work" -w /work regymm/openxc7 bash -c '
             set -euo pipefail
             DB=/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
@@ -254,6 +349,7 @@ jobs:
             has_gnu=false; [ -x $O/bitwalk-gnu ] && has_gnu=true
             # The memo arm only changes --write, so it reads the frames fasm2frames wrote.
             has_memo=false; [ -x $O/bitwalk-memo ] && has_memo=true
+            has_opt2=false; [ -x $O/bitwalk-opt2 ] && has_opt2=true
             X2B=/prjxray/build/tools/xc7frames2bit
             PF="--part_file $DB/$P/part.yaml --part_name $P"
             for i in 1 2 3 4 5; do
@@ -269,6 +365,9 @@ jobs:
               fi
               if [ "$has_memo" = true ]; then
                 echo "blinky.frames bitwalk-memo $(ms $O/bitwalk-memo --write $O/a$i.frames $O/d$i.bit $PF)" >> $O/runs-write.txt
+              fi
+              if [ "$has_opt2" = true ]; then
+                echo "blinky.frames bitwalk-opt2 $(ms $O/bitwalk-opt2 --write $O/a$i.frames $O/e$i.bit $PF)" >> $O/runs-write.txt
               fi
             done
             cat $O/runs-fasm.txt $O/runs-write.txt
@@ -291,6 +390,9 @@ jobs:
                 if [ "$has_memo" = true ]; then
                   echo "$size.frames bitwalk-memo $(ms $O/bitwalk-memo --write $O/$size.frames $O/$size-d$i.bit $PF)" >> $O/runs-size.txt
                 fi
+                if [ "$has_opt2" = true ]; then
+                  echo "$size.frames bitwalk-opt2 $(ms $O/bitwalk-opt2 --write $O/$size.frames $O/$size-e$i.bit $PF)" >> $O/runs-size.txt
+                fi
               done
             done
             echo "--- writers on the first line and the first half of the frames file"
@@ -311,6 +413,9 @@ jobs:
             if [ "$has_memo" = true ]; then
               { echo -n "bitwalk glibc memo --write: "; { time $O/bitwalk-memo --write $O/a1.frames $O/s-d.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
             fi
+            if [ "$has_opt2" = true ]; then
+              { echo -n "bitwalk glibc option 2 --write: "; { time $O/bitwalk-opt2 --write $O/a1.frames $O/s-e.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+            fi
             if [ "$size_ok" = true ]; then
               { echo -n "xc7frames2bit, one line: "; { time $X2B $PF --frm_file $O/one.frames --output_file $O/s-one-a.bit > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
               { echo -n "bitwalk musl --write, one line: "; { time $O/bitwalk --write $O/one.frames $O/s-one-b.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
@@ -319,6 +424,9 @@ jobs:
               fi
               if [ "$has_memo" = true ]; then
                 { echo -n "bitwalk glibc memo --write, one line: "; { time $O/bitwalk-memo --write $O/one.frames $O/s-one-d.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
+              fi
+              if [ "$has_opt2" = true ]; then
+                { echo -n "bitwalk glibc option 2 --write, one line: "; { time $O/bitwalk-opt2 --write $O/one.frames $O/s-one-e.bit $PF > /dev/null 2>&1; } 2>&1; } >> $O/split.txt
               fi
             fi
             echo "--- user and sys time, one pass each"
@@ -351,16 +459,17 @@ jobs:
               [ "$same_frames" = true ] && [ "$same_payload" = true ] || round_bad=true
               if [ "$round_bad" = true ]; then ok=false; fi
             done
-            # The memo arm wrote from fasm2frames output, so only its payload is compared.
-            memo_ran=false
-            [ -f "out/d$i.bit" ] && memo_ran=true
-            if [ "$memo_ran" = true ]; then
-              pd=$(payload "out/d$i.bit")
-              same_memo=false
-              [ "$pa" = "$pd" ] && same_memo=true
-              echo "round $i arm d: payload identical $same_memo (frames from fasm2frames)"
-              if [ "$same_memo" != true ]; then ok=false; fi
-            fi
+            # Arms d and e wrote from fasm2frames output, so only their payload is compared.
+            for arm in d e; do
+              arm_ran=false
+              [ -f "out/$arm$i.bit" ] && arm_ran=true
+              if [ "$arm_ran" != true ]; then continue; fi
+              pw=$(payload "out/$arm$i.bit")
+              same_write=false
+              [ "$pa" = "$pw" ] && same_write=true
+              echo "round $i arm $arm: payload identical $same_write (frames from fasm2frames)"
+              if [ "$same_write" != true ]; then ok=false; fi
+            done
           done
           po=$(payload fasm/blinky_ax7203.bit)
           pb=$(payload out/b1.bit)
@@ -370,7 +479,7 @@ jobs:
           # The short files are informational: a disagreement there is reported, not fatal.
           : > out/size-compare.txt
           for size in one half; do
-            for arm in b c d; do
+            for arm in b c d e; do
               both_ran=false
               [ -f "out/$size-a1.bit" ] && [ -f "out/$size-${arm}1.bit" ] && both_ran=true
               if [ "$both_ran" != true ]; then continue; fi
@@ -391,7 +500,7 @@ jobs:
             cat out/runs-size.txt
             cat out/size-compare.txt
             cat out/split.txt
-            echo "byte-identical in all 5 rounds, every arm (b musl, c glibc, d glibc memo): $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
+            echo "byte-identical in all 5 rounds, every arm (b musl, c glibc, d glibc memo, e glibc option 2): $ok; payload equals run $FASM_RUN's .bit: $same_as_artifact"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           if [ "$ok" != true ]; then
@@ -409,6 +518,7 @@ jobs:
             ${{ runner.temp }}/bitwalk
             ${{ runner.temp }}/bitwalk-gnu
             ${{ runner.temp }}/bitwalk-memo
+            ${{ runner.temp }}/bitwalk-opt2
             ${{ runner.temp }}/idx.txt
             ${{ runner.temp }}/sha256.txt
             ${{ runner.temp }}/image.txt
