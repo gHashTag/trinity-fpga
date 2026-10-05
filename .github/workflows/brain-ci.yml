@@ -77,6 +77,12 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
+
       - name: Build TRI Binary
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
@@ -214,6 +220,12 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
+
       - name: Build TRI Binary
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
@@ -255,6 +267,12 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
+
       - name: Test ${{ matrix.region }}
         run: |
           zig build test-${{ matrix.region }} -Dci=true
@@ -279,6 +297,12 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
+
       - name: Test Brain Integration
         run: |
           zig build test-brain -Dci=true
@@ -302,6 +326,12 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
+
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
 
       - name: Run Stress Test
         id: stress
@@ -432,6 +462,12 @@ jobs:
         with:
           version: 0.16.0
 
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
+
       - name: Build TRI Binary
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
         # nothing, so ./zig-out/bin/tri never existed for the steps below.
@@ -472,6 +508,12 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
+
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
 
       - name: Build TRI Binary
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
@@ -579,6 +621,12 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: 0.16.0
+
+      - name: CPU probe (exp, not for merge)
+        run: |
+          grep -m1 'model name' /proc/cpuinfo
+          echo "cpu-flags-md5 $(grep -m1 '^flags' /proc/cpuinfo | md5sum | cut -c1-12)"
+          nproc
 
       - name: Build TRI Binary
         # `tri-compile`, not `tri`: the `tri` step RUNS the CLI and installs
