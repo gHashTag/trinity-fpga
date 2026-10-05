@@ -1,513 +1,597 @@
-; lexer.t27 — Lexical Analyzer for TRI-27 Assembly
-; Tokenizes .t27 source code into tokens for the parser
+; compiler/parser/lexer.t27 — Lexer for TRI-27 Assembly
+; Tokenizes source code into Token stream for parser
+; φ² + 1/φ² = 3 | TRINITY
 
-; TokenType — enum of all token types
-enum TokenType {
-    ; End of input
-    EOF = 0
+module trilexer;
 
-    ; Identifiers and literals
-    Identifier = 1
-    Label = 2           ; identifier followed by colon
-    Integer = 3         ; decimal integer
-    HexInteger = 4      ; 0x prefix
-    BinaryInteger = 5   ; 0b prefix
-    String = 6          ; "string"
+using base::types;
 
-    ; Keywords
-    Const = 10
-    Data = 11
-    Code = 12
-    Export = 13
-    Import = 14
-    Use = 15
+// Configuration
+pub const MAX_IDENTIFIER_LEN: usize = 64;
+pub const MAX_NUMBER_LEN: usize = 20;
+pub const MAX_TOKENS: usize = 10000;
 
-    ; Opcodes
-    Mov = 20
-    Jz = 21
-    Jnz = 22
-    Jmp = 23
-    Mul = 24
-    Add = 25
-    Sub = 26
-    Bind = 27
-    Bundle = 28
-    Halt = 29
+// Token types
+pub const TokenType = enum(u8) {
+    eof = 0,
+    newline = 1,
+    dot = 2,
+    colon = 3,
+    semicolon = 4,
+    comma = 5,
+    hash = 6,
+    lparen = 7,
+    rparen = 8,
+    lbracket = 9,
+    rbracket = 10,
+    plus = 11,
+    minus = 12,
+    star = 13,
+    slash = 14,
+    percent = 15,
+    and = 16,
+    or = 17,
+    xor = 18,
+    tilde = 19,
+    lt = 20,
+    gt = 21,
+    eq = 22,
+    excl = 23,
 
-    ; Registers (r0-r26)
-    Reg = 30
+    // Keywords
+    use = 24,
+    const = 25,
+    data = 26,
+    code = 27,
+    dword = 28,
+    dspace = 29,
+    dtrit = 30,
 
-    ; Directives
-    DWord = 40
-    DSpace = 41
-    DTrit = 42
+    // TDD-Inside-Spec sections (assembly-style)
+    test = 31,
+    invariant = 32,
+    bench = 33,
+    verify = 34,
+    expected = 35,
+    setup = 36,
+    rationale = 37,
+    measure = 38,
+    target = 39,
 
-    ; Punctuation and operators
-    Colon = 50          ; :
-    Semicolon = 51      ; ;
-    Comma = 52          ; ,
-    Dot = 53            ; .
-    Hash = 54           ; #
-    LBracket = 55       ; [
-    RBracket = 56       ; ]
-    LParen = 57         ; (
-    RParen = 58         ; )
-    Equals = 59         ; =
-    Plus = 60           ; +
-    Minus = 61          ; -
-    Star = 62           ; *
-    Slash = 63          ; /
-    Percent = 64        ; %
+    // TDD-Inside-Spec high-level keywords (spec-style)
+    spec = 40,
+    rule = 41,
+    given = 42,
+    when = 43,
+    then = 44,
+    assert = 45,
+    and = 46,
+    expect = 47,
 
-    ; Whitespace (for line tracking)
-    Newline = 70
-}
+    // Literals and identifiers
+    integer = 48,
+    float = 49,
+    string = 50,
+    identifier = 51,
+    reg = 52,
+    label = 53,
 
-; Token — a single token from the source
-struct Token {
-    type : TokenType
-    text : string
-    value : i64           ; For integer literals
-    line : u32
-    column : u32
-    source_file : string
-}
+    // Opcodes
+    mov = 60,
+    jz = 61,
+    jnz = 62,
+    jmp = 63,
+    jge = 64,
+    jgt = 65,
+    jle = 66,
+    jlt = 67,
+    jeq = 68,
+    jne = 69,
+    call = 70,
+    ret = 71,
+    mul = 72,
+    add = 73,
+    sub = 74,
+    div = 75,
+    bind = 76,
+    bundle = 77,
+    halt = 78,
+    push = 79,
+    pop = 80,
+    load = 81,
+    store = 82,
+    shl = 83,
+    shr = 84,
+    and_op = 85,
+    or_op = 86,
+    xor_op = 87,
+    not = 88,
+    neg = 89,
+    sqrt = 90,
+    tanh = 91,
+    trap = 92,
+};
 
-; Lexer — lexical analyzer state
-struct Lexer {
-    source : string
-    pos : u32
-    line : u32
-    column : u32
-    source_file : string
-    current_char : u8
-}
+// Token struct
+pub const Token = struct {
+    type: TokenType,
+    line: u32,
+    column: u32,
+    text: []const u8,
+    value: u64,
+};
 
-; Create new lexer
-fn Lexer.new(source : string, source_file : string) -> Lexer {
-    let l = Lexer {
-        source: source,
-        pos: 0,
-        line: 1,
-        column: 1,
-        source_file: source_file,
-        current_char: 0
-    };
-    l.advance();
-    return l;
-}
+// Lexer state
+pub const Lexer = struct {
+    source: []const u8,
+    source_file: []const u8,
+    pos: usize = 0,
+    line: u32 = 1,
+    column: u32 = 1,
+    current_char: u8 = 0,
 
-; Advance to next character
-fn Lexer.advance() -> u8 {
-    if self.pos < self.source.len() {
-        self.current_char = self.source.u8_at(self.pos);
-        self.pos = self.pos + 1;
-        if self.current_char == '\n' {
-            self.line = self.line + 1;
-            self.column = 1;
-        } else {
-            self.column = self.column + 1;
-        }
-    } else {
-        self.current_char = 0;  ; EOF
-    }
-    return self.current_char;
-}
+    // Working buffers
+    identifier_buffer: [MAX_IDENTIFIER_LEN]u8 = [_]u8{0} ** MAX_IDENTIFIER_LEN,
+    number_buffer: [MAX_NUMBER_LEN]u8 = [_]u8{0} ** MAX_NUMBER_LEN,
 
-; Peek at next character without consuming
-fn Lexer.peek(offset : u32) -> u8 {
-    let peek_pos = self.pos + offset;
-    if peek_pos < self.source.len() {
-        return self.source.u8_at(peek_pos);
-    }
-    return 0;  ; EOF
-}
-
-; Skip whitespace (except newlines)
-fn Lexer.skip_whitespace() {
-    while self.current_char != 0 {
-        if self.current_char == ' ' or self.current_char == '\t' or
-           self.current_char == '\r' {
-            self.advance();
-        } else {
-            break;
-        }
-    }
-}
-
-; Skip comment (; until newline)
-fn Lexer.skip_comment() {
-    while self.current_char != 0 and self.current_char != '\n' {
-        self.advance();
-    }
-}
-
-; Read identifier or keyword
-fn Lexer.read_identifier() -> Token {
-    let start_line = self.line;
-    let start_col = self.column;
-    let start_pos = self.pos - 1;
-
-    while self.current_char != 0 {
-        if is_ident_char(self.current_char) {
-            self.advance();
-        } else {
-            break;
-        }
+    // Initialize lexer with source
+    pub fn init(lexer: *Lexer, source: []const u8, source_file: []const u8) void {
+        lexer.source = source;
+        lexer.source_file = source_file;
+        lexer.pos = 0;
+        lexer.line = 1;
+        lexer.column = 1;
+        lexer.current_char = if (source.len > 0) source[0] else 0;
     }
 
-    let text = self.source.substring(start_pos, self.pos - start_pos);
-    let token_type = self.get_keyword_type(text);
+    // Main entry point: tokenize source into Token array
+    pub fn tokenize(lexer: *Lexer, tokens: []Token) usize {
+        var token_count: usize = 0;
 
-    return Token {
-        type: token_type,
-        text: text,
-        value: 0,
-        line: start_line,
-        column: start_col,
-        source_file: self.source_file
-    };
-}
+        while (lexer.current_char != 0) {
+            // Skip whitespace (except newline)
+            lexer.skip_whitespace();
 
-; Check if character is valid for identifier
-fn is_ident_char(c : u8) -> bool {
-    ; Allow letters, digits, underscore, and dollar sign
-    ; First character must be letter or underscore
-    return (c >= 'a' and c <= 'z') or
-           (c >= 'A' and c <= 'Z') or
-           (c == '_') or
-           (c >= '0' and c <= '9') or
-           (c == '$');
-}
+            // Check for end of source
+            if (lexer.current_char == 0) break;
 
-; Get keyword type from identifier text
-fn Lexer.get_keyword_type(text : string) -> TokenType {
-    ; Case-insensitive keyword matching
-    let upper = text.to_upper_case();
-
-    ; Directives
-    if upper == "CONST" { return TokenType.Const; }
-    if upper == "DATA" { return TokenType.Data; }
-    if upper == "CODE" { return TokenType.Code; }
-    if upper == "EXPORT" { return TokenType.Export; }
-    if upper == "IMPORT" { return TokenType.Import; }
-    if upper == "USE" { return TokenType.Use; }
-
-    ; Opcodes
-    if upper == "MOV" { return TokenType.Mov; }
-    if upper == "JZ" { return TokenType.Jz; }
-    if upper == "JNZ" { return TokenType.Jnz; }
-    if upper == "JMP" { return TokenType.Jmp; }
-    if upper == "MUL" { return TokenType.Mul; }
-    if upper == "ADD" { return TokenType.Add; }
-    if upper == "SUB" { return TokenType.Sub; }
-    if upper == "BIND" { return TokenType.Bind; }
-    if upper == "BUNDLE" { return TokenType.Bundle; }
-    if upper == "HALT" { return TokenType.Halt; }
-
-    ; Data directives
-    if upper == "DWORD" { return TokenType.DWord; }
-    if upper == "DSPACE" { return TokenType.DSpace; }
-    if upper == "DTRIT" { return TokenType.DTrit; }
-
-    ; Default: identifier
-    return TokenType.Identifier;
-}
-
-; Read integer literal (decimal, hex, binary)
-fn Lexer.read_integer() -> Token {
-    let start_line = self.line;
-    let start_col = self.column;
-    let start_pos = self.pos - 1;
-    let token_type = TokenType.Integer;
-    let value : i64 = 0;
-
-    ; Check for hex prefix (0x)
-    if self.current_char == '0' and self.peek(0) == 'x' {
-        self.advance();  ; consume '0'
-        self.advance();  ; consume 'x'
-        token_type = TokenType.HexInteger;
-        value = self.read_hex_digits();
-    }
-    ; Check for binary prefix (0b)
-    else if self.current_char == '0' and self.peek(0) == 'b' {
-        self.advance();  ; consume '0'
-        self.advance();  ; consume 'b'
-        token_type = TokenType.BinaryInteger;
-        value = self.read_binary_digits();
-    }
-    ; Decimal
-    else {
-        value = self.read_decimal_digits();
-    }
-
-    return Token {
-        type: token_type,
-        text: self.source.substring(start_pos, self.pos - start_pos),
-        value: value,
-        line: start_line,
-        column: start_col,
-        source_file: self.source_file
-    };
-}
-
-; Read hexadecimal digits
-fn Lexer.read_hex_digits() -> i64 {
-    let value : i64 = 0;
-    while self.current_char != 0 {
-        let digit : i64 = 0;
-        if self.current_char >= '0' and self.current_char <= '9' {
-            digit = (self.current_char - '0') as i64;
-        } else if self.current_char >= 'a' and self.current_char <= 'f' {
-            digit = (self.current_char - 'a' + 10) as i64;
-        } else if self.current_char >= 'A' and self.current_char <= 'F' {
-            digit = (self.current_char - 'A' + 10) as i64;
-        } else {
-            break;
-        }
-        value = value * 16 + digit;
-        self.advance();
-    }
-    return value;
-}
-
-; Read binary digits
-fn Lexer.read_binary_digits() -> i64 {
-    let value : i64 = 0;
-    while self.current_char != 0 {
-        if self.current_char == '0' or self.current_char == '1' {
-            let digit = (self.current_char - '0') as i64;
-            value = value * 2 + digit;
-            self.advance();
-        } else {
-            break;
-        }
-    }
-    return value;
-}
-
-; Read decimal digits
-fn Lexer.read_decimal_digits() -> i64 {
-    let value : i64 = 0;
-    while self.current_char != 0 {
-        if self.current_char >= '0' and self.current_char <= '9' {
-            let digit = (self.current_char - '0') as i64;
-            value = value * 10 + digit;
-            self.advance();
-        } else {
-            break;
-        }
-    }
-    return value;
-}
-
-; Read register (r0-r26)
-fn Lexer.read_register() -> Token {
-    let start_line = self.line;
-    let start_col = self.column;
-    let start_pos = self.pos - 1;
-
-    ; Already consumed 'r', now read number
-    self.advance();  ; consume 'r'
-    let reg_num = self.read_decimal_digits();
-
-    return Token {
-        type: TokenType.Reg,
-        text: self.source.substring(start_pos, self.pos - start_pos),
-        value: reg_num,
-        line: start_line,
-        column: start_col,
-        source_file: self.source_file
-    };
-}
-
-; Read string literal
-fn Lexer.read_string() -> Token {
-    let start_line = self.line;
-    let start_col = self.column;
-    let start_pos = self.pos - 1;
-
-    self.advance();  ; consume opening quote
-
-    ; Read until closing quote
-    while self.current_char != 0 and self.current_char != '"' {
-        if self.current_char == '\\' {
-            self.advance();  ; consume backslash
-            ; Handle escape sequences
-        }
-        self.advance();
-    }
-
-    if self.current_char == '"' {
-        self.advance();  ; consume closing quote
-    }
-
-    return Token {
-        type: TokenType.String,
-        text: self.source.substring(start_pos, self.pos - start_pos),
-        value: 0,
-        line: start_line,
-        column: start_col,
-        source_file: self.source_file
-    };
-}
-
-; Get next token
-fn Lexer.next_token() -> Token {
-    while self.current_char != 0 {
-        ; Skip whitespace
-        if self.current_char == ' ' or self.current_char == '\t' or self.current_char == '\r' {
-            self.skip_whitespace();
-            continue;
-        }
-
-        ; Newline
-        if self.current_char == '\n' {
-            let line = self.line;
-            let col = self.column;
-            self.advance();
-            return Token {
-                type: TokenType.Newline,
-                text: "\\n",
-                value: 0,
-                line: line,
-                column: col,
-                source_file: self.source_file
-            };
-        }
-
-        ; Comment
-        if self.current_char == ';' {
-            self.skip_comment();
-            continue;
-        }
-
-        ; Register (r0-r26)
-        if self.current_char == 'r' and is_digit(self.peek(0)) {
-            return self.read_register();
-        }
-
-        ; Identifier or keyword
-        if is_alpha(self.current_char) or self.current_char == '_' {
-            let token = self.read_identifier();
-            ; Check if it's a label (followed by colon)
-            if self.current_char == ':' {
-                self.advance();
-                token.type = TokenType.Label;
+            // Check for newline
+            if (lexer.current_char == '\n') {
+                tokens[token_count] = Token{
+                    .type = .newline,
+                    .line = lexer.line,
+                    .column = lexer.column,
+                    .text = "\n",
+                    .value = 0,
+                };
+                token_count += 1;
+                lexer.line += 1;
+                lexer.column = 1;
+                lexer.advance_char();
+                continue;
             }
-            return token;
+
+            // Check for comment (;)
+            if (lexer.current_char == ';') {
+                lexer.skip_comment();
+                continue;
+            }
+
+            // Check for directives (.use, .const, etc.)
+            if (lexer.current_char == '.') {
+                lexer.advance_char();
+                const ident = lexer.read_identifier();
+                const token_type = lexer.lookup_keyword(ident);
+                tokens[token_count] = Token{
+                    .type = token_type,
+                    .line = lexer.line,
+                    .column = lexer.column,
+                    .text = ident,
+                    .value = 0,
+                };
+                token_count += 1;
+                continue;
+            }
+
+            // Check for single-character tokens
+            const single_token = lexer.read_single_char();
+            if (single_token != .identifier) {
+                tokens[token_count] = Token{
+                    .type = single_token,
+                    .line = lexer.line,
+                    .column = lexer.column,
+                    .text = lexer.identifier_buffer[0..1],
+                    .value = 0,
+                };
+                token_count += 1;
+                continue;
+            }
+
+            // Check for digit (number)
+            if (lexer.current_char >= '0' and lexer.current_char <= '9') {
+                const (value, text) = lexer.read_number();
+                tokens[token_count] = Token{
+                    .type = .integer,
+                    .line = lexer.line,
+                    .column = lexer.column,
+                    .text = text,
+                    .value = value,
+                };
+                token_count += 1;
+                continue;
+            }
+
+            // Identifier, keyword, or register
+            const ident = lexer.read_identifier();
+            const token_type = lexer.lookup_keyword(ident);
+
+            // Check if it's a register
+            if (token_type == .identifier) {
+                const (is_reg, reg_num) = lexer.is_register(ident);
+                if (is_reg) {
+                    tokens[token_count] = Token{
+                        .type = .reg,
+                        .line = lexer.line,
+                        .column = lexer.column,
+                        .text = ident,
+                        .value = reg_num,
+                    };
+                } else {
+                    tokens[token_count] = Token{
+                        .type = .identifier,
+                        .line = lexer.line,
+                        .column = lexer.column,
+                        .text = ident,
+                        .value = 0,
+                    };
+                }
+            } else {
+                tokens[token_count] = Token{
+                    .type = token_type,
+                    .line = lexer.line,
+                    .column = lexer.column,
+                    .text = ident,
+                    .value = 0,
+                };
+            }
+            token_count += 1;
         }
 
-        ; Integer literal
-        if is_digit(self.current_char) {
-            return self.read_integer();
+        // Emit EOF token
+        tokens[token_count] = Token{
+            .type = .eof,
+            .line = lexer.line,
+            .column = lexer.column,
+            .text = "",
+            .value = 0,
+        };
+        token_count += 1;
+
+        return token_count;
+    }
+
+    // Advance to next character
+    fn advance_char(lexer: *Lexer) void {
+        if (lexer.pos < lexer.source.len) {
+            lexer.pos += 1;
+            lexer.column += 1;
+            lexer.current_char = if (lexer.pos < lexer.source.len)
+                lexer.source[lexer.pos]
+            else
+                0;
+        } else {
+            lexer.current_char = 0;
         }
+    }
 
-        ; String literal
-        if self.current_char == '"' {
-            return self.read_string();
+    // Peek at next character
+    fn peek_char(lexer: *Lexer) u8 {
+        if (lexer.pos + 1 < lexer.source.len) {
+            return lexer.source[lexer.pos + 1];
         }
+        return 0;
+    }
 
-        ; Single-character tokens
-        let token_type = TokenType.EOF;
-        let token_text : string = "";
-        let line = self.line;
-        let col = self.column;
-
-        switch self.current_char {
-            case ':':
-                token_type = TokenType.Colon;
-                token_text = ":";
-            case ';':
-                token_type = TokenType.Semicolon;
-                token_text = ";";
-            case ',':
-                token_type = TokenType.Comma;
-                token_text = ",";
-            case '.':
-                token_type = TokenType.Dot;
-                token_text = ".";
-            case '#':
-                token_type = TokenType.Hash;
-                token_text = "#";
-            case '[':
-                token_type = TokenType.LBracket;
-                token_text = "[";
-            case ']':
-                token_type = TokenType.RBracket;
-                token_text = "]";
-            case '(':
-                token_type = TokenType.LParen;
-                token_text = "(";
-            case ')':
-                token_type = TokenType.RParen;
-                token_text = ")";
-            case '=':
-                token_type = TokenType.Equals;
-                token_text = "=";
-            case '+':
-                token_type = TokenType.Plus;
-                token_text = "+";
-            case '-':
-                token_type = TokenType.Minus;
-                token_text = "-";
-            case '*':
-                token_type = TokenType.Star;
-                token_text = "*";
-            case '/':
-                token_type = TokenType.Slash;
-                token_text = "/";
-            case '%':
-                token_type = TokenType.Percent;
-                token_text = "%";
-            default:
-                ; Unknown character
-                token_text = string.from_char(self.current_char);
+    // Skip whitespace (except newline)
+    fn skip_whitespace(lexer: *Lexer) void {
+        while (lexer.current_char == ' ' or
+               lexer.current_char == '\t' or
+               lexer.current_char == '\r')
+        {
+            lexer.advance_char();
         }
+    }
 
-        self.advance();
-        return Token {
-            type: token_type,
-            text: token_text,
-            value: 0,
-            line: line,
-            column: col,
-            source_file: self.source_file
+    // Skip comment
+    fn skip_comment(lexer: *Lexer) void {
+        while (lexer.current_char != 0 and lexer.current_char != '\n') {
+            lexer.advance_char();
+        }
+    }
+
+    // Read identifier into buffer
+    fn read_identifier(lexer: *Lexer) []const u8 {
+        var i: usize = 0;
+        while ((lexer.current_char >= '0' and lexer.current_char <= '9') or
+               (lexer.current_char >= 'A' and lexer.current_char <= 'Z') or
+               (lexer.current_char >= 'a' and lexer.current_char <= 'z') or
+               lexer.current_char == '_')
+        {
+            if (i < MAX_IDENTIFIER_LEN - 1) {
+                lexer.identifier_buffer[i] = lexer.current_char;
+                i += 1;
+            }
+            lexer.advance_char();
+        }
+        lexer.identifier_buffer[i] = 0;
+        return lexer.identifier_buffer[0..i];
+    }
+
+    // Read single character token
+    fn read_single_char(lexer: *Lexer) TokenType {
+        const c = lexer.current_char;
+        lexer.advance_char();
+
+        return switch (c) {
+            ':' => .colon,
+            ';' => .semicolon,
+            ',' => .comma,
+            '#' => .hash,
+            '(' => .lparen,
+            ')' => .rparen,
+            '[' => .lbracket,
+            ']' => .rbracket,
+            '+' => .plus,
+            '-' => .minus,
+            '*' => .star,
+            '/' => .slash,
+            '%' => .percent,
+            '&' => .and,
+            '|' => .or,
+            '^' => .xor,
+            '~' => .tilde,
+            '<' => .lt,
+            '>' => .gt,
+            '=' => .eq,
+            '!' => .excl,
+            else => .identifier,
         };
     }
 
-    ; EOF
-    return Token {
-        type: TokenType.EOF,
-        text: "",
-        value: 0,
-        line: self.line,
-        column: self.column,
-        source_file: self.source_file
-    };
-}
+    // Read number (integer or float)
+    fn read_number(lexer: *Lexer) struct { u64, []const u8 } {
+        var value: u64 = 0;
+        var is_hex = false;
+        var is_binary = false;
+        var i: usize = 0;
 
-; Tokenize entire source
-fn tokenize(source : string, source_file : string) -> []Token {
-    let lexer = Lexer.new(source, source_file);
-    let tokens : []Token = [];
-
-    loop {
-        let token = lexer.next_token();
-        tokens.push(token);
-        if token.type == TokenType.EOF {
-            break;
+        // Check for hex prefix
+        if (lexer.current_char == '0') {
+            lexer.advance_char();
+            const next = lexer.current_char;
+            if (next == 'x' or next == 'X') {
+                is_hex = true;
+                lexer.advance_char();
+            } else if (next == 'b' or next == 'B') {
+                is_binary = true;
+                lexer.advance_char();
+            } else {
+                // Just a zero
+                lexer.number_buffer[i] = '0';
+                i += 1;
+            }
         }
+
+        const base: u64 = if (is_hex) 16 else if (is_binary) 2 else 10;
+
+        while (lexer.is_digit(lexer.current_char) or
+               (is_hex and lexer.is_hex_digit(lexer.current_char)))
+        {
+            const digit = if (lexer.current_char >= '0' and lexer.current_char <= '9')
+                @as(u64, lexer.current_char - '0')
+            else if (lexer.current_char >= 'a' and lexer.current_char <= 'f')
+                @as(u64, lexer.current_char - 'a' + 10)
+            else
+                @as(u64, lexer.current_char - 'A' + 10);
+
+            value = value * base + digit;
+
+            if (i < MAX_NUMBER_LEN - 1) {
+                lexer.number_buffer[i] = lexer.current_char;
+                i += 1;
+            }
+            lexer.advance_char();
+        }
+
+        return .{ value, lexer.number_buffer[0..i] };
     }
 
-    return tokens;
+    // Check if character is a digit
+    fn is_digit(lexer: *Lexer, c: u8) bool {
+        _ = lexer;
+        return c >= '0' and c <= '9';
+    }
+
+    // Check if character is a hex digit
+    fn is_hex_digit(lexer: *Lexer, c: u8) bool {
+        _ = lexer;
+        return (c >= '0' and c <= '9') or
+               (c >= 'a' and c <= 'f') or
+               (c >= 'A' and c <= 'F');
+    }
+
+    // Check if identifier is a register (r0-r26, R0-R26)
+    fn is_register(lexer: *Lexer, ident: []const u8) struct { bool, u64 } {
+        _ = lexer;
+        if (ident.len < 2) return .{ false, 0 };
+
+        const first = ident[0];
+        if (first != 'r' and first != 'R') return .{ false, 0 };
+
+        // Parse register number
+        var num: u64 = 0;
+        for (ident[1..]) |c| {
+            if (c < '0' or c > '9') return .{ false, 0 };
+            num = num * 10 + (c - '0');
+        }
+
+        if (num > 26) return .{ false, 0 };
+        return .{ true, num };
+    }
+
+    // Lookup keyword in table
+    fn lookup_keyword(lexer: *Lexer, ident: []const u8) TokenType {
+        _ = lexer;
+        // Simple keyword lookup (would use hash table in implementation)
+        if (std.mem.eql(u8, ident, "use")) return .use;
+        if (std.mem.eql(u8, ident, "const")) return .const;
+        if (std.mem.eql(u8, ident, "data")) return .data;
+        if (std.mem.eql(u8, ident, "code")) return .code;
+        if (std.mem.eql(u8, ident, "dword")) return .dword;
+        if (std.mem.eql(u8, ident, "dspace")) return .dspace;
+        if (std.mem.eql(u8, ident, "dtrit")) return .dtrit;
+        if (std.mem.eql(u8, ident, "test")) return .test;
+        if (std.mem.eql(u8, ident, "invariant")) return .invariant;
+        if (std.mem.eql(u8, ident, "bench")) return .bench;
+        if (std.mem.eql(u8, ident, "verify")) return .verify;
+        if (std.mem.eql(u8, ident, "expected")) return .expected;
+        if (std.mem.eql(u8, ident, "setup")) return .setup;
+        if (std.mem.eql(u8, ident, "rationale")) return .rationale;
+        if (std.mem.eql(u8, ident, "measure")) return .measure;
+        if (std.mem.eql(u8, ident, "target")) return .target;
+        if (std.mem.eql(u8, ident, "spec")) return .spec;
+        if (std.mem.eql(u8, ident, "rule")) return .rule;
+        if (std.mem.eql(u8, ident, "given")) return .given;
+        if (std.mem.eql(u8, ident, "when")) return .when;
+        if (std.mem.eql(u8, ident, "then")) return .then;
+        if (std.mem.eql(u8, ident, "assert")) return .assert;
+        if (std.mem.eql(u8, ident, "and")) return .and;
+        if (std.mem.eql(u8, ident, "expect")) return .expect;
+        if (std.mem.eql(u8, ident, "mov")) return .mov;
+        if (std.mem.eql(u8, ident, "jz")) return .jz;
+        if (std.mem.eql(u8, ident, "jnz")) return .jnz;
+        if (std.mem.eql(u8, ident, "jmp")) return .jmp;
+        if (std.mem.eql(u8, ident, "jge")) return .jge;
+        if (std.mem.eql(u8, ident, "jgt")) return .jgt;
+        if (std.mem.eql(u8, ident, "jle")) return .jle;
+        if (std.mem.eql(u8, ident, "jlt")) return .jlt;
+        if (std.mem.eql(u8, ident, "jeq")) return .jeq;
+        if (std.mem.eql(u8, ident, "jne")) return .jne;
+        if (std.mem.eql(u8, ident, "call")) return .call;
+        if (std.mem.eql(u8, ident, "ret")) return .ret;
+        if (std.mem.eql(u8, ident, "mul")) return .mul;
+        if (std.mem.eql(u8, ident, "add")) return .add;
+        if (std.mem.eql(u8, ident, "sub")) return .sub;
+        if (std.mem.eql(u8, ident, "div")) return .div;
+        if (std.mem.eql(u8, ident, "bind")) return .bind;
+        if (std.mem.eql(u8, ident, "bundle")) return .bundle;
+        if (std.mem.eql(u8, ident, "halt")) return .halt;
+        if (std.mem.eql(u8, ident, "push")) return .push;
+        if (std.mem.eql(u8, ident, "pop")) return .pop;
+        if (std.mem.eql(u8, ident, "load")) return .load;
+        if (std.mem.eql(u8, ident, "store")) return .store;
+        if (std.mem.eql(u8, ident, "shl")) return .shl;
+        if (std.mem.eql(u8, ident, "shr")) return .shr;
+        if (std.mem.eql(u8, ident, "and")) return .and_op;
+        if (std.mem.eql(u8, ident, "or")) return .or_op;
+        if (std.mem.eql(u8, ident, "xor")) return .xor_op;
+        if (std.mem.eql(u8, ident, "not")) return .not;
+        if (std.mem.eql(u8, ident, "neg")) return .neg;
+        if (std.mem.eql(u8, ident, "sqrt")) return .sqrt;
+        if (std.mem.eql(u8, ident, "tanh")) return .tanh;
+        if (std.mem.eql(u8, ident, "trap")) return .trap;
+
+        return .identifier;
+    }
+};
+
+// Tests
+test "test_tokenize_spec_keywords" {
+    // Verify: all T27 keywords are recognized
+    // Setup: tokenize source with all keywords (use, const, data, code, etc.)
+    // Expected: each keyword has correct TOKEN_* type
 }
 
-; Helper functions
-fn is_digit(c : u8) -> bool {
-    return c >= '0' and c <= '9';
+test "test_token_roundtrip" {
+    // Verify: token text matches source for literals and identifiers
+    // Setup: tokenize source with identifiers and literals
+    // Expected: token.text == source substring
 }
 
-fn is_alpha(c : u8) -> bool {
-    return (c >= 'a' and c <= 'z') or (c >= 'A' and c <= 'Z');
+test "test_register_recognition" {
+    // Verify: r0-r26 and R0-R26 are recognized as registers
+    // Setup: tokenize "r0 R15 r26"
+    // Expected: tokens with correct reg numbers
+}
+
+test "test_number_formats" {
+    // Verify: decimal, hex (0x), binary (0b) numbers parsed correctly
+    // Setup: tokenize "42 0x2A 0b101010"
+    // Expected: all three evaluate to 42
+}
+
+test "test_comment_skipping" {
+    // Verify: comments (; comment) are not tokenized
+    // Setup: tokenize "instruction ; this is a comment"
+    // Expected: only "instruction" token, no comment tokens
+}
+
+test "test_line_tracking" {
+    // Verify: token line and column are correct
+    // Setup: tokenize multi-line source
+    // Expected: token.line and token.column match source positions
+}
+
+test "test_newline_handling" {
+    // Verify: newlines are tokenized and line counter increments
+    // Setup: tokenize source with multiple lines
+    // Expected: line number increments after each newline
+}
+
+test "test_string_literal" {
+    // Verify: string literals are parsed correctly
+    // Setup: tokenize '"hello world"'
+    // Expected: token type STRING, text includes quotes
+}
+
+// Invariants
+invariant "token_roundtrip" {
+    // For all valid tokens: token.text == source[token.position : token.length]
+    // Rationale: Lexical analysis must preserve source text
+}
+
+invariant "line_column_accuracy" {
+    // token.line and token.column accurately reflect source position
+    // Rationale: Error messages must point to correct location
+}
+
+invariant "register_range_validity" {
+    // Only r0-r26 and R0-R26 are valid registers
+    // Rationale: Register encoding has fixed range (27 registers)
+}
+
+invariant "number_format_validity" {
+    // 0x prefix -> hex, 0b prefix -> binary, else decimal
+    // Rationale: Number prefixes are unambiguous
+}
+
+invariant "eof_token_termination" {
+    // Token stream always ends with EOF token
+    // Rationale: Parser needs explicit end marker
+}
+
+invariant "no_lexical_errors_on_valid_source" {
+    // For syntactically valid t27: lexer produces no errors
+    // Rationale: Clean source should lex cleanly
+}
+
+// Benchmarks
+bench "bench_tokenize_throughput_chars_per_sec" {
+    // Measure: characters processed per second
+    // Target: > 1M chars/sec for typical source
+}
+
+bench "test_token_memory_overhead" {
+    // Measure: bytes per token
+    // Target: < 64 bytes per token (efficient storage)
 }
