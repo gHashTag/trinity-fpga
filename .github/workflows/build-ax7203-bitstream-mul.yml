@@ -1,45 +1,53 @@
 name: Build AX7203 MUL Bitstream
+# EXPERIMENT BRANCH exp/bitstream-mul-image-ab -- not for merge.
+# Main's only run (29235721559, 2026-07-13) failed to route $PACKER_GND_NET with
+# image eced1cdd and a cached chipdb of unknown age. A rerun on 2026-10-05
+# (37263347699, :latest = 35c91073, chipdb built in the run) routed the same
+# DSP48E1 netlist. This isolates the image: every arm builds its own chipdb
+# from its own image, so no cached chipdb is involved anywhere.
 on:
   workflow_dispatch:
     inputs:
       design:
         description: 'Design module name'
         required: true
-        default: 'corona_compute_gf8_mul_ax7203'
+        default: 'corona_compute_gf16_mul_ax7203'
 
 jobs:
   build:
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arm: old-dsp
+            image: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+            synth: synth_xilinx -abc9 -nocarry -arch xc7
+          - arm: new-dsp
+            image: regymm/openxc7@sha256:35c910739e3a4b40850b85de31ebc8954985a66e982009f09123b70dbb0e75da
+            synth: synth_xilinx -abc9 -nocarry -arch xc7
+          - arm: old-nodsp
+            image: regymm/openxc7@sha256:eced1cdd4727549f2d983328e0cf170fb6f6f67d87f19b2bf24365163368c70c
+            synth: synth_xilinx -abc9 -nocarry -nodsp -arch xc7
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: true
-      - name: Generate chipdb cache
-        id: chipdb
-        uses: actions/cache@v4
-        with:
-          path: chipdb-xc7a200tfbg484-2.bin
-          key: chipdb-xc7a200tfbg484-2-v2
-      - name: Build chipdb (if not cached)
-        if: steps.chipdb.outputs.cache-hit != 'true'
+      - name: Toolchain versions
         run: |
-          docker run --rm -v "$(pwd):/github" regymm/openxc7:latest bash -c '
+          docker run --rm "${{ matrix.image }}" bash -c 'yosys -V; nextpnr-xilinx --version 2>&1 | head -2; git -C /nextpnr-xilinx log -1 --format="nextpnr-xilinx %h %cI" 2>/dev/null; git -C /nextpnr-xilinx/xilinx/external/prjxray-db log -1 --format="prjxray-db %h %cI" 2>/dev/null; true'
+      - name: Build chipdb in this run
+        run: |
+          docker run --rm -v "$(pwd):/github" "${{ matrix.image }}" bash -c '
           cd /nextpnr-xilinx/xilinx &&
           python3 python/bbaexport.py --xray /nextpnr-xilinx/xilinx/external/prjxray-db/artix7 --metadata /nextpnr-xilinx/xilinx/external/nextpnr-xilinx-meta/artix7 --device xc7a200tfbg484-2 --constids /nextpnr-xilinx/xilinx/constids.inc --bba /tmp/chipdb.bba &&
           bbasm --le /tmp/chipdb.bba /github/chipdb-xc7a200tfbg484-2.bin'
-      - name: Build bitstream
+          shasum -a 256 chipdb-xc7a200tfbg484-2.bin
+      - name: Synth and place-and-route
         run: |
           DESIGN="${{ github.event.inputs.design }}"
-          docker run --rm -v "$(pwd):/github" -e DESIGN="$DESIGN" regymm/openxc7:latest bash -c '
+          docker run --rm -v "$(pwd):/github" -e DESIGN="$DESIGN" -e SYNTH="${{ matrix.synth }}" "${{ matrix.image }}" bash -c '
           cd /github/fpga/openxc7-synth
-          yosys -q -p "read_verilog gf_adder_param.v gf_mul_param.v ${DESIGN}.v; synth_xilinx -abc9 -nocarry -arch xc7; write_json ${DESIGN}.json" || exit 1
-          cp /github/chipdb-xc7a200tfbg484-2.bin /chipdb/xc7a200tfbg484-2.bin
-          nextpnr-xilinx --chipdb /chipdb/xc7a200tfbg484-2.bin --json ${DESIGN}.json --xdc ax7203_corona.xdc --fasm ${DESIGN}.fasm --placer heap --router router1 --timing-allow-fail --freq 5.0 || exit 1
-          /prjxray/env/bin/fasm2frames --db-root /nextpnr-xilinx/xilinx/external/prjxray-db/artix7 --part xc7a200tfbg484-2 ${DESIGN}.fasm ${DESIGN}.frames 2>/dev/null
-          xc7frames2bit --part_file /nextpnr-xilinx/xilinx/external/prjxray-db/artix7/xc7a200tfbg484-2/part.yaml --frm_file ${DESIGN}.frames --output_file ${DESIGN}.bit
-          ls -la ${DESIGN}.bit'
-      - name: Upload bitstream
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ github.event.inputs.design }}_bitstream
-          path: fpga/openxc7-synth/${{ github.event.inputs.design }}.bit
+          yosys -q -p "read_verilog gf_adder_param.v gf_mul_param.v ${DESIGN}.v; ${SYNTH}; write_json ${DESIGN}.json" || exit 1
+          nextpnr-xilinx --chipdb /github/chipdb-xc7a200tfbg484-2.bin --json ${DESIGN}.json --xdc ax7203_corona.xdc --fasm ${DESIGN}.fasm --placer heap --router router1 --timing-allow-fail --freq 5.0 > /github/np.log 2>&1
+          echo "nextpnr rc=$?"'
+          grep -E "PACKER_GND|PACKER_VCC|Routing complete|Routing design failed|Max frequency|SLICE_LUTX:|SLICE_FFX:|DSP48E1:|^ERROR" np.log
+          grep -q "Routing complete" np.log
