@@ -152,6 +152,9 @@ pub const Error = error{
     UnknownNode,
     DuplicateNode,
     InsufficientStake,
+    /// With a journal open, an owner name the journal cannot hold. Refused at
+    /// registration: accepted here it would earn work and never be credited.
+    InvalidOwner,
     OutOfMemory,
 };
 
@@ -187,6 +190,9 @@ pub const Ledger = struct {
     /// the nonce mark the coordinator must resume at. An unreadable journal is
     /// an error, never an empty one.
     pub fn openJournal(self: *Ledger, j: journal_mod.Journal, operator: []const u8) journal_mod.Error!journal_mod.Restored {
+        if (operator.len != 0 and !journal_mod.isHandle(operator)) return journal_mod.Error.InvalidHandle;
+        var it = self.accounts.valueIterator();
+        while (it.next()) |a| if (!journal_mod.isHandle(a.owner)) return journal_mod.Error.InvalidHandle;
         const r = try j.restore(self.gpa, &self.spent_nonces);
         self.journal = j;
         self.operator = operator;
@@ -197,6 +203,7 @@ pub const Ledger = struct {
     /// onboarding step: an identity, an owner, and something to lose.
     pub fn register(self: *Ledger, node_id: u32, owner: []const u8, physical: bool, stake_mtri: u64) Error!void {
         if (self.accounts.contains(node_id)) return Error.DuplicateNode;
+        if (self.journal != null and !journal_mod.isHandle(owner)) return Error.InvalidOwner;
         if (stake_mtri < self.policy.min_stake_mtri) return Error.InsufficientStake;
         try self.accounts.put(self.gpa, node_id, .{
             .node_id = node_id,

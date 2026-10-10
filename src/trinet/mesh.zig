@@ -34,6 +34,7 @@ pub const Error = error{
     UnknownNode,
     DuplicateNode,
     InsufficientStake,
+    InvalidOwner,
     UnsoundPolicy,
     /// The journal could not take the next nonce mark, so no nonce is issued.
     JournalWrite,
@@ -835,4 +836,30 @@ test "an unreadable journal refuses to open" {
     var m = try Mesh.init(std.testing.allocator, .{});
     defer m.deinit();
     try std.testing.expectError(journal_mod.Error.JournalUnreadable, m.openJournal(.{ .path = "/tmp" }, ""));
+}
+
+test "an owner name the journal cannot hold is refused at the door, not at payout" {
+    if (comptime !@import("builtin").link_libc) return error.SkipZigTest;
+    const j: journal_mod.Journal = .{ .path = "/tmp/trinet-mesh-handle-906.jsonl" };
+    _ = std.c.unlink(j.path.ptr);
+    defer _ = std.c.unlink(j.path.ptr);
+    {
+        var m = try Mesh.init(std.testing.allocator, .{});
+        defer m.deinit();
+        _ = try m.openJournal(j, "");
+        try std.testing.expectError(Error.InvalidOwner, m.join(Node.initEmulated(0x4E4F4431, "peer-1", .honest), "developer 1", 100000));
+        try m.join(Node.initEmulated(0x4E4F4432, "peer-2", .honest), "developer-2", 100000);
+    }
+    {
+        // Joined before the journal opened: the journal refuses to open.
+        var m = try Mesh.init(std.testing.allocator, .{});
+        defer m.deinit();
+        try m.join(Node.initEmulated(0x4E4F4431, "peer-1", .honest), "a\"b", 100000);
+        try std.testing.expectError(journal_mod.Error.InvalidHandle, m.openJournal(j, ""));
+    }
+    {
+        var m = try Mesh.init(std.testing.allocator, .{});
+        defer m.deinit();
+        try std.testing.expectError(journal_mod.Error.InvalidHandle, m.openJournal(j, "op erator"));
+    }
 }

@@ -36,6 +36,8 @@ pub const Error = error{
     JournalMalformed,
     JournalWrite,
     NonceSpaceExhausted,
+    /// An owner or operator name the journal cannot hold as written.
+    InvalidHandle,
     OutOfMemory,
 };
 
@@ -142,7 +144,10 @@ pub const Journal = struct {
     }
 };
 
-fn isHandle(s: []const u8) bool {
+/// A GitHub-style handle: letters, digits, `-` and `_`. Names go into the
+/// journal unescaped, so only these pass, and the ledger refuses anything else
+/// at registration rather than at payout.
+pub fn isHandle(s: []const u8) bool {
     if (s.len == 0) return false;
     for (s) |ch| if (!std.ascii.isAlphanumeric(ch) and ch != '-' and ch != '_') return false;
     return true;
