@@ -196,6 +196,8 @@ jobs:
       # the image instead of from the freeze. So the pinned revision is checked
       # out here too, the checkout is asserted rather than assumed, and bbasm
       # comes from the build artifact.
+      #
+      # chipdb-uncached: built from the nextpnr-xilinx tree at NEXTPNR_REV, not the image, so an image-keyed cache would hand it the wrong constids (above); dispatch-only, 6 runs, last 2026-08-14 (#846)
       - name: Generate
         run: |
           chmod +x npnr/bin/nextpnr-xilinx npnr/bin/bbasm

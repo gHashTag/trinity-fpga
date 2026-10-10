@@ -84,6 +84,7 @@ jobs:
           '
           ls -l bin/
 
+      # chipdb-uncached: bbaexport runs from the image's tree after checking out NEXTPNR_STOCK, so the chipdb belongs to that revision, not to the image ID the cache keys on; dispatch-only, 7 runs, last 2026-08-18 (#846)
       - name: Generate the chipdb
         run: |
           mkdir -p chipdb

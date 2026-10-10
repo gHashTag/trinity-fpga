@@ -141,6 +141,8 @@ jobs:
       # and diff its ILOGIC configuration against Vivado's. IFFDELMUXE3 is now
       # exonerated -- absence IS the direct position -- so what remains is
       # whatever else Vivado programs on a working IDDR and we do not.
+      #
+      # chipdb-uncached: the composite action would fit, but this probe has run 3 times, the last on 2026-08-18, and it is the instrument behind openXC7/nextpnr-xilinx#114; changing it saves nothing measurable (#846)
       - name: Build the same design with openXC7 and diff the ILOGIC config
         run: |
           set +e
