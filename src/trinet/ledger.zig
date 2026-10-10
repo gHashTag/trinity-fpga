@@ -28,6 +28,7 @@
 
 const std = @import("std");
 const protocol = @import("protocol.zig");
+const journal_mod = @import("journal.zig");
 
 /// Credits are tracked in milli-TRI so that per-job rewards stay integral.
 pub const milli: u64 = 1000;
@@ -131,6 +132,11 @@ pub const Outcome = enum {
     unverifiable_not_charged,
     /// Node is suspended and should not have been dispatched to.
     not_eligible,
+    /// The coordinator could not put the credit on disk, or the nonce was not
+    /// issued by this coordinator run. Not credited and NOT slashed: both are
+    /// statements about us. A credit that is not on disk does not count
+    /// (gHashTag/t27 specs/trinet/node-work-credit.t27 may_credit).
+    not_recorded,
 };
 
 pub const Settlement = struct {
@@ -160,6 +166,12 @@ pub const Ledger = struct {
     total_corrupted: u64 = 0,
     total_unverifiable: u64 = 0,
     jobs_on_silicon: u64 = 0,
+    /// The durable record of what was paid (journal.zig). Without one, the
+    /// paid set lives in memory and a restart forgets it.
+    journal: ?journal_mod.Journal = null,
+    /// Who runs this coordinator. Empty, or equal to a node's owner, makes
+    /// that node's credits self-reported.
+    operator: []const u8 = "",
 
     pub fn init(gpa: std.mem.Allocator, policy: Policy) Error!Ledger {
         if (!policy.isSound()) return Error.UnsoundPolicy;
@@ -169,6 +181,16 @@ pub const Ledger = struct {
     pub fn deinit(self: *Ledger) void {
         self.accounts.deinit(self.gpa);
         self.spent_nonces.deinit(self.gpa);
+    }
+
+    /// Open the coordinator's journal: rebuild the paid set from it and return
+    /// the nonce mark the coordinator must resume at. An unreadable journal is
+    /// an error, never an empty one.
+    pub fn openJournal(self: *Ledger, j: journal_mod.Journal, operator: []const u8) journal_mod.Error!journal_mod.Restored {
+        const r = try j.restore(self.gpa, &self.spent_nonces);
+        self.journal = j;
+        self.operator = operator;
+        return r;
     }
 
     /// A developer attaches a node and bonds a stake. This is the whole
@@ -300,9 +322,30 @@ pub const Ledger = struct {
                 .detail = "receipt for an already-settled nonce",
             };
         }
+        const reward = self.policy.reward_per_job_mtri;
+
+        // Write before credit: with a journal, a credit counts only once its
+        // line is on disk, so a crash can lose a credit but never repeat one.
+        if (self.journal) |j| {
+            j.writeCredit(.{
+                .operator = self.operator,
+                .owner = acct.owner,
+                .node_id = dispatched_to,
+                .physical = acct.physical,
+                .nonce = job.nonceValue(),
+                .y = receipt.y,
+                .tag = receipt.tag,
+                .tag_kind = @tagName(receipt.kind),
+                .level = journal_mod.Level.of(self.operator, acct.owner),
+                .mtri = reward,
+            }) catch return .{
+                .node_id = dispatched_to,
+                .outcome = .not_recorded,
+                .detail = "journal write failed: not credited",
+            };
+        }
         try self.spent_nonces.put(self.gpa, key, {});
 
-        const reward = self.policy.reward_per_job_mtri;
         acct.credit_mtri += reward;
         acct.accepted += 1;
         acct.consecutive_rejections = 0;
