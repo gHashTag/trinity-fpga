@@ -26,14 +26,17 @@ name: reachability ratchet
 
 on:
   push:
+    branches: [main]
     paths:
       - 'src/tri/**'
       - 'build.zig'
       - '.github/workflows/reachability-ratchet.yml'
+  # every push path, so a PR that touches only one of them still runs this
   pull_request:
     paths:
       - 'src/tri/**'
       - 'build.zig'
+      - '.github/workflows/reachability-ratchet.yml'
   workflow_dispatch:
 
 # GitHub's default step shell is `bash -e {0}` -- NO pipefail. In `measurer | tee

@@ -28,18 +28,21 @@ name: tri builds
 
 on:
   push:
+    branches: [main]
     paths:
       - 'build.zig'
       - 'build.zig.zon'
       - 'src/tri/**'
       - 'src/vsa**'
       - '.github/workflows/tri-build.yml'
+  # every push path, so a PR that touches only one of them still runs this
   pull_request:
     paths:
       - 'build.zig'
       - 'build.zig.zon'
       - 'src/tri/**'
       - 'src/vsa**'
+      - '.github/workflows/tri-build.yml'
   workflow_dispatch:
 
 env:

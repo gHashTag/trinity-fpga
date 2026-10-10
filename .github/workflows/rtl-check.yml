@@ -6,17 +6,21 @@ name: RTL check
 # resolving the ref, reading the inputs across the boundary, checking out the
 # CALLER's code rather than the callee's.
 #
-# It also means these two chips are checked on every push by the same thing that
-# is offered to strangers, which is the only honest way to offer it.
+# It also means these two chips are checked on every PR commit and every push to
+# main by the same thing that is offered to strangers, which is the only honest
+# way to offer it.
 
 on:
   push:
+    branches: [main]
     paths:
       - 'ttsky26c/**'
       - '.github/workflows/rtl-check.yml'
+  # every push path, so a PR that touches only one of them still runs this
   pull_request:
     paths:
       - 'ttsky26c/**'
+      - '.github/workflows/rtl-check.yml'
   workflow_dispatch:
 
 permissions:

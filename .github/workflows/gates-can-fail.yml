@@ -38,6 +38,7 @@ name: Gates can fail
 
 on:
   push:
+    branches: [main]
     paths:
       - 'tools/check_*.py'
       - 'tools/materialise_siblings.sh'

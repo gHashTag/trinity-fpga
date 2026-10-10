@@ -17,9 +17,11 @@ on:
       - 'conformance/compute_golden_consistency.py'
       - 'conformance/corona_decode_host_ax7203.py'
       - 'conformance/golden_consistency.py'
+  # every push path, so a PR that touches only one of them still runs this
   pull_request:
     paths:
       - 'conformance/**'
+      - '.github/workflows/conformance-selftest.yml'
 
 jobs:
   selftest:
