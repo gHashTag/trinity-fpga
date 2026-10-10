@@ -43,7 +43,6 @@ const observability = @import("observability.zig");
 const structured_log = @import("structured_log.zig");
 const env_loader = @import("env_loader.zig");
 const golden_chain = @import("golden_chain");
-const tri_clara = @import("tri_clara.zig");
 const tri_sparc = @import("sparc/mod.zig");
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -383,8 +382,6 @@ pub fn main() !void {
             demos.runSpecExecDemo();
             return;
         }
-        // CLARA namespace: route `tri clara <command>` to CLARA proposal commands
-        // CLARA command now handled by tri_register.zig execute_map
         // Bench namespace: route `tri bench compare/record/history` to perf_benchmark
         if (std.mem.eql(u8, first_arg, "bench")) {
             const bench_sub = if (arg_idx + 1 < args.len) args[arg_idx + 1] else "";
@@ -907,7 +904,6 @@ pub fn main() !void {
         .fpga => try tri_register.runFpgaCommand(allocator, cmd_args),
         .train => try tri_train.runTrainCommand(allocator, cmd_args),
         .zenodo => try tri_zenodo.runZenodoCommand(allocator, cmd_args),
-        .clara => try tri_clara.main(allocator, cmd_args), // DARPA CLARA TA1 (PA-25-07-02)
         .kaggle => try tri_kaggle.runKaggleCommand(allocator, cmd_args),
         .sparc => try tri_sparc.runCommand(allocator, cmd_args), // SPARC galaxy rotation curves
         .cloud => try tri_register.runCommand(allocator, "cloud", cmd_args),

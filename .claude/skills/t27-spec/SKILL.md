@@ -537,7 +537,7 @@ and reading three files of the same shape would have confirmed the wrong conclus
 noise as signal and nobody reads warning 43 of 58. The repair is to make the tool
 classify rather than binarise — this one now reports vectors / report / definition /
 empty, and the single genuinely stale artefact it had been hiding for months
-(a CLARA coverage file covering 7% of the current corpus) became visible the moment the
+(a coverage file for a since-deleted demo, covering 7% of the current corpus) became visible the moment the
 false positives stopped.
 
 The general form, and the reason this keeps recurring in this campaign: **the failure
@@ -581,10 +581,10 @@ individual test passes.
 
 ## Evidence that cites a command nobody can run is not evidence
 
-`conformance/clara_spec_coverage.json` recorded
-`{"command": "bash scripts/clara/demo.sh", "result": "20/20 passed, 0 failed"}`.
-`scripts/clara/` does not exist anywhere in the repository — not renamed, not moved,
-absent. The row had been carried as passing evidence for four months.
+A conformance coverage JSON (the demo it covered has since been deleted) recorded
+`{"command": "bash scripts/<demo>/demo.sh", "result": "20/20 passed, 0 failed"}`.
+That scripts directory does not exist anywhere in the repository — not renamed, not
+moved, absent. The row had been carried as passing evidence for four months.
 
 This reframes what "narrow the claim vs regenerate the evidence" means. There was no
 claim to narrow: an artefact asserting a result from a command that cannot be executed is
