@@ -21,6 +21,20 @@
 //! a credit counts only after its whole line is on disk and a nonce is issued
 //! only after its mark is.
 //!
+//! Skipped for READING is not the same as fit to WRITE. `append` opens with
+//! fopen("a"), so the next line a run writes is glued onto the torn one, and
+//! the result is worse than the tear: depending on where the process died the
+//! glued line either stops parsing (so the journal becomes unreadable and
+//! crediting stops for good) or parses as a credit and SWALLOWS the mark that
+//! was glued into it (so the next start resumes at an older mark and reissues
+//! nonces the previous run may already have handed out). A writing run
+//! therefore refuses a torn journal at open -- `Ledger.openJournal` returns
+//! `JournalTornTail` before any nonce or credit -- and leaves the file exactly
+//! as it found it. Repairing it by truncation is NOT done here: another writer
+//! may hold the same path, and an unproven repair of a payment record is worse
+//! than a stop. `parse`/`restore` keep reporting `torn_tail` so a person or a
+//! read-only tool can still inspect the file.
+//!
 //! The file is JSON lines so a person can read it and `jq` can sum it. It
 //! needs libc for fsync; without libc a journal cannot be opened.
 
@@ -34,6 +48,10 @@ pub const Error = error{
     JournalUnavailable,
     JournalUnreadable,
     JournalMalformed,
+    /// The last line is incomplete: a run died mid-write. Readable, but not
+    /// writable -- see the note at the top of this file. The run stops with
+    /// the file untouched instead of appending onto the tear.
+    JournalTornTail,
     JournalWrite,
     NonceSpaceExhausted,
     /// An owner or operator name the journal cannot hold as written.
@@ -68,6 +86,9 @@ pub const Restored = struct {
     /// The highest mark on disk; 0 for a fresh journal.
     mark: u32 = 0,
     credits: u64 = 0,
+    /// The file's last line has no newline, so it was never finished. Reading
+    /// skips it; a run that intends to WRITE must stop (`JournalTornTail`),
+    /// because appending glues the next line onto this one.
     torn_tail: bool = false,
 };
 
@@ -202,6 +223,14 @@ fn numberAfter(line: []const u8, key: []const u8) ?[]const u8 {
 
 const testing = std.testing;
 
+/// Lay down a journal by hand, to read back a state a running coordinator
+/// cannot produce on purpose.
+fn writeText(path: [:0]const u8, text: []const u8) !void {
+    const f = std.c.fopen(path.ptr, "w") orelse return error.JournalWrite;
+    const n = std.c.fwrite(text.ptr, 1, text.len, f);
+    if (std.c.fclose(f) != 0 or n != text.len) return error.JournalWrite;
+}
+
 test "the nonce mark moves in blocks and never wraps" {
     try testing.expectEqual(@as(u32, 1024), reserve_block);
     try testing.expectEqual(@as(u32, 1025), nextMark(1));
@@ -256,6 +285,50 @@ test "a missing journal is fresh, an unreadable one is an error" {
     // A directory exists but cannot be read as a journal.
     const dir: Journal = .{ .path = "/tmp" };
     try testing.expectError(Error.JournalUnreadable, dir.restore(testing.allocator, &spent));
+}
+
+test "writing on top of a torn tail is what corrupts a journal" {
+    if (comptime !builtin.link_libc) return error.SkipZigTest;
+    // This is why a torn tail refuses to open for writing instead of being
+    // appended to: `append` uses fopen("a"), so the next line the coordinator
+    // writes is glued onto the unfinished one. Both halves below write exactly
+    // the mark a resuming run would have written next, and neither result is
+    // survivable.
+    const head = "{\"mark\":1024}\n";
+
+    // Torn before the nonce: the glued line stops parsing, so from here on the
+    // journal is unreadable and crediting stops for good.
+    {
+        const j: Journal = .{ .path = "/tmp/trinet-journal-test-glue-early-906.jsonl" };
+        _ = std.c.unlink(j.path.ptr);
+        defer _ = std.c.unlink(j.path.ptr);
+        try writeText(j.path, head ++ "{\"t\":2,\"operator\":\"\",\"owner\":\"a\",\"node\":\"4e4f4431\",\"physi");
+        try j.writeMark(2048);
+
+        var spent: std.AutoHashMapUnmanaged(u64, void) = .empty;
+        defer spent.deinit(testing.allocator);
+        try testing.expectError(Error.JournalMalformed, j.restore(testing.allocator, &spent));
+    }
+
+    // Torn a few fields later: worse, because it is silent. The glued line
+    // parses as a paid credit and swallows the mark written into it, so the
+    // next start resumes at the OLD mark and reissues nonces the previous run
+    // may already have handed out -- the exact double payment this file exists
+    // to prevent.
+    {
+        const j: Journal = .{ .path = "/tmp/trinet-journal-test-glue-late-906.jsonl" };
+        _ = std.c.unlink(j.path.ptr);
+        defer _ = std.c.unlink(j.path.ptr);
+        try writeText(j.path, head ++ "{\"t\":2,\"operator\":\"\",\"owner\":\"a\",\"node\":\"4e4f4432\",\"physical\":false,\"nonce\":5,\"y\":3,\"tag\":\"00");
+        try j.writeMark(2048);
+
+        var spent: std.AutoHashMapUnmanaged(u64, void) = .empty;
+        defer spent.deinit(testing.allocator);
+        const r = try j.restore(testing.allocator, &spent);
+        try testing.expectEqual(@as(u32, 1024), r.mark); // the 2048 just written is gone
+        try testing.expect(spent.contains(spentKey(0x4E4F4432, 5)));
+        try testing.expect(!r.torn_tail); // and it no longer looks damaged
+    }
 }
 
 test "a mark and a credit written are read back" {

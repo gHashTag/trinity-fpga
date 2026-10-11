@@ -731,6 +731,14 @@ fn journaledJob(m: *Mesh, seed: u8) !protocol.Job {
     return protocol.Job.withNonce(try m.freshNonce(), @splat(seed), @splat(0x55));
 }
 
+/// Lay down a journal by hand, to restart on top of one a running coordinator
+/// cannot produce on purpose: a torn tail, or a line that does not parse.
+fn writeJournalText(path: [:0]const u8, text: []const u8) !void {
+    const f = std.c.fopen(path.ptr, "w") orelse return error.JournalWrite;
+    const written = std.c.fwrite(text.ptr, 1, text.len, f);
+    if (std.c.fclose(f) != 0 or written != text.len) return error.JournalWrite;
+}
+
 test "a restarted coordinator never pays the same (node, nonce) twice" {
     if (comptime !@import("builtin").link_libc) return error.SkipZigTest;
     const j: journal_mod.Journal = .{ .path = "/tmp/trinet-mesh-restart-906.jsonl" };
@@ -811,6 +819,104 @@ test "a forged answer is refused and never reaches the journal" {
     try std.testing.expect(o.settlement.outcome != .credited);
     var buf: [1024]u8 = undefined;
     try std.testing.expectEqual(@as(usize, 0), std.mem.count(u8, journalText(j.path, &buf), "\"mtri\""));
+}
+
+test "every credit line names the owner its own node was registered to" {
+    // The handle in the line is what a payout is read off, so it has to be the
+    // node's owner -- not the coordinator's operator, and not whichever owner
+    // happened to be settled first.
+    if (comptime !@import("builtin").link_libc) return error.SkipZigTest;
+    const j: journal_mod.Journal = .{ .path = "/tmp/trinet-mesh-owner-906.jsonl" };
+    _ = std.c.unlink(j.path.ptr);
+    defer _ = std.c.unlink(j.path.ptr);
+
+    var m = try Mesh.init(std.testing.allocator, .{});
+    defer m.deinit();
+    try m.join(Node.initEmulated(0x4E4F4431, "peer-1", .honest), "developer-1", 100000);
+    try m.join(Node.initEmulated(0x4E4F4432, "peer-2", .honest), "developer-2", 100000);
+    _ = try m.openJournal(j, "gHashTag");
+
+    // Round-robin: one job each.
+    for (0..2) |_| {
+        const o = try m.dispatch(try journaledJob(&m, 1));
+        try std.testing.expectEqual(ledger_mod.Outcome.credited, o.settlement.outcome);
+    }
+
+    var buf: [4096]u8 = undefined;
+    const text = journalText(j.path, &buf);
+    try std.testing.expectEqual(@as(usize, 1), std.mem.count(u8, text, "\"owner\":\"developer-1\""));
+    try std.testing.expectEqual(@as(usize, 1), std.mem.count(u8, text, "\"owner\":\"developer-2\""));
+    try std.testing.expectEqual(@as(usize, 2), std.mem.count(u8, text, "\"operator\":\"gHashTag\""));
+    // The operator is not an owner of anything here.
+    try std.testing.expectEqual(@as(usize, 0), std.mem.count(u8, text, "\"owner\":\"gHashTag\""));
+}
+
+test "a journal torn mid-line refuses to open, twice over, and is left untouched" {
+    // The regression this exists for: the coordinator used to open a torn
+    // journal successfully and carry on writing. `append` uses fopen("a"), so
+    // the first mark it wrote was glued onto the unfinished line -- see
+    // journal.zig "writing on top of a torn tail is what corrupts a journal"
+    // for what that does. One start cannot see it; the SECOND start is where
+    // the damage surfaces, so this test performs both.
+    if (comptime !@import("builtin").link_libc) return error.SkipZigTest;
+    const j: journal_mod.Journal = .{ .path = "/tmp/trinet-mesh-torn-906.jsonl" };
+    defer _ = std.c.unlink(j.path.ptr);
+    // A mark, one whole credit, and a line the process died inside.
+    const torn = "{\"mark\":1024}\n" ++
+        "{\"t\":1,\"operator\":\"\",\"owner\":\"dmitrii-f-t27\",\"node\":\"4e4f4431\",\"physical\":false,\"nonce\":1,\"y\":3,\"tag\":\"0000000000000000\",\"tag_kind\":\"crc32\",\"level\":\"self_reported\",\"mtri\":1}\n" ++
+        "{\"t\":2,\"operator\":\"\",\"owner\":\"dmitrii-f-t27\",\"node\":\"4e4f4431\",\"physi";
+    try writeJournalText(j.path, torn);
+
+    // First start after the crash: refused before any nonce or credit.
+    {
+        var m = try Mesh.init(std.testing.allocator, .{});
+        defer m.deinit();
+        try m.join(Node.initEmulated(0x4E4F4431, "peer-1", .honest), "dmitrii-f-t27", 100000);
+        try std.testing.expectError(journal_mod.Error.JournalTornTail, m.openJournal(j, ""));
+        try std.testing.expect(m.ledger.journal == null);
+        try std.testing.expectEqual(@as(u32, 0), m.nonce_mark);
+        try std.testing.expectEqual(@as(u64, 0), m.ledger.total_credited_mtri);
+    }
+
+    var buf: [4096]u8 = undefined;
+    try std.testing.expectEqualStrings(torn, journalText(j.path, &buf));
+
+    // Second start: the same named error, not a journal that has since become
+    // unparsable, and still not a byte written.
+    {
+        var m = try Mesh.init(std.testing.allocator, .{});
+        defer m.deinit();
+        try m.join(Node.initEmulated(0x4E4F4431, "peer-1", .honest), "dmitrii-f-t27", 100000);
+        try std.testing.expectError(journal_mod.Error.JournalTornTail, m.openJournal(j, ""));
+    }
+    var buf2: [4096]u8 = undefined;
+    try std.testing.expectEqualStrings(torn, journalText(j.path, &buf2));
+
+    // Read-only inspection still describes the file rather than refusing it:
+    // one whole credit, the mark, and a tail somebody has to decide about.
+    var spent: std.AutoHashMapUnmanaged(u64, void) = .empty;
+    defer spent.deinit(std.testing.allocator);
+    const seen = try j.restore(std.testing.allocator, &spent);
+    try std.testing.expect(seen.torn_tail);
+    try std.testing.expectEqual(@as(u64, 1), seen.credits);
+    try std.testing.expectEqual(@as(u32, 1024), seen.mark);
+}
+
+test "a journal line that does not parse stops the coordinator, it does not read as empty" {
+    if (comptime !@import("builtin").link_libc) return error.SkipZigTest;
+    const j: journal_mod.Journal = .{ .path = "/tmp/trinet-mesh-malformed-906.jsonl" };
+    defer _ = std.c.unlink(j.path.ptr);
+    // A complete line with no node field: we cannot tell what it paid.
+    try writeJournalText(j.path, "{\"mark\":1024}\n{\"t\":1,\"owner\":\"dmitrii-f-t27\",\"nonce\":1,\"mtri\":1}\n");
+
+    var m = try Mesh.init(std.testing.allocator, .{});
+    defer m.deinit();
+    try m.join(Node.initEmulated(0x4E4F4431, "peer-1", .honest), "dmitrii-f-t27", 100000);
+    try std.testing.expectError(journal_mod.Error.JournalMalformed, m.openJournal(j, ""));
+    // The journal was not adopted, so nothing here can credit against it. The
+    // runner turns this error into a refusal to start (main.zig).
+    try std.testing.expect(m.ledger.journal == null);
+    try std.testing.expectEqual(@as(u64, 0), m.ledger.total_credited_mtri);
 }
 
 test "an unwritable journal issues no nonce and credits nothing" {

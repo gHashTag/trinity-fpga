@@ -313,13 +313,23 @@ fn openJournalFromEnv(m: *mesh_mod.Mesh) !void {
     const operator = envOr(operator_env, "");
     const r = m.openJournal(.{ .path = path }, operator) catch |e| {
         std.debug.print("journal {s}: {s} -- not crediting without it\n", .{ path, @errorName(e) });
+        switch (e) {
+            // Say what it is, because the file is fine to READ and the fix is
+            // an operator's decision, not a retry.
+            error.JournalTornTail => std.debug.print("The last line was never finished: a previous run died mid-write.\n" ++
+                "Appending to it would glue the next line onto the tear, so this run\n" ++
+                "stops and the file is left exactly as it is. Stop here and keep the\n" ++
+                "file unchanged: it holds the paid set and the nonce reserve mark.\n" ++
+                "Recover it only under control, after checking its complete credit\n" ++
+                "lines and its last complete mark line.\n", .{}),
+            else => {},
+        }
         return e;
     };
-    std.debug.print("journal {s}: {d} paid jobs restored, nonces resume at {d}{s}, credits {s}\n", .{
+    std.debug.print("journal {s}: {d} paid jobs restored, nonces resume at {d}, credits {s}\n", .{
         path,
         r.credits,
         m.next_nonce,
-        if (r.torn_tail) " (a torn last line was skipped)" else "",
         if (operator.len == 0) "self-reported (TRINET_OPERATOR unset)" else "by operator",
     });
 }
